@@ -1,8 +1,8 @@
 import XCTest
 
-/// K7 on the demo world: the board live from pushes, Move to… with the
-/// daemon's checks, a draft from + (with a photo when the library has one),
-/// and a lead's board proposal in Needs you. The draft and proposal tests
+/// K7 on the demo world: the board live from pushes, its label chips (K8),
+/// Move to… with the daemon's checks, a draft from + with a label and a
+/// photo, and a lead's board proposal in Needs you. The draft and proposal tests
 /// need a 0.19 daemon (DEMO_DAEMON) and skip on an older one.
 ///
 /// The demo connects with the owner token, which a 0.19 daemon never lets
@@ -13,6 +13,8 @@ final class K7BoardTests: XCTestCase {
         continueAfterFailure = true
         if UIDevice.current.userInterfaceIdiom == .pad { throw XCTSkip("iPhone layout") }
         try requireLiveDaemon()
+        // The Lab and its lead before any board starts: 0.19 gives the lead role to the project's lead.
+        _ = try? DemoControl.post("/lab")
     }
 
     private func any(_ app: XCUIApplication, _ format: String, _ args: CVarArg...) -> XCUIElement {
@@ -37,6 +39,28 @@ final class K7BoardTests: XCTestCase {
         waitFor(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Inbox'")).firstMatch, 20).tap()
         waitFor(card, 20)
         screenshot("K7-board-live")
+
+        // The seed cards' label groups as chips, one row per group (K8): platform filters the column.
+        let other = any(app, "label CONTAINS %@", "Owner threads read marks")
+        let ios = app.buttons["board-label-platform:ios"]
+        if ios.waitForExistence(timeout: 5) {
+            XCTAssertTrue(app.buttons["board-label-area:board"].exists, "a row for the area group too")
+            XCTAssertTrue(any(app, "label CONTAINS %@", "ios · board").exists, "the card shows its labels")
+            XCTAssertTrue(other.exists)
+            ios.tap()
+            let hidden = NSPredicate(format: "exists == false")
+            expectation(for: hidden, evaluatedWith: other)
+            waitForExpectations(timeout: 10)
+            XCTAssertTrue(card.exists, "an ios card stays")
+            // Each test files the seed again, so the totals vary: "Inbox 2 of 3", "Inbox 6 of 9".
+            XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label MATCHES 'Inbox [0-9]+ of [0-9]+.*'")).firstMatch.exists,
+                          "the chip counts what the filter shows")
+            screenshot("K7-label-filter")
+            waitFor(app.buttons["board-labels-clear"]).tap()
+            waitFor(other, 10)
+        } else {
+            XCTFail("no label chips for the seed cards' labels")
+        }
 
         // The card's menu (a sideways swipe pages to the next column).
         card.press(forDuration: 1.2)
@@ -84,6 +108,10 @@ final class K7BoardTests: XCTestCase {
         title.tap()
         let words = "K7 draft \(Int(Date().timeIntervalSince1970))"
         title.typeText(words)
+        // A label from the board's groups, when its cards use any (the seed cards do once filed).
+        let label = app.buttons["quick-add-label-platform:ios"]
+        let labelled = label.exists
+        if labelled { label.tap() }
 
         // A photo from the library, when the simulator has one.
         let photo: Bool
@@ -95,6 +123,9 @@ final class K7BoardTests: XCTestCase {
 
         waitFor(app.descendants(matching: .any)["draft-banner"], 30)
         XCTAssertTrue(any(app, "label CONTAINS %@", words).exists, "the draft's title")
+        if labelled {
+            XCTAssertTrue(any(app, "label CONTAINS %@", "platform:ios").exists, "the label picked, on the draft")
+        }
         if photo {
             // Uploaded in chunks, attached, and read back with attachment_read for the thumbnail.
             let thumbnail = waitFor(any(app, "label BEGINSWITH 'Image hero.png'"), 20)
