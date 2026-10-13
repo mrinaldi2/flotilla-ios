@@ -505,6 +505,7 @@ struct NeedsRow: View {
         case .offBoard: "Off the board"
         case .servingOff: "Not serving"
         case .ownerQuestion: "Question"
+        case .draftUpdated: "Draft updated"
         default: "Needs you"
         }
     }
@@ -521,6 +522,7 @@ struct NeedsRow: View {
         case .offBoard: "rectangle.dashed"
         case .servingOff: "wifi.slash"
         case .ownerQuestion: "questionmark.bubble.fill"
+        case .draftUpdated: "square.and.pencil"
         default: "circle"
         }
     }
@@ -530,7 +532,7 @@ struct NeedsRow: View {
         case .p0Item, .servingOff: .failed
         case .decision where row.priority == "urgent" || row.priority == "P0": .failed
         case .relayedRulings, .offBoard: .quiet
-        case .ownerQuestion: .working
+        case .ownerQuestion, .draftUpdated: .working
         default: .needsYou
         }
     }

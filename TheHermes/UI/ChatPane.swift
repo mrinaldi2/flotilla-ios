@@ -7,6 +7,8 @@ struct BotChatPane: View {
     @Environment(LensStore.self) private var lens
     let botId: String
     @Binding var searching: Bool
+    /// A card or draft every message goes with (`send_user_message{item_id}`, K7).
+    var itemId: String? = nil
     @State private var search = ChatSearchState()
     /// Which step groups the owner opened or closed, kept here rather than in the
     /// rows: a turn moving from the drawn tail into the lazy stack keeps it (H-228).
@@ -166,7 +168,11 @@ struct BotChatPane: View {
         var message = PendingMessage(text: text)
         pending.append(message)
         do {
-            try await store.sendMessage(botId: botId, body: text)
+            if let itemId {
+                try await store.sendMessage(botId: botId, body: text, itemId: itemId)
+            } else {
+                try await store.sendMessage(botId: botId, body: text)
+            }
             message.state = .sent
         } catch {
             message.state = .failed(error.localizedDescription)

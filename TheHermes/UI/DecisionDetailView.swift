@@ -18,7 +18,14 @@ struct DecisionDetailView: View {
             if let decision {
                 header(decision)
                 if let ruling = decision.ruling { rulingSection(decision, ruling) }
-                if decision.state == "open" { answerSection(decision) }
+                if decision.state == "open" {
+                    // A lead's board change (K7): Approve or Decline, not a written ruling.
+                    if let proposal = BoardProposal(decision) {
+                        ProposalSection(decision: decision, proposal: proposal)
+                    } else {
+                        answerSection(decision)
+                    }
+                }
                 stateActions(decision)
                 commentsSection(decision)
             } else {
