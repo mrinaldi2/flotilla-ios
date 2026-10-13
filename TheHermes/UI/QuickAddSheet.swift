@@ -76,7 +76,16 @@ struct QuickAddSheet: View {
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
-            .onAppear { titleFocused = true }
+            .onAppear {
+                titleFocused = true
+                #if DEBUG
+                // UI tests: the photo picker runs out of process, so -attachFixture <path> adds a file.
+                if let path = UserDefaults.standard.string(forKey: "attachFixture"), model.files.isEmpty,
+                   let data = FileManager.default.contents(atPath: path) {
+                    model.add(name: (path as NSString).lastPathComponent, data: data)
+                }
+                #endif
+            }
             .onChange(of: photos) { _, items in
                 guard !items.isEmpty else { return }
                 photos = []

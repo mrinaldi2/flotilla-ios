@@ -1,8 +1,8 @@
 import SwiftUI
 
 // The project's Board (UX-024, K7): the board picker, the column chips and a
-// paged list per column, live from `board_watch` pushes. A card moves with a
-// swipe or its menu ("Move to…"); + starts a draft. A 0.18 home has one
+// paged list per column, live from `board_watch` pushes. A card moves from
+// its menu (long press) or its own screen ("Move to…"); + starts a draft. A 0.18 home has one
 // board and no drafts: no picker, no tray and no +.
 
 struct BoardPane: View {
@@ -204,7 +204,7 @@ private struct BoardBar: View {
     }
 }
 
-/// One column's cards, in board order. With `control`, a swipe or the menu moves one.
+/// One column's cards, in board order. With `control`, a card's menu moves it.
 struct ColumnList: View {
     let cards: [BoardCard]
     let computerId: String
@@ -221,12 +221,7 @@ struct ColumnList: View {
                         IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
                     }
                 }
-                .swipeActions(edge: .trailing) {
-                    if canMove {
-                        Button { move(card) } label: { Label("Move to…", systemImage: "arrow.right.square") }
-                            .tint(.accentColor)
-                    }
-                }
+                // Its menu, not a swipe: a sideways swipe pages to the next column.
                 .contextMenu {
                     if canMove {
                         Button { move(card) } label: { Label("Move to…", systemImage: "arrow.right.square") }

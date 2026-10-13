@@ -15,7 +15,7 @@ app=$(find "$out/Build/Products/Release-iphonesimulator" -name 'TheHermes.app' -
 [ -n "$app" ] || { echo "No TheHermes.app in $out" >&2; exit 1; }
 status=0
 # Every file in the bundle: a Debug build keeps its code in TheHermes.debug.dylib.
-for hook in installStub installOfferStub releaseStub ownerAuthStub homeFixture pairLink; do
+for hook in installStub installOfferStub releaseStub ownerAuthStub homeFixture pairLink attachFixture; do
     if find "$app" -type f -exec strings -a {} + 2>/dev/null | grep -q "$hook"; then
         echo "FOUND in Release: $hook" >&2
         status=1

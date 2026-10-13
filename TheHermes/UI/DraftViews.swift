@@ -198,7 +198,9 @@ struct DraftSections: View {
             case .conflict?:
                 refusal = ["\(item.id) changed meanwhile. Look again, then finalize."]
             case nil:
-                break
+                // The daemon's refusal, said where Finalize is.
+                refusal = [model.failure?.capitalizedFirst ?? "Not finalized."]
+                model.failure = nil
             }
             await reload()
         }
@@ -212,6 +214,9 @@ struct DraftSections: View {
             defer { busy = false }
             if await model.discard(version: item.version, reason: why) {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } else {
+                refusal = [model.failure?.capitalizedFirst ?? "Not discarded."]
+                model.failure = nil
             }
             await reload()
         }

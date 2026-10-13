@@ -27,6 +27,15 @@ struct ItemView: View {
     @State private var chatting: String?
     /// Following the draft's project for its pushes, since which reconnect.
     @State private var following: (project: String, token: UUID, reconnects: Int)?
+    /// "Move to…" from the card itself, with its board's columns.
+    @State private var moving: MoveTarget?
+    @State private var moveFailure: String?
+
+    private struct MoveTarget: Identifiable {
+        let card: BoardCard
+        let columns: [BoardColumnRow]
+        var id: String { card.id }
+    }
 
     private var project: String? { projectId ?? fleet.cards.home(for: itemId)?.projectId }
 
@@ -111,6 +120,18 @@ struct ItemView: View {
         .task { await load() }
         .reloadsOnReconnect { await load() }
         .onDisappear { stopFollowing() }
+        .toolbar {
+            if let item = detail?.item, item.state.isEmpty || item.state == "live", store.canControl, store.speaksProto, project != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Move to…") { openMove(item) }
+                        .accessibilityIdentifier("item-move")
+                }
+            }
+        }
+        .sheet(item: $moving, onDismiss: { Task { await load() } }) { target in
+            MoveSheet(model: MoveModel(card: target.card, service: store), columns: target.columns)
+        }
+        .errorAlert("Couldn’t check the columns.", $moveFailure)
         .navigationDestination(item: $chatting) { botId in
             DraftChatView(botId: botId, itemId: itemId, title: detail?.item.title ?? "")
         }
@@ -118,6 +139,25 @@ struct ItemView: View {
             ReplySheet(to: CommentWords.author(row.author) { store.bot($0)?.name }, quote: row.body ?? "") { body in
                 replying = nil
                 post(body, replyTo: row.id)
+            }
+        }
+    }
+
+    /// The card's board, then the Move sheet on it.
+    private func openMove(_ item: Hermes_Board_V1_Item) {
+        guard let project else { return }
+        Task {
+            do {
+                let state = BoardState(snapshot: try await store.board(projectId: project), remembered: item.boardID)
+                var card = BoardCard()
+                card.id = item.id
+                card.title = item.title
+                card.columnKey = item.columnKey
+                card.version = item.version
+                card.boardID = item.boardID
+                moving = MoveTarget(card: card, columns: state.allColumns)
+            } catch {
+                moveFailure = error.localizedDescription
             }
         }
     }
