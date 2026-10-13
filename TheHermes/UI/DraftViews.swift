@@ -223,8 +223,10 @@ struct DraftSections: View {
     }
 }
 
-/// Every change to a draft, newest first, with who made it and an Undo for
-/// each one that can be put back. Opening it marks the bots' changes seen.
+/// Every change to a draft, newest first, with who made it and its own
+/// Undo (`item_draft_undo`, as the desktop's review). Opening it marks the
+/// bots' changes seen. Undoing is the owner's: the home takes it from a
+/// paired device and says so otherwise.
 struct DraftChangesView: View {
     @Environment(AppStore.self) private var store
     let itemId: String
@@ -241,7 +243,7 @@ struct DraftChangesView: View {
                     row(revision)
                 }
             } footer: {
-                Text("Undo puts one change back. A field changed again since needs its later change undone first.")
+                Text("Undo takes one change back: a field returns to what it was, an attachment or link it added goes, one it removed comes back. The undo is a change of yours.")
                     .foregroundStyle(Color.secondaryText)
             }
         }
@@ -257,21 +259,23 @@ struct DraftChangesView: View {
     }
 
     private func row(_ revision: DraftRevision) -> some View {
-        let undo = detail.flatMap { DraftUndo.of(revision, among: model.revisions, detail: $0) }
-        return VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(DraftWords.author(revision.actor) { store.bot($0)?.name }).font(.caption.weight(.semibold))
                 if revision.hasAt { Text(revision.at.date.relative).font(.caption2).foregroundStyle(Color.secondaryText) }
                 if model.isNew(revision) { Pill(text: "● New", tone: .working) }
                 Spacer(minLength: 4)
-                if let undo {
+                if model.undone.contains(revision.id) {
+                    Text("↶ Undone").font(.caption.weight(.semibold)).foregroundStyle(Color.secondaryText)
+                } else if store.canControl, detail?.item.state == "draft" {
                     if undoing == revision.id {
                         ProgressView()
                     } else {
-                        Button("Undo") { run(revision, undo) }
+                        Button("Undo") { run(revision) }
                             .font(.caption.weight(.semibold))
                             .buttonStyle(.borderless)
                             .frame(minWidth: 44, minHeight: 44)
+                            .disabled(undoing != nil)
                             .accessibilityLabel("Undo: \(DraftWords.change(revision))")
                     }
                 }
@@ -284,17 +288,18 @@ struct DraftChangesView: View {
         .padding(.vertical, 2)
     }
 
-    private func run(_ revision: DraftRevision, _ undo: DraftUndo) {
+    private func run(_ revision: DraftRevision) {
         guard let detail else { return }
         undoing = revision.id
         Task {
             defer { undoing = nil }
             do {
-                try await model.undo(revision, detail: detail)
-                self.detail = try? await store.item(itemId)
+                try await model.undo(revision, version: detail.item.version)
             } catch {
                 failure = error.localizedDescription
             }
+            // The version moved on, or someone else's did: read it again either way.
+            self.detail = try? await store.item(itemId)
         }
     }
 }

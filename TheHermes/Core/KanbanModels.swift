@@ -26,6 +26,8 @@ final class BoardModel {
     var tab = ""
     /// The last move or a refetch failing, said quietly over the board.
     var notice: String?
+    /// The labels picked in the filter bar, for the board on screen.
+    var filter = LabelFilter()
 
     @ObservationIgnored private let service: BoardService
     @ObservationIgnored private let memory: BoardMemory
@@ -86,6 +88,7 @@ final class BoardModel {
         state = fresh
         phase = .loaded
         notice = nil
+        keepFilter(fresh)
         if tab.isEmpty || (tab != Self.draftsTab && !fresh.columns.contains { $0.key == tab }) { tab = fresh.startColumn }
         if tab == Self.draftsTab && !fresh.hasBoards { tab = fresh.startColumn }
         // A push the snapshot couldn't take: read once more.
@@ -100,9 +103,19 @@ final class BoardModel {
         }
         if current.apply(event) {
             state = current
+            keepFilter(current)
         } else {
             Task { await reload() }
         }
+    }
+
+    /// Drops picked labels the board no longer offers (another board, a value
+    /// gone); untouched while nothing is picked, so a push redraws nothing more.
+    private func keepFilter(_ state: BoardState) {
+        guard filter.isOn else { return }
+        var kept = filter
+        kept.keep(only: state.labelGroups())
+        if kept != filter { filter = kept }
     }
 
     /// Shows another board and remembers it for this project.
@@ -110,6 +123,7 @@ final class BoardModel {
         guard var current = state else { return }
         current.select(id)
         state = current
+        keepFilter(current)
         memory.remember(current.selected, for: projectId)
         if tab != Self.draftsTab { tab = current.startColumn }
     }
@@ -224,6 +238,8 @@ final class QuickAddModel {
     var type = Hermes_Board_V1_ItemType.feature
     var boardId: String
     var description = ""
+    /// Labels picked from the board's groups (`platform:ios`); never platforms.
+    private(set) var labels: [String] = []
     private(set) var files: [File] = []
     var links: [String] = []
     /// "Uploading import-error.png…", while saving.
@@ -240,6 +256,16 @@ final class QuickAddModel {
 
     func add(name: String, data: Data) { files.append(File(name: name, data: data)) }
     func remove(_ id: UUID) { files.removeAll { $0.id == id } }
+
+    func toggle(label: String) {
+        if let index = labels.firstIndex(of: label) { labels.remove(at: index) } else { labels.append(label) }
+    }
+
+    /// Another board picked: keeps only the labels its groups offer.
+    func keepLabels(offered groups: [LabelGroupView]) {
+        let offered = Set(groups.flatMap { group in group.values.map(group.label) })
+        labels.removeAll { !offered.contains($0) }
+    }
 
     var totalProblem: String? { AttachmentRules.totalRefusal(files.reduce(0) { $0 + Int64($1.data.count) }) }
 
@@ -261,6 +287,7 @@ final class QuickAddModel {
         // Left out, the type's template fills the description.
         if !description.trimmed.isEmpty { create.description_p = description }
         if !boardId.isEmpty { create.boardID = boardId }
+        create.labels = labels
         create.draft = true
         let itemId: String
         do {
@@ -325,6 +352,8 @@ final class DraftModel {
     private(set) var revisions: [DraftRevision] = []
     private(set) var seen: Int64 = 0
     private(set) var loaded = false
+    /// The changes taken back from this screen: "↶ Undone", no second Undo.
+    private(set) var undone: Set<Int64> = []
     var failure: String?
 
     @ObservationIgnored private let service: DraftService
@@ -360,18 +389,18 @@ final class DraftModel {
         seen = changes.seen
     }
 
-    /// Puts one change back; the caller reloads the item.
-    func undo(_ revision: DraftRevision, detail: BoardItemDetail) async throws {
-        guard let undo = DraftUndo.of(revision, among: revisions, detail: detail) else { return }
-        switch undo {
-        case .update(let update):
-            if case .conflict? = try await service.updateItem(update).outcome {
-                throw DaemonError(code: "conflict", message: "\(itemId) changed meanwhile. Look again, then undo.")
-            }
-        case .detach(let attachmentId):
-            _ = try await service.detach(itemId: itemId, attachmentId: attachmentId)
-        case .unlink(let unlink):
-            _ = try await service.unlink(unlink)
+    /// Takes one change back with `item_draft_undo` (K5), on any change:
+    /// the home puts the field back, or removes or restores the attachment
+    /// or link, as a revision of the owner's own. The caller reloads the item.
+    func undo(_ revision: DraftRevision, version: UInt64) async throws {
+        let result = try await service.undo(itemId: itemId, version: version, revision: revision.id)
+        switch result.outcome {
+        case .done?:
+            undone.insert(revision.id)
+        case .refused(let refused)?:
+            throw DaemonError(code: "refused", message: MoveOutcome.lines(refused.unmet).joined(separator: " "))
+        case .conflict?, nil:
+            throw DaemonError(code: "conflict", message: "\(itemId) changed meanwhile. Look again, then undo.")
         }
         await load()
     }

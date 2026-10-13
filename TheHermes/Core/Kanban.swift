@@ -244,62 +244,6 @@ enum MoveOutcome: Equatable {
     }
 }
 
-// MARK: Proposals
-
-/// A lead's board-structure proposal, raised as a question decision (K4):
-/// "Board change proposed for <board>: <summary>", its body ending
-/// "Proposal <id>.". The daemon gives the app nothing else to tell it by.
-struct BoardProposal: Equatable {
-    let id: String
-    let boardName: String
-    let summary: String
-
-    static let titlePrefix = "Board change proposed for "
-
-    init?(title: String, body: String) {
-        guard title.hasPrefix(Self.titlePrefix) else { return nil }
-        let rest = title.dropFirst(Self.titlePrefix.count)
-        guard let colon = rest.range(of: ": ") else { return nil }
-        guard let match = body.range(of: #"Proposal ([A-Za-z0-9_-]+)\.\s*$"#, options: .regularExpression) else { return nil }
-        let token = body[match].dropFirst("Proposal ".count).trimmingCharacters(in: .whitespacesAndNewlines)
-        id = String(token.dropLast())
-        boardName = String(rest[..<colon.lowerBound])
-        summary = String(rest[colon.upperBound...])
-    }
-
-    init?(_ decision: Decision) { self.init(title: decision.title, body: decision.body) }
-
-    /// What the change does to the columns, when the summary says: a column
-    /// added (“QA”) or removed (by key). Nil for other changes.
-    enum ColumnChange: Equatable {
-        case add(String)
-        case remove(String)
-    }
-
-    var columnChange: ColumnChange? {
-        if summary.hasPrefix("add column “"), let end = summary.dropFirst("add column “".count).firstIndex(of: "”") {
-            return .add(String(summary[summary.index(summary.startIndex, offsetBy: "add column “".count)..<end]))
-        }
-        if summary.hasPrefix("remove column ") {
-            return .remove(String(summary.dropFirst("remove column ".count)))
-        }
-        return nil
-    }
-
-    /// The column strip before and after, as chips: "To do", "Doing", "+ QA",
-    /// "− Review". `before` is the board's visible columns as they are now.
-    func strips(before: [BoardColumnRow]) -> (before: [String], after: [String])? {
-        guard let change = columnChange, !before.isEmpty else { return nil }
-        let names = before.map(\.name)
-        switch change {
-        case .add(let name):
-            return (names, names + ["+ \(name)"])
-        case .remove(let key):
-            return (names, before.map { $0.key == key ? "− \($0.name)" : $0.name })
-        }
-    }
-}
-
 // MARK: Drafts
 
 /// Words for a draft's revisions (K4b): who changed what.
@@ -323,6 +267,7 @@ enum DraftWords {
         case "attachment": return to.isEmpty ? "Removed \(from)" : "Attached \(to)"
         case "link": return to.isEmpty ? "Unlinked \(linkWords(from))" : "Linked \(linkWords(to))"
         case "labels": return to.isEmpty ? "Removed the labels" : "Labels: \(to)"
+        case "parent": return to.isEmpty ? "No longer under \(from)" : "Under \(to)"
         case "type", "size", "priority":
             let name = r.field.capitalizedFirst
             return from.isEmpty ? "\(name): \(to)" : (to.isEmpty ? "\(name) cleared" : "\(name): \(from) → \(to)")
@@ -331,9 +276,13 @@ enum DraftWords {
         }
     }
 
+    /// How the daemon stores a link's kind, longest first: "item:blocks" before "item".
+    private static let linkKinds = ["item:duplicates", "item:relates", "item:blocks", "decision", "artifact", "meeting",
+                                    "branch", "thread", "task", "pr"]
+
     /// "artifact:specs/RB-20.md" → "specs/RB-20.md".
     private static func linkWords(_ stored: String) -> String {
-        let kind = DraftUndo.linkKinds.keys.sorted { $0.count > $1.count }.first { stored.hasPrefix("\($0):") }
+        let kind = linkKinds.first { stored.hasPrefix("\($0):") }
         return kind.map { String(stored.dropFirst($0.count + 1)) } ?? stored
     }
 
@@ -344,83 +293,6 @@ enum DraftWords {
         let names = unseen.map { author($0.actor, botName: botName) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
         let count = unseen.count == 1 ? "1 change" : "\(unseen.count) changes"
         return "\(count) by \(ListFormatter.localizedString(byJoining: names)) since you looked"
-    }
-}
-
-/// Undoing one revision of a draft (the review's per-change Undo). The daemon
-/// has no undo request yet (left for K5), so the phone sends the edit that
-/// puts the field back: `item_update` with the old value, `item_detach` for an
-/// attachment, `item_unlink` for a link.
-enum DraftUndo: Equatable {
-    case update(Hermes_Board_V1_ItemUpdate)
-    case detach(attachmentId: String)
-    case unlink(Hermes_Board_V1_ItemRemoveLink)
-
-    static let linkKinds: [String: Hermes_Board_V1_LinkKind] = [
-        "task": .task, "decision": .decision, "artifact": .artifact, "branch": .branch, "pr": .pr,
-        "meeting": .meeting, "item:blocks": .itemBlocks, "item:relates": .itemRelates,
-        "item:duplicates": .itemDuplicates, "thread": .thread,
-    ]
-    private static let types: [String: Hermes_Board_V1_ItemType] = [
-        "epic": .epic, "feature": .feature, "bug": .bug, "spike": .spike, "chore": .chore,
-    ]
-    private static let sizes: [String: Hermes_Board_V1_Size] = ["S": .s, "M": .m, "L": .l]
-    private static let priorities: [String: Hermes_Board_V1_Priority] = ["P0": .p0, "P1": .p1, "P2": .p2, "P3": .p3]
-
-    /// The edit that undoes `revision` on the item as `detail` holds it, or
-    /// nil when it can't: the field changed again since (undo the later
-    /// change first), or the old value is one an edit can't set back.
-    static func of(_ revision: DraftRevision, among revisions: [DraftRevision], detail: BoardItemDetail) -> DraftUndo? {
-        let item = detail.item
-        let from = revision.hasFrom ? revision.from : ""
-        let to = revision.hasTo ? revision.to : ""
-        switch revision.field {
-        case "attachment":
-            // An attachment added: detach it, if it is still there.
-            guard from.isEmpty, !to.isEmpty else { return nil }
-            let match = detail.attachments.last { $0.name == to && !$0.removed }
-            return match.map { .detach(attachmentId: $0.id) }
-        case "link":
-            guard from.isEmpty, !to.isEmpty,
-                  let kind = linkKinds.keys.sorted(by: { $0.count > $1.count }).first(where: { to.hasPrefix("\($0):") }),
-                  let linkKind = linkKinds[kind], linkKind != .thread else { return nil }
-            var unlink = Hermes_Board_V1_ItemRemoveLink()
-            unlink.id = item.id
-            unlink.kind = linkKind
-            unlink.ref = String(to.dropFirst(kind.count + 1))
-            guard detail.links.contains(where: { $0.kind == unlink.kind && $0.ref == unlink.ref }) else { return nil }
-            return .unlink(unlink)
-        default:
-            break
-        }
-        // Only the field's latest change puts the item back where it was.
-        guard revisions.last(where: { $0.field == revision.field })?.id == revision.id else { return nil }
-        var update = Hermes_Board_V1_ItemUpdate()
-        update.id = item.id
-        update.expectedVersion = item.version
-        switch revision.field {
-        case "title":
-            guard !from.isEmpty else { return nil }
-            update.title = from
-        case "description": update.description_p = from
-        case "acceptance_criteria":
-            update.acceptanceCriteria.values = from.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-        case "labels":
-            update.labels.values = from.components(separatedBy: ", ").filter { !$0.isEmpty }
-        case "type":
-            guard let type = types[from] else { return nil }
-            update.type = type
-        case "size":
-            // An edit can set a size but not clear one.
-            guard let size = sizes[from] else { return nil }
-            update.size = size
-        case "priority":
-            guard let priority = priorities[from] else { return nil }
-            update.priority = priority
-        default:
-            return nil
-        }
-        return .update(update)
     }
 }
 

@@ -1,9 +1,11 @@
 import SwiftUI
 
-// The project's Board (UX-024, K7): the board picker, the column chips and a
-// paged list per column, live from `board_watch` pushes. A card moves from
-// its menu (long press) or its own screen ("Move to…"); + starts a draft. A 0.18 home has one
-// board and no drafts: no picker, no tray and no +.
+// The project's Board (UX-024, K7): the board picker, the column chips, a
+// row of label chips per label group (K8, as the desktop's filter bar), and
+// a paged list per column, live from `board_watch` pushes. A card moves from
+// its menu (long press) or its own screen ("Move to…"); + starts a draft. A
+// 0.18 home has one board and no drafts: no picker, no tray and no +; its
+// platforms read as the `platform` group.
 
 struct BoardPane: View {
     @Environment(Fleet.self) private var fleet
@@ -85,6 +87,7 @@ private struct BoardContent: View {
     @ViewBuilder private func loaded(_ state: BoardState) -> some View {
         VStack(spacing: 0) {
             BoardBar(model: model, state: state)
+            LabelFilterBar(model: model, groups: state.labelGroups())
             if let notice = saveNotice ?? model.notice {
                 Text(notice)
                     .font(.footnote)
@@ -100,9 +103,10 @@ private struct BoardContent: View {
                                        description: Text("Add columns to \(state.board?.name ?? "it") on your computer."))
             } else {
                 TabView(selection: $model.tab) {
+                    let groups = state.labelGroups()
                     ForEach(state.columns, id: \.key) { column in
-                        ColumnList(cards: state.cards(in: column.key), computerId: computer.id, bots: store.bots,
-                                   canMove: store.canControl) { moving = $0 }
+                        ColumnList(cards: state.cards(in: column.key, matching: model.filter), computerId: computer.id, bots: store.bots,
+                                   groups: groups, filtering: model.filter.isOn, canMove: store.canControl) { moving = $0 }
                             .tag(column.key)
                     }
                     if state.hasBoards {
@@ -135,7 +139,7 @@ private struct BoardContent: View {
         }
         .sheet(isPresented: $adding) {
             QuickAddSheet(model: QuickAddModel(projectId: model.projectId, boardId: state.selected, service: store),
-                          boards: state.boards) { saved in
+                          boards: state.boards, groups: { state.labelGroups(for: $0) }) { saved in
                 saveNotice = saved.missing.isEmpty ? nil
                     : "\(saved.itemId) was saved without: " + saved.missing.joined(separator: "; ")
                 model.tab = BoardModel.draftsTab
@@ -178,7 +182,8 @@ private struct BoardBar: View {
                     .accessibilityIdentifier("board-picker")
                 }
                 ForEach(state.columns, id: \.key) { column in
-                    chip(column.chip(count: state.cards(in: column.key).count), tab: column.key)
+                    let shown = state.cards(in: column.key, matching: model.filter).count
+                    chip(column.chip(shown: shown, of: state.cards(in: column.key).count, filtering: model.filter.isOn), tab: column.key)
                 }
                 if state.hasBoards {
                     chip("✎ Drafts \(state.drafts.count)", tab: BoardModel.draftsTab)
@@ -204,20 +209,26 @@ private struct BoardBar: View {
     }
 }
 
-/// One column's cards, in board order. With `control`, a card's menu moves it.
+/// One column's cards, in board order, with the labels of the board's
+/// groups. With `control`, a card's menu moves it.
 struct ColumnList: View {
     let cards: [BoardCard]
     let computerId: String
     let bots: [Bot]
+    var groups: [LabelGroupView] = []
+    /// A label filter hides some of the column's cards.
+    var filtering = false
     var canMove = false
     var move: (BoardCard) -> Void = { _ in }
 
     var body: some View {
         List {
-            if cards.isEmpty { EmptyNote(text: "No cards here", systemImage: "tray") }
+            if cards.isEmpty {
+                EmptyNote(text: filtering ? "No cards with these labels" : "No cards here", systemImage: "tray")
+            }
             ForEach(cards, id: \.id) { card in
                 NavigationLink(value: NeedsDestination.item(computerId: computerId, itemId: card.id)) {
-                    ItemRow(title: card.title, subtitle: subtitle(card), titleLines: 2) {
+                    ItemRow(title: card.title, subtitle: subtitle(card), detail: labels(card), titleLines: 2) {
                         IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
                     }
                 }
@@ -235,6 +246,12 @@ struct ColumnList: View {
         .listStyle(.insetGrouped)
     }
 
+    /// "ios · desktop": the values of its labels in the board's groups.
+    private func labels(_ card: BoardCard) -> String? {
+        let shown = BoardState.cardLabels(card, groups: groups).map(Labels.word)
+        return shown.isEmpty ? nil : shown.joined(separator: " · ")
+    }
+
     private func subtitle(_ card: BoardCard) -> String {
         var parts = [card.id]
         if card.hasAssignee, let name = bots.first(where: { $0.id == card.assignee })?.name { parts.append(name) }
@@ -242,6 +259,60 @@ struct ColumnList: View {
         if card.blocked { parts.append("Blocked") }
         if card.stale { parts.append("Stale") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The board's label groups as filter chips, one row per group, as the
+/// desktop's filter bar: any picked label within a group, every group.
+private struct LabelFilterBar: View {
+    @Bindable var model: BoardModel
+    let groups: [LabelGroupView]
+
+    var body: some View {
+        if !groups.allSatisfy(\.values.isEmpty) {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(groups.filter { !$0.values.isEmpty }) { group in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            Text(group.name)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.secondaryText)
+                                .accessibilityHidden(true)
+                            ForEach(group.values, id: \.self) { value in
+                                chip(group.label(value), value: value, group: group.name)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Label group \(group.name)")
+                }
+                if model.filter.isOn {
+                    Button("Show all cards") { model.filter.clear() }
+                        .font(.caption.weight(.semibold))
+                        .frame(minHeight: 32)
+                        .padding(.horizontal, 16)
+                        .accessibilityIdentifier("board-labels-clear")
+                }
+            }
+            .padding(.bottom, 6)
+        }
+    }
+
+    private func chip(_ label: String, value: String, group: String) -> some View {
+        let on = model.filter.has(label)
+        return Button { model.filter.toggle(label) } label: {
+            Text(on ? "✓ \(value)" : value)
+                .font(.caption.weight(on ? .semibold : .regular))
+                .padding(.horizontal, 10)
+                .frame(minHeight: 32)
+                .background(on ? Color.accentColor.opacity(0.15) : Color(.tertiarySystemFill), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(group): \(value)")
+        .accessibilityHint(on ? "Stops filtering by it" : "Shows only cards labelled \(label)")
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier("board-label-\(label)")
     }
 }
 

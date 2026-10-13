@@ -2,14 +2,16 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// New item (+, K7): a draft with a title, type, board, description, files
-/// and links. Photos come from the library (screenshots included) or the
+/// New item (+, K7): a draft with a title, type, board, labels from the
+/// board's groups (K8), description, files and links. Photos come from the library (screenshots included) or the
 /// camera, files from Files. HEIC photos are sent as JPEG: the home takes
 /// PNG, JPEG, WebP, GIF, PDF, Markdown, text and log files.
 struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State var model: QuickAddModel
     let boards: [KanbanBoard]
+    /// A board's label groups, to pick labels from.
+    let groups: (String) -> [LabelGroupView]
     let saved: (QuickAddModel.Saved) -> Void
     @State private var photos: [PhotosPickerItem] = []
     @State private var takingPhoto = false
@@ -43,6 +45,7 @@ struct QuickAddSheet: View {
                 } footer: {
                     Text("Saved as a draft: it reaches the board when you finalize it.").foregroundStyle(Color.secondaryText)
                 }
+                labels
                 Section {
                     TextField("Description", text: $model.description, prompt: .placeholder("Left empty, the type’s template fills it"),
                               axis: .vertical)
@@ -86,6 +89,7 @@ struct QuickAddSheet: View {
                 }
                 #endif
             }
+            .onChange(of: model.boardId) { _, board in model.keepLabels(offered: groups(board)) }
             .onChange(of: photos) { _, items in
                 guard !items.isEmpty else { return }
                 photos = []
@@ -102,6 +106,45 @@ struct QuickAddSheet: View {
             }
         }
         .interactiveDismissDisabled(model.progress != nil)
+    }
+
+    /// A row of chips per label group of the chosen board; none, no section.
+    @ViewBuilder private var labels: some View {
+        let groups = groups(model.boardId).filter { !$0.values.isEmpty }
+        if !groups.isEmpty {
+            Section {
+                ForEach(groups) { group in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(group.name).font(.caption.weight(.semibold)).foregroundStyle(Color.secondaryText)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(group.values, id: \.self) { value in labelChip(group, value) }
+                            }
+                        }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Label group \(group.name)")
+                }
+            } header: {
+                SectionTitle("Labels", count: model.labels.isEmpty ? nil : model.labels.count)
+            }
+        }
+    }
+
+    private func labelChip(_ group: LabelGroupView, _ value: String) -> some View {
+        let label = group.label(value)
+        let on = model.labels.contains(label)
+        return Button { model.toggle(label: label) } label: {
+            Text(on ? "✓ \(value)" : value)
+                .font(.subheadline.weight(on ? .semibold : .regular))
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+                .background(on ? Color.accentColor.opacity(0.15) : Color(.tertiarySystemFill), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(group.name): \(value)")
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier("quick-add-label-\(label)")
     }
 
     @ViewBuilder private var attachments: some View {

@@ -70,8 +70,10 @@ struct ItemView: View {
                     if live, let place = facts.placeLine { Text(place).font(.subheadline) }
                     if !live, item.hasAssignee { Text("Assignee: \(store.bot(item.assignee)?.name ?? "a bot")").font(.subheadline) }
                     if let flags = facts.flagsLine { Text(flags).font(.subheadline).foregroundStyle(Color.warningText) }
-                    if !item.labels.isEmpty {
-                        Text("Labels: \(item.labels.joined(separator: ", "))").font(.subheadline).foregroundStyle(Color.secondaryText)
+                    // Every label in full (`platform:ios`); a 0.18 home's platforms as `platform:` labels.
+                    if !item.allLabels.isEmpty {
+                        Text("Labels: \(item.allLabels.joined(separator: ", "))").font(.subheadline).foregroundStyle(Color.secondaryText)
+                            .accessibilityIdentifier("item-labels")
                     }
                     if !item.description_p.isEmpty {
                         LinkedText(markdown: AttachmentText.inline(item.description_p, attachments: detail.attachments))

@@ -22,13 +22,12 @@ protocol DraftService: AnyObject {
     func createItem(_ create: Hermes_Board_V1_ItemCreate) async throws -> Hermes_Board_V1_EditResult
     func upload(_ chunk: Hermes_Board_V1_AttachmentUpload) async throws -> UInt64
     func attach(_ attach: Hermes_Board_V1_ItemAttach) async throws -> BoardItemDetail
-    func detach(itemId: String, attachmentId: String) async throws -> BoardItemDetail
     func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges
     func invite(itemId: String, botId: String?) async throws -> BoardItemDetail
     func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult
     func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult
-    func updateItem(_ update: Hermes_Board_V1_ItemUpdate) async throws -> Hermes_Board_V1_EditResult
-    func unlink(_ unlink: Hermes_Board_V1_ItemRemoveLink) async throws -> Hermes_Board_V1_EditResult
+    /// Takes back one revision (`item_draft_undo`, K5): the owner's alone.
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult
 }
 
 extension AppStore: BoardService, DraftService {
@@ -115,14 +114,6 @@ extension AppStore: BoardService, DraftService {
         return detail
     }
 
-    func detach(itemId: String, attachmentId: String) async throws -> BoardItemDetail {
-        var detach = Hermes_Board_V1_ItemDetach()
-        detach.id = itemId
-        detach.attachmentID = attachmentId
-        guard case .item(let detail) = try await boardCall(.itemDetach(detach), name: "item_detach") else { throw unexpected("item_detach") }
-        return detail
-    }
-
     func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges {
         var changes = Hermes_Board_V1_ItemDraftChanges()
         changes.id = itemId
@@ -159,13 +150,12 @@ extension AppStore: BoardService, DraftService {
         return result
     }
 
-    func updateItem(_ update: Hermes_Board_V1_ItemUpdate) async throws -> Hermes_Board_V1_EditResult {
-        guard case .edited(let result) = try await boardCall(.itemUpdate(update), name: "item_update") else { throw unexpected("item_update") }
-        return result
-    }
-
-    func unlink(_ unlink: Hermes_Board_V1_ItemRemoveLink) async throws -> Hermes_Board_V1_EditResult {
-        guard case .edited(let result) = try await boardCall(.itemUnlink(unlink), name: "item_unlink") else { throw unexpected("item_unlink") }
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult {
+        var undo = Hermes_Board_V1_ItemDraftUndo()
+        undo.id = itemId
+        undo.expectedVersion = version
+        undo.revision = revision
+        guard case .edited(let result) = try await boardCall(.itemDraftUndo(undo), name: "item_draft_undo") else { throw unexpected("item_draft_undo") }
         return result
     }
 

@@ -142,6 +142,35 @@ final class KanbanDecodingTests: XCTestCase {
         XCTAssertEqual(result.boardID, "b1")
     }
 
+    private func decision(_ id: String, title: String, body: String) -> Decision {
+        Decision(["id": id, "project_id": "p1", "kind": "question", "title": title, "body": body, "state": "open"])
+    }
+
+    func testTheBoardFixtureCarriesTheLeadsProposalForItsDecision() throws {
+        guard case .board(let snapshot) = try response("response.board") else { return XCTFail("not a board") }
+        let asked = decision("dec-9", title: "Board change proposed for Main: add column “QA” with rules assignee_set",
+                             body: "Lead proposes it. Proposal bp-1.")
+        XCTAssertTrue(ProposalCard.mayBe(asked))
+        let found = try XCTUnwrap(ProposalCard.find(decision: asked, in: snapshot))
+        XCTAssertEqual(found.id, "bp-1")
+        XCTAssertEqual(found.summary, "add column “QA” with rules assignee_set")
+        guard case .columnAdd(let add)? = found.change else { return XCTFail("not a column added") }
+        XCTAssertEqual(add.after, "doing")
+        XCTAssertEqual(found.columns.map(\.key), ["review", "done"], "the board's columns now")
+        XCTAssertEqual(found.diff.before.map(\.chip), ["Review", "Done"])
+        XCTAssertEqual(found.diff.after.map(\.chip), ["Review", "Done", "+ QA"], "after a column this board doesn't show: at the end")
+        XCTAssertEqual(found.diff.notes, ["+ adds: Has an assignee"], "its rules, in words")
+
+        // Another decision, or a home before K5 (no proposals): the decision's words.
+        let other = decision("dec-1", title: "Board change proposed for Main: remove column review", body: "Proposal bp-7.")
+        XCTAssertEqual(ProposalCard.find(decision: other, in: snapshot)?.id, "bp-7")
+        XCTAssertEqual(ProposalCard.find(decision: other, in: snapshot)?.diff.after.map(\.chip), ["− Review", "Done"])
+        XCTAssertNil(ProposalCard.find(decision: decision("dec-2", title: "Ship it?", body: "Yes or no."), in: snapshot))
+        XCTAssertFalse(ProposalCard.mayBe(decision("dec-2", title: "Ship it?", body: "Yes or no.")), "its board isn't read")
+        XCTAssertTrue(ProposalCard.mayBe(decision("dec-3", title: "Reworded", body: "… Proposal bp-3.")),
+                      "a question ending with a proposal's id is looked up")
+    }
+
     func testTheMovedFixturesBecomeOutcomes() throws {
         guard case .moved(let done) = try response("response.moved.done"),
               case .moved(let refused) = try response("response.moved.refused"),
@@ -153,7 +182,7 @@ final class KanbanDecodingTests: XCTestCase {
     }
 }
 
-/// The board's state and pushes, moves, proposals, draft words and undo, attachments.
+/// The board's state and pushes, moves, proposals, draft words, attachments.
 @MainActor
 final class KanbanLogicTests: XCTestCase {
     static func snapshot019() throws -> BoardSnapshot {
@@ -277,27 +306,127 @@ final class KanbanLogicTests: XCTestCase {
         XCTAssertFalse(options[1].visible)
     }
 
-    func testAProposalIsReadFromItsDecision() {
-        let proposal = BoardProposal(title: "Board change proposed for Main: add column “QA” with rules assignee_set",
-                                     body: "Lead proposes to add column “QA” with rules assignee_set on board Main.\n\n"
-                                         + "Approve or decline it in Needs you; nothing changes until you do. Proposal 1b2c-33d4-e5.")
+    private func column(_ key: String, _ name: String, ord: UInt32, board: String = "b-main", visible: Bool = true) -> BoardColumnRow {
+        var c = BoardColumnRow()
+        c.key = key
+        c.name = name
+        c.ord = ord
+        c.boardID = board
+        c.visible = visible
+        return c
+    }
+
+    func testAProposalIsReadFromItsDecisionsWordsWhenTheHomeSendsNone() {
+        let proposal = ProposalCard(title: "Board change proposed for Main: add column “QA” with rules assignee_set",
+                                    body: "Lead proposes to add column “QA” with rules assignee_set on board Main.\n\n"
+                                        + "Approve or decline it in Needs you; nothing changes until you do. Proposal 1b2c-33d4-e5.")
         XCTAssertEqual(proposal?.id, "1b2c-33d4-e5")
         XCTAssertEqual(proposal?.boardName, "Main")
         XCTAssertEqual(proposal?.summary, "add column “QA” with rules assignee_set")
-        XCTAssertEqual(proposal?.columnChange, .add("QA"))
-        var todo = BoardColumnRow()
-        todo.key = "todo"
-        todo.name = "To do"
-        var review = todo
-        review.key = "review"
-        review.name = "Review"
-        let strips = proposal?.strips(before: [todo, review])
-        XCTAssertEqual(strips?.after, ["To do", "Review", "+ QA"])
-        let removal = BoardProposal(title: "Board change proposed for Main: remove column review", body: "… Proposal bp1.")
-        XCTAssertEqual(removal?.strips(before: [todo, review])?.after, ["To do", "− Review"])
-        XCTAssertNil(BoardProposal(title: "Which accent colour?", body: "Proposal bp1."), "not a board change")
-        XCTAssertNil(BoardProposal(title: "Board change proposed for Main: rename", body: "No id here."))
-        XCTAssertNil(BoardProposal(title: "Board change proposed for Main: rename the board to “X”", body: "Proposal bp1.")?.columnChange)
+        let todo = column("todo", "To do", ord: 0)
+        let review = column("review", "Review", ord: 1)
+        var added = proposal
+        added?.columns = [todo, review]
+        XCTAssertEqual(added?.diff.after.map(\.chip), ["To do", "Review", "+ QA"], "the words don't say where: at the end")
+        XCTAssertEqual(added?.diff.notes, [], "nor its rules")
+        var removal = ProposalCard(title: "Board change proposed for Main: remove column review", body: "… Proposal bp1.")
+        removal?.columns = [todo, review]
+        XCTAssertEqual(removal?.diff.after.map(\.chip), ["To do", "− Review"])
+        XCTAssertNil(ProposalCard(title: "Which accent colour?", body: "Proposal bp1."), "not a board change")
+        XCTAssertNil(ProposalCard(title: "Board change proposed for Main: rename", body: "No id here."))
+        var rename = ProposalCard(title: "Board change proposed for Main: rename the board to “X”", body: "Proposal bp1.")
+        rename?.columns = [todo]
+        XCTAssertEqual(rename?.diff.showsColumns, false, "no strip for a change the words can't draw")
+    }
+
+    private func decision(_ id: String, title: String, body: String, kind: String = "question") -> Decision {
+        Decision(["id": id, "project_id": "p1", "kind": kind, "title": title, "body": body, "state": "open"])
+    }
+
+    func testEachKindOfProposedChangeReadsAsTheDesktopDrawsIt() {
+        let columns = [column("todo", "To do", ord: 0), column("doing", "Doing", ord: 1), column("done", "Done", ord: 2),
+                       column("cancelled", "Cancelled", ord: 3, visible: false)]
+        var add = Hermes_Board_V1_ColumnAdd()
+        add.name = "QA"
+        add.after = "doing"
+        add.rules = ["size_at_most:M", "fields_filled:Problem;Scope"]
+        add.movers = ["lead", "roles:dev,tester"]
+        add.wipLimit = 2
+        let added = ProposalDiff(.columnAdd(add), columns: columns)
+        XCTAssertEqual(added.before.map(\.chip), ["To do", "Doing", "Done"], "a hidden column isn't drawn")
+        XCTAssertEqual(added.after.map(\.chip), ["To do", "Doing", "+ QA", "Done"])
+        XCTAssertEqual(added.notes, ["+ adds: Size at most M", "+ adds: Template sections filled: Problem, Scope",
+                                     "Moved in by: The lead, Roles dev, tester", "WIP limit 2"])
+
+        var update = Hermes_Board_V1_ColumnUpdate()
+        update.key = "doing"
+        update.name = "In progress"
+        update.after = ""
+        update.setPolicy = true
+        update.rules = ["assignee_set"]
+        var doing = columns[1]
+        doing.rules = ["not_blocked"]
+        let updated = ProposalDiff(.columnUpdate(update), columns: [columns[0], doing, columns[2]])
+        XCTAssertEqual(updated.after.map(\.chip), ["~ In progress", "To do", "Done"], "renamed and moved first")
+        XCTAssertEqual(updated.notes, ["+ adds: Has an assignee", "− drops: Not flagged blocked"])
+
+        var hide = Hermes_Board_V1_ColumnUpdate()
+        hide.key = "done"
+        hide.visible = false
+        XCTAssertEqual(ProposalDiff(.columnUpdate(hide), columns: columns).after.map(\.chip), ["To do", "Doing"])
+
+        var remove = Hermes_Board_V1_ColumnRemove()
+        remove.key = "doing"
+        remove.moveItemsTo = "todo"
+        let removed = ProposalDiff(.columnRemove(remove), columns: columns)
+        XCTAssertEqual(removed.after.map(\.chip), ["To do", "− Doing", "Done"])
+        XCTAssertEqual(removed.notes, ["Its items move to To do"])
+
+        var automation = Hermes_Board_V1_AutomationSet()
+        automation.fact = "pr.merged"
+        automation.columnKey = "done"
+        let automated = ProposalDiff(.automationSet(automation), columns: columns)
+        XCTAssertFalse(automated.showsColumns)
+        XCTAssertEqual(automated.notes, ["When PR merged → move to Done"])
+
+        var create = Hermes_Board_V1_BoardCreate()
+        create.name = "Research"
+        create.preset = "simple"
+        let created = ProposalDiff(.boardCreate(create), columns: [])
+        XCTAssertEqual(created.before, [])
+        XCTAssertEqual(created.after.map(\.chip), ["+ To do", "+ Doing", "+ Done"])
+        XCTAssertEqual(created.notes, ["A new board, Research, from the Simple preset"])
+
+        var groups = Hermes_Board_V1_BoardUpdate()
+        var platform = LabelGroup()
+        platform.name = "platform"
+        platform.values = ["ios", "android"]
+        groups.labelGroups.values = [platform]
+        XCTAssertEqual(ProposalDiff(.boardUpdate(groups), columns: columns).notes, ["Label groups: platform: ios, android"])
+    }
+
+    func testAProposalForANewBoardIsNamedAfterIt() throws {
+        var snapshot = try Self.snapshot019()
+        var proposal = LeadProposal()
+        proposal.id = "bp-2"
+        proposal.decisionID = "dec-2"
+        proposal.state = "open"
+        proposal.summary = "create board “Research 2” (simple)"
+        var create = Hermes_Board_V1_BoardCreate()
+        create.name = "Research 2"
+        create.preset = "simple"
+        proposal.change = .boardCreate(create)
+        var applied = proposal
+        applied.id = "bp-1"
+        applied.decisionID = "dec-1"
+        applied.state = "applied"
+        snapshot.proposals = [applied, proposal]
+        let found = ProposalCard.find(decision: decision("dec-2", title: "Board change proposed for Main: create board “Research 2” (simple)",
+                                                         body: "Proposal bp-2."), in: snapshot)
+        XCTAssertEqual(found?.boardName, "Research 2")
+        XCTAssertEqual(found?.columns, [])
+        XCTAssertNil(ProposalCard.find(decision: decision("dec-1", title: "Reworded", body: "Proposal bp-1."), in: snapshot),
+                     "an applied proposal isn't one to rule on, and the words don't parse")
     }
 
     // MARK: Drafts
@@ -313,22 +442,6 @@ final class KanbanLogicTests: XCTestCase {
         return r
     }
 
-    private func draftDetail() -> BoardItemDetail {
-        var detail = BoardItemDetail()
-        detail.item.id = "RB-9"
-        detail.item.version = 6
-        detail.item.state = "draft"
-        var shot = ItemAttachment()
-        shot.id = "a1"
-        shot.name = "shot.png"
-        detail.attachments = [shot]
-        var link = Hermes_Board_V1_ItemLink()
-        link.kind = .artifact
-        link.ref = "specs/RB-9.md"
-        detail.links = [link]
-        return detail
-    }
-
     func testDraftChangesInWords() {
         XCTAssertEqual(DraftWords.change(revision(1, "title", from: "Import", to: "Import recipes")), "Title: “Import” → “Import recipes”")
         XCTAssertEqual(DraftWords.change(revision(2, "attachment", from: nil, to: "shot.png")), "Attached shot.png")
@@ -337,45 +450,15 @@ final class KanbanLogicTests: XCTestCase {
         XCTAssertEqual(DraftWords.change(revision(5, "size", from: "", to: "M")), "Size: M")
         XCTAssertEqual(DraftWords.change(revision(6, "priority", from: "P2", to: "P1")), "Priority: P2 → P1")
         XCTAssertEqual(DraftWords.change(revision(7, "description", from: "", to: "x")), "Wrote the description")
+        XCTAssertEqual(DraftWords.change(revision(8, "labels", from: "", to: "platform:ios, area:import")), "Labels: platform:ios, area:import")
+        XCTAssertEqual(DraftWords.change(revision(9, "parent", from: "", to: "RB-1")), "Under RB-1")
+        XCTAssertEqual(DraftWords.change(revision(10, "link", from: "item:duplicates:RB-3", to: nil)), "Unlinked RB-3")
         let revisions = [revision(1, "title", from: "a", to: "b", by: "device:d1"), revision(2, "title", from: "b", to: "c"),
                          revision(3, "size", from: "", to: "M", by: "bot:b-dev")]
         let names = ["b-lead": "Lead", "b-dev": "Dev"]
         XCTAssertEqual(DraftWords.unseenLine(revisions, seen: 1) { names[$0] }, "2 changes by Lead and Dev since you looked")
         XCTAssertNil(DraftWords.unseenLine(revisions, seen: 3) { names[$0] })
         XCTAssertEqual(DraftWords.author("device:d1") { _ in nil }, "You")
-    }
-
-    func testUndoPutsTheFieldBackOnlyFromItsLatestChange() {
-        let detail = draftDetail()
-        let first = revision(1, "title", from: "Import", to: "Import recipes")
-        let second = revision(2, "title", from: "Import recipes", to: "Import recipes from sites")
-        let all = [first, second]
-        XCTAssertNil(DraftUndo.of(first, among: all, detail: detail), "a later change to the title comes first")
-        guard case .update(let update)? = DraftUndo.of(second, among: all, detail: detail) else { return XCTFail("no undo") }
-        XCTAssertEqual(update.id, "RB-9")
-        XCTAssertEqual(update.expectedVersion, 6)
-        XCTAssertEqual(update.title, "Import recipes")
-        XCTAssertFalse(update.hasDescription_p, "only the field undone")
-
-        let ac = revision(3, "acceptance_criteria", from: "Cups\nGrams", to: "Cups\nGrams\nSpoons")
-        guard case .update(let acUpdate)? = DraftUndo.of(ac, among: [ac], detail: detail) else { return XCTFail("no undo") }
-        XCTAssertTrue(acUpdate.hasAcceptanceCriteria)
-        XCTAssertEqual(acUpdate.acceptanceCriteria.values, ["Cups", "Grams"])
-
-        let labels = revision(4, "labels", from: "", to: "ui")
-        guard case .update(let labelUpdate)? = DraftUndo.of(labels, among: [labels], detail: detail) else { return XCTFail("no undo") }
-        XCTAssertTrue(labelUpdate.hasLabels, "an empty list is sent, so the labels clear")
-        XCTAssertEqual(labelUpdate.labels.values, [])
-
-        XCTAssertNil(DraftUndo.of(revision(5, "size", from: "", to: "M"), among: [], detail: detail), "an edit can't clear a size")
-        XCTAssertEqual(DraftUndo.of(revision(6, "attachment", from: nil, to: "shot.png"), among: [], detail: detail),
-                       .detach(attachmentId: "a1"))
-        XCTAssertNil(DraftUndo.of(revision(7, "attachment", from: "old.png", to: nil), among: [], detail: detail), "a removal stays")
-        guard case .unlink(let unlink)? = DraftUndo.of(revision(8, "link", from: nil, to: "artifact:specs/RB-9.md"), among: [], detail: detail)
-        else { return XCTFail("no unlink") }
-        XCTAssertEqual(unlink.kind, .artifact)
-        XCTAssertEqual(unlink.ref, "specs/RB-9.md")
-        XCTAssertNil(DraftUndo.of(revision(9, "link", from: nil, to: "thread:b-lead"), among: [], detail: detail), "the discussion stays linked")
     }
 
     // MARK: Attachments

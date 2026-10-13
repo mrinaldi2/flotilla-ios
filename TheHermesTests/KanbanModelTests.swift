@@ -23,7 +23,8 @@ final class FakeKanban: BoardService, DraftService {
     var finalizeResult = Hermes_Board_V1_MoveResult()
     private(set) var finalized: [(String, String?)] = []
     var discardResult = Hermes_Board_V1_EditResult()
-    private(set) var updates: [Hermes_Board_V1_ItemUpdate] = []
+    var undoResult = Hermes_Board_V1_EditResult()
+    private(set) var undos: [(version: UInt64, revision: Int64)] = []
     /// Called during `watchBoard`, before it answers: pushes that overtake the reply.
     var duringWatch: (() -> Void)?
 
@@ -67,8 +68,6 @@ final class FakeKanban: BoardService, DraftService {
         return BoardItemDetail()
     }
 
-    func detach(itemId: String, attachmentId: String) async throws -> BoardItemDetail { BoardItemDetail() }
-
     func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges {
         changeCalls.append(markSeen)
         var answer = changes
@@ -85,14 +84,10 @@ final class FakeKanban: BoardService, DraftService {
 
     func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult { discardResult }
 
-    func updateItem(_ update: Hermes_Board_V1_ItemUpdate) async throws -> Hermes_Board_V1_EditResult {
-        updates.append(update)
-        var result = Hermes_Board_V1_EditResult()
-        result.outcome = .done(Hermes_Board_V1_Item())
-        return result
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult {
+        undos.append((version, revision))
+        return undoResult
     }
-
-    func unlink(_ unlink: Hermes_Board_V1_ItemRemoveLink) async throws -> Hermes_Board_V1_EditResult { Hermes_Board_V1_EditResult() }
 }
 
 @MainActor
@@ -269,6 +264,8 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertEqual(create?.boardID, "b-research")
         XCTAssertEqual(create?.draft, true)
         XCTAssertFalse(create?.hasDescription_p ?? true, "left out, so the template fills it")
+        XCTAssertEqual(create?.labels, [], "no labels picked")
+        XCTAssertEqual(create?.platforms, [], "never platforms")
         XCTAssertEqual(fake.uploads.map(\.offset), [0, 524_288])
         XCTAssertEqual(Set(fake.uploads.map(\.uploadID)).count, 1, "one upload id for the file's chunks")
         XCTAssertEqual(fake.uploads.first?.total, 600_000)
@@ -293,6 +290,42 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertEqual(saved?.itemId, "RB-22", "the draft is kept")
         XCTAssertEqual(saved?.missing, ["app.log: too large for this item"])
         XCTAssertFalse(fake.creates.first?.hasBoardID ?? true, "no board named: the default one")
+    }
+
+    func testQuickAddSendsTheLabelsPickedFromTheBoardsGroupsAndNoPlatforms() async {
+        let fake = FakeKanban()
+        var item = Hermes_Board_V1_Item()
+        item.id = "RB-23"
+        fake.createResult.outcome = .done(item)
+        let model = QuickAddModel(projectId: "p1", boardId: "b-main", service: fake)
+        model.title = "Scaling"
+        model.toggle(label: "platform:ios")
+        model.toggle(label: "course:main")
+        model.toggle(label: "platform:desktop")
+        model.toggle(label: "platform:desktop")
+        XCTAssertEqual(model.labels, ["platform:ios", "course:main"])
+        // Another board: only what its groups offer stays.
+        model.boardId = "b-research"
+        model.keepLabels(offered: [LabelGroupView(name: "course", values: ["main", "dessert"])])
+        XCTAssertEqual(model.labels, ["course:main"])
+        _ = await model.save()
+        XCTAssertEqual(fake.creates.first?.labels, ["course:main"])
+        XCTAssertEqual(fake.creates.first?.platforms, [], "a 0.19 home reads platforms from labels")
+        XCTAssertEqual(fake.creates.first?.boardID, "b-research")
+    }
+
+    func testTheFilterFollowsTheBoardOnScreen() async throws {
+        let fake = FakeKanban()
+        var snapshot = try KanbanLogicTests.snapshot019()
+        snapshot.cards[0].labels = ["platform:ios"]
+        snapshot.cards[1].labels = ["topic:flour"]
+        fake.snapshots = [snapshot]
+        let model = BoardModel(projectId: "p1", service: fake, memory: BoardMemory(defaults: defaults))
+        await model.start()
+        model.filter.toggle("platform:ios")
+        XCTAssertEqual(model.state?.cards(in: "doing", matching: model.filter).map(\.id), ["RB-1"])
+        model.select(board: "b-research")
+        XCTAssertFalse(model.filter.isOn, "Research offers no platform group: the filter goes")
     }
 
     func testARefusedDraftSaysWhy() async {
@@ -341,17 +374,36 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertEqual(fake.changeCalls, [false, true], "nothing new: not asked again")
     }
 
-    func testUndoSendsTheOldValueAndAConflictedDiscardSaysSo() async throws {
+    func testUndoAsksTheHomeForAnyChangeAndSaysARefusal() async throws {
         let fake = FakeKanban()
-        fake.changes.revisions = [revision(1, by: "bot:b-lead")]
+        // Two changes to the title, an attachment, and the owner's own: each has its Undo.
+        fake.changes.revisions = [revision(1, by: "bot:b-lead"), revision(2, by: "bot:b-lead"), revision(3, by: "device:d1")]
         let model = DraftModel(itemId: "RB-9", service: fake)
         await model.load()
-        var detail = BoardItemDetail()
-        detail.item.id = "RB-9"
-        detail.item.version = 4
-        try await model.undo(model.revisions[0], detail: detail)
-        XCTAssertEqual(fake.updates.first?.title, "a1")
-        XCTAssertEqual(fake.updates.first?.expectedVersion, 4)
+        fake.undoResult.outcome = .done(Hermes_Board_V1_Item())
+        try await model.undo(model.revisions[0], version: 4)
+        XCTAssertEqual(fake.undos.first?.version, 4)
+        XCTAssertEqual(fake.undos.first?.revision, 1, "an earlier change too, not only a field's latest")
+        XCTAssertEqual(model.undone, [1])
+        XCTAssertEqual(fake.changeCalls, [false, false], "the changes are read again")
+
+        var refused = Hermes_Board_V1_MoveRefused()
+        refused.unmet = [unmet("draft.live", "RB-9 is not a draft any more; edit it instead.")]
+        fake.undoResult.outcome = .refused(refused)
+        do {
+            try await model.undo(model.revisions[2], version: 5)
+            XCTFail("refused")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "RB-9 is not a draft any more; edit it instead.")
+        }
+        fake.undoResult.outcome = .conflict(Hermes_Board_V1_Item())
+        do {
+            try await model.undo(model.revisions[1], version: 5)
+            XCTFail("conflict")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "RB-9 changed meanwhile. Look again, then undo.")
+        }
+        XCTAssertEqual(model.undone, [1], "only what was taken back")
 
         fake.discardResult.outcome = .conflict(Hermes_Board_V1_Item())
         let discarded = await model.discard(version: 4, reason: "dup")
