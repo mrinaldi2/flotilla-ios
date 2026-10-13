@@ -71,7 +71,11 @@ extension AppStore: BoardService, DraftService {
         guard status == .connected else { return }
         var unwatch = Hermes_Board_V1_BoardUnwatch()
         unwatch.projectID = projectId
-        Task { _ = try? await boardCall(.boardUnwatch(unwatch), name: "board_unwatch") }
+        Task {
+            // Another screen of the project (a card pushed over the board) may watch it by now.
+            guard boardListeners[projectId] == nil else { return }
+            _ = try? await boardCall(.boardUnwatch(unwatch), name: "board_unwatch")
+        }
     }
 
     /// A binary push: a board event goes to the screens watching its project.
