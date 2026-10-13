@@ -1,0 +1,23 @@
+{
+  "boardPush": {
+    "boardEvent": {
+      "projectId": "p1",
+      "seq": "14",
+      "kind": "BOARD_EVENT_KIND_DRAFT_CHANGED",
+      "itemId": "RB-020",
+      "card": {
+        "id": "RB-020",
+        "type": "ITEM_TYPE_FEATURE",
+        "title": "Unit conversion (cups ↔ grams)",
+        "priority": "PRIORITY_P2",
+        "rank": "a0",
+        "columnKey": "todo",
+        "acChecked": 0,
+        "acTotal": 2,
+        "version": "5",
+        "boardId": "p1/main",
+        "draft": true
+      }
+    }
+  }
+}

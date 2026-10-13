@@ -1,0 +1,10 @@
+{
+  "reqId": "37",
+  "boardRequest": {
+    "itemDiscard": {
+      "id": "RB-020",
+      "expectedVersion": "4",
+      "reason": "Covered by RB-014"
+    }
+  }
+}

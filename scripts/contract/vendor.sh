@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copies the wire contract from a commit of the Hermes desktop/daemon repo
-# (ADR-001): the protos, the home fixtures, where they came from and their
-# checksums.
+# (ADR-001): the protos, the home and board fixtures, where they came from
+# and their checksums.
 #
 #   scripts/contract/vendor.sh <path to the desktop repo> <commit>
 #       vendor; then run scripts/contract/generate-swift.sh and the tests
@@ -43,9 +43,15 @@ mkdir -p contract/fixtures/home
 for path in $(git -C "$repo" ls-tree --name-only "$full" crates/bus/fixtures/home/); do
   git -C "$repo" show "$full:$path" > "contract/fixtures/home/$(basename "$path")"
 done
+# The board's golden proto-JSON, its messages and envelopes included.
+for path in $(git -C "$repo" ls-tree -r --name-only "$full" crates/bus/fixtures/board/); do
+  rel=${path#crates/bus/fixtures/}
+  mkdir -p "contract/fixtures/$(dirname "$rel")"
+  git -C "$repo" show "$full:$path" > "contract/fixtures/$rel"
+done
 {
   printf 'proto/ and fixtures/ come from the Hermes repo at\n%s\n' "$full"
-  printf '(proto/ and crates/bus/fixtures/home/).\n'
+  printf '(proto/, crates/bus/fixtures/home/ and crates/bus/fixtures/board/).\n'
   printf 'Refresh with scripts/contract/vendor.sh; never edit these files by hand.\n\nsha256:\n'
   (cd contract && find proto fixtures -type f | sort | xargs shasum -a 256)
 } > contract/SOURCE

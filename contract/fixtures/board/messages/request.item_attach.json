@@ -1,0 +1,11 @@
+{
+  "reqId": "31",
+  "boardRequest": {
+    "itemAttach": {
+      "id": "RB-020",
+      "uploadId": "u-1",
+      "caption": "The import fails on this site",
+      "name": "import-error.png"
+    }
+  }
+}

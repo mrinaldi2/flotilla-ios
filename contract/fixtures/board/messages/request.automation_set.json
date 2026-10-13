@@ -1,0 +1,11 @@
+{
+  "reqId": "29",
+  "boardRequest": {
+    "automationSet": {
+      "boardId": "b1",
+      "version": "6",
+      "fact": "pr.merged",
+      "columnKey": "rs-done"
+    }
+  }
+}

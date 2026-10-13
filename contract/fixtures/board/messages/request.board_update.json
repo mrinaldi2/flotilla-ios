@@ -1,0 +1,11 @@
+{
+  "reqId": "25",
+  "boardRequest": {
+    "boardUpdate": {
+      "boardId": "b1",
+      "version": "2",
+      "name": "Lab",
+      "structurePolicy": "lead_free"
+    }
+  }
+}

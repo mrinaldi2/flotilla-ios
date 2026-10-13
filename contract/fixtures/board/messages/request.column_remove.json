@@ -1,0 +1,11 @@
+{
+  "reqId": "28",
+  "boardRequest": {
+    "columnRemove": {
+      "boardId": "b1",
+      "version": "5",
+      "key": "qa",
+      "moveItemsTo": "rs-doing"
+    }
+  }
+}

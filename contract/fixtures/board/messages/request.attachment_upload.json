@@ -1,0 +1,13 @@
+{
+  "reqId": "33",
+  "boardRequest": {
+    "attachmentUpload": {
+      "itemId": "RB-020",
+      "uploadId": "u-1",
+      "offset": "0",
+      "data": "iVBORw0KGgo=",
+      "total": "48213",
+      "name": "import-error.png"
+    }
+  }
+}
