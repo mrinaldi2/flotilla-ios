@@ -12,7 +12,9 @@
     "PLATFORM_DESKTOP"
   ],
   "labels": [
-    "dashboard"
+    "dashboard",
+    "platform:daemon",
+    "platform:desktop"
   ],
   "blocked": true,
   "stale": false,

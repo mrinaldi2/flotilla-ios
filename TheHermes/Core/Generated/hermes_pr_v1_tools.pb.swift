@@ -32,7 +32,7 @@ nonisolated struct Hermes_Pr_V1_PrOpen: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// the card, e.g. "H-265"
+  /// the card, e.g. "RB-12"
   var item: String = String()
 
   var branch: String = String()

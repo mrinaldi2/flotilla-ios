@@ -11,7 +11,7 @@ import "hermes/pr/v1/pr.proto";
 // [pr_open] The card's assignee opens a PR for its branch; the card moves
 // Doing → Review. One open PR per card.
 message PrOpen {
-  string item = 1;                          // the card, e.g. "H-265"
+  string item = 1;                          // the card, e.g. "RB-12"
   string branch = 2;
   optional string title = 3;                // unset = the card's title
   optional string body = 4;                 // the change note, markdown

@@ -1,0 +1,10 @@
+{
+  "reqId": "89",
+  "boardRequest": {
+    "itemDraftUndo": {
+      "id": "RB-020",
+      "expectedVersion": "6",
+      "revision": "7"
+    }
+  }
+}

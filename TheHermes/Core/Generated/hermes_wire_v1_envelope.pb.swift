@@ -24,91 +24,97 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-nonisolated struct Hermes_Wire_V1_Envelope: Sendable {
+nonisolated struct Hermes_Wire_V1_Envelope: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// Correlates a response with its request, as `req_id` does in JSON frames.
-  var reqID: UInt64 = 0
+  var reqID: UInt64 {
+    get {_storage._reqID}
+    set {_uniqueStorage()._reqID = newValue}
+  }
 
   /// One arm per typed surface's requests, responses and pushes. Field
   /// numbers below 16 are kept for the busiest arms.
-  var body: Hermes_Wire_V1_Envelope.OneOf_Body? = nil
+  var body: OneOf_Body? {
+    get {return _storage._body}
+    set {_uniqueStorage()._body = newValue}
+  }
 
   var boardRequest: Hermes_Board_V1_BoardRequest {
     get {
-      if case .boardRequest(let v)? = body {return v}
+      if case .boardRequest(let v)? = _storage._body {return v}
       return Hermes_Board_V1_BoardRequest()
     }
-    set {body = .boardRequest(newValue)}
+    set {_uniqueStorage()._body = .boardRequest(newValue)}
   }
 
   var boardResponse: Hermes_Board_V1_BoardResponse {
     get {
-      if case .boardResponse(let v)? = body {return v}
+      if case .boardResponse(let v)? = _storage._body {return v}
       return Hermes_Board_V1_BoardResponse()
     }
-    set {body = .boardResponse(newValue)}
+    set {_uniqueStorage()._body = .boardResponse(newValue)}
   }
 
   /// Pushes carry `req_id` 0.
   var boardPush: Hermes_Board_V1_BoardPush {
     get {
-      if case .boardPush(let v)? = body {return v}
+      if case .boardPush(let v)? = _storage._body {return v}
       return Hermes_Board_V1_BoardPush()
     }
-    set {body = .boardPush(newValue)}
+    set {_uniqueStorage()._body = .boardPush(newValue)}
   }
 
   /// The projects home (H-128).
   var homeRequest: Hermes_Home_V1_HomeRequest {
     get {
-      if case .homeRequest(let v)? = body {return v}
+      if case .homeRequest(let v)? = _storage._body {return v}
       return Hermes_Home_V1_HomeRequest()
     }
-    set {body = .homeRequest(newValue)}
+    set {_uniqueStorage()._body = .homeRequest(newValue)}
   }
 
   var homeResponse: Hermes_Home_V1_HomeResponse {
     get {
-      if case .homeResponse(let v)? = body {return v}
+      if case .homeResponse(let v)? = _storage._body {return v}
       return Hermes_Home_V1_HomeResponse()
     }
-    set {body = .homeResponse(newValue)}
+    set {_uniqueStorage()._body = .homeResponse(newValue)}
   }
 
   /// Pull requests and checks (H-261).
   var prRequest: Hermes_Pr_V1_PrRequest {
     get {
-      if case .prRequest(let v)? = body {return v}
+      if case .prRequest(let v)? = _storage._body {return v}
       return Hermes_Pr_V1_PrRequest()
     }
-    set {body = .prRequest(newValue)}
+    set {_uniqueStorage()._body = .prRequest(newValue)}
   }
 
   var prResponse: Hermes_Pr_V1_PrResponse {
     get {
-      if case .prResponse(let v)? = body {return v}
+      if case .prResponse(let v)? = _storage._body {return v}
       return Hermes_Pr_V1_PrResponse()
     }
-    set {body = .prResponse(newValue)}
+    set {_uniqueStorage()._body = .prResponse(newValue)}
   }
 
   var prPush: Hermes_Pr_V1_PrPush {
     get {
-      if case .prPush(let v)? = body {return v}
+      if case .prPush(let v)? = _storage._body {return v}
       return Hermes_Pr_V1_PrPush()
     }
-    set {body = .prPush(newValue)}
+    set {_uniqueStorage()._body = .prPush(newValue)}
   }
 
   var error: Hermes_Wire_V1_Error {
     get {
-      if case .error(let v)? = body {return v}
+      if case .error(let v)? = _storage._body {return v}
       return Hermes_Wire_V1_Error()
     }
-    set {body = .error(newValue)}
+    set {_uniqueStorage()._body = .error(newValue)}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -132,6 +138,8 @@ nonisolated struct Hermes_Wire_V1_Envelope: Sendable {
   }
 
   init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 nonisolated struct Hermes_Wire_V1_Error: Sendable {
@@ -157,188 +165,226 @@ nonisolated extension Hermes_Wire_V1_Envelope: SwiftProtobuf.Message, SwiftProto
   static let protoMessageName: String = _protobuf_package + ".Envelope"
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}req_id\0\u{3}board_request\0\u{3}board_response\0\u{3}board_push\0\u{3}home_request\0\u{3}home_response\0\u{3}pr_request\0\u{3}pr_response\0\u{3}pr_push\0\u{2}\u{6}error\0")
 
+  fileprivate class _StorageClass {
+    var _reqID: UInt64 = 0
+    var _body: Hermes_Wire_V1_Envelope.OneOf_Body?
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _reqID = source._reqID
+      _body = source._body
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.reqID) }()
-      case 2: try {
-        var v: Hermes_Board_V1_BoardRequest?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .boardRequest(let m) = current {v = m}
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularUInt64Field(value: &_storage._reqID) }()
+        case 2: try {
+          var v: Hermes_Board_V1_BoardRequest?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .boardRequest(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .boardRequest(v)
+          }
+        }()
+        case 3: try {
+          var v: Hermes_Board_V1_BoardResponse?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .boardResponse(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .boardResponse(v)
+          }
+        }()
+        case 4: try {
+          var v: Hermes_Board_V1_BoardPush?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .boardPush(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .boardPush(v)
+          }
+        }()
+        case 5: try {
+          var v: Hermes_Home_V1_HomeRequest?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .homeRequest(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .homeRequest(v)
+          }
+        }()
+        case 6: try {
+          var v: Hermes_Home_V1_HomeResponse?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .homeResponse(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .homeResponse(v)
+          }
+        }()
+        case 7: try {
+          var v: Hermes_Pr_V1_PrRequest?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .prRequest(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .prRequest(v)
+          }
+        }()
+        case 8: try {
+          var v: Hermes_Pr_V1_PrResponse?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .prResponse(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .prResponse(v)
+          }
+        }()
+        case 9: try {
+          var v: Hermes_Pr_V1_PrPush?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .prPush(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .prPush(v)
+          }
+        }()
+        case 15: try {
+          var v: Hermes_Wire_V1_Error?
+          var hadOneofValue = false
+          if let current = _storage._body {
+            hadOneofValue = true
+            if case .error(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._body = .error(v)
+          }
+        }()
+        default: break
         }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .boardRequest(v)
-        }
-      }()
-      case 3: try {
-        var v: Hermes_Board_V1_BoardResponse?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .boardResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .boardResponse(v)
-        }
-      }()
-      case 4: try {
-        var v: Hermes_Board_V1_BoardPush?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .boardPush(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .boardPush(v)
-        }
-      }()
-      case 5: try {
-        var v: Hermes_Home_V1_HomeRequest?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .homeRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .homeRequest(v)
-        }
-      }()
-      case 6: try {
-        var v: Hermes_Home_V1_HomeResponse?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .homeResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .homeResponse(v)
-        }
-      }()
-      case 7: try {
-        var v: Hermes_Pr_V1_PrRequest?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .prRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .prRequest(v)
-        }
-      }()
-      case 8: try {
-        var v: Hermes_Pr_V1_PrResponse?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .prResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .prResponse(v)
-        }
-      }()
-      case 9: try {
-        var v: Hermes_Pr_V1_PrPush?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .prPush(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .prPush(v)
-        }
-      }()
-      case 15: try {
-        var v: Hermes_Wire_V1_Error?
-        var hadOneofValue = false
-        if let current = self.body {
-          hadOneofValue = true
-          if case .error(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.body = .error(v)
-        }
-      }()
-      default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.reqID != 0 {
-      try visitor.visitSingularUInt64Field(value: self.reqID, fieldNumber: 1)
-    }
-    switch self.body {
-    case .boardRequest?: try {
-      guard case .boardRequest(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .boardResponse?: try {
-      guard case .boardResponse(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .boardPush?: try {
-      guard case .boardPush(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    }()
-    case .homeRequest?: try {
-      guard case .homeRequest(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    }()
-    case .homeResponse?: try {
-      guard case .homeResponse(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    }()
-    case .prRequest?: try {
-      guard case .prRequest(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-    }()
-    case .prResponse?: try {
-      guard case .prResponse(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
-    }()
-    case .prPush?: try {
-      guard case .prPush(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-    }()
-    case .error?: try {
-      guard case .error(let v)? = self.body else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-    }()
-    case nil: break
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if _storage._reqID != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._reqID, fieldNumber: 1)
+      }
+      switch _storage._body {
+      case .boardRequest?: try {
+        guard case .boardRequest(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case .boardResponse?: try {
+        guard case .boardResponse(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }()
+      case .boardPush?: try {
+        guard case .boardPush(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      }()
+      case .homeRequest?: try {
+        guard case .homeRequest(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
+      case .homeResponse?: try {
+        guard case .homeResponse(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      }()
+      case .prRequest?: try {
+        guard case .prRequest(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+      }()
+      case .prResponse?: try {
+        guard case .prResponse(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+      }()
+      case .prPush?: try {
+        guard case .prPush(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+      }()
+      case .error?: try {
+        guard case .error(let v)? = _storage._body else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+      }()
+      case nil: break
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Hermes_Wire_V1_Envelope, rhs: Hermes_Wire_V1_Envelope) -> Bool {
-    if lhs.reqID != rhs.reqID {return false}
-    if lhs.body != rhs.body {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._reqID != rhs_storage._reqID {return false}
+        if _storage._body != rhs_storage._body {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

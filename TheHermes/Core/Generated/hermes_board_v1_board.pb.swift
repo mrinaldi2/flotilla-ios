@@ -8,7 +8,7 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
-/// The board surface, contract version 1 (H-017, H-020 §1.1, ADR-001 §1).
+/// The board surface, contract version 1 (ADR-001 §1).
 ///
 /// The single source of truth: Rust (prost), TypeScript (protobuf-es) and
 /// Swift (swift-protobuf) are generated from this file. Additive changes keep
@@ -298,7 +298,10 @@ nonisolated enum Hermes_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseIterabl
 
 }
 
-/// Where an item's change lands; decides who must verify it.
+/// Deprecated (0.19.0 K8): what 0.18 apps and linked computers read and
+/// send. An item's platforms are its labels in the `platform` group
+/// (`platform:ios`); a 0.19 home fills these fields from them and maps them
+/// back on input. Read `labels` instead.
 nonisolated enum Hermes_Board_V1_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
   typealias RawValue = Int
   case unspecified // = 0
@@ -755,6 +758,27 @@ nonisolated struct Hermes_Board_V1_Board: Sendable {
 
   var version: UInt64 = 0
 
+  /// The label groups the board declares, for filters and pickers. An item's
+  /// label `<group>:<value>` belongs to group `<group>`.
+  var labelGroups: [Hermes_Board_V1_LabelGroup] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+/// Labels that go together, such as `platform: ios, android` (0.19.0 K8).
+nonisolated struct Hermes_Board_V1_LabelGroup: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Lowercase, no spaces or colons: `platform`, `area`.
+  var name: String = String()
+
+  /// The values offered, in order: `ios` stands for the label `platform:ios`.
+  var values: [String] = []
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -768,7 +792,7 @@ nonisolated struct Hermes_Board_V1_BoardSettings: Sendable {
 
   var projectID: String = String()
 
-  /// Item id prefix: "H" gives "H-017".
+  /// Item id prefix: "RB" gives "RB-12".
   var key: String = String()
 
   /// The next item number; ids are never reused.
@@ -776,14 +800,20 @@ nonisolated struct Hermes_Board_V1_BoardSettings: Sendable {
 
   var staleAfterHours: UInt32 = 0
 
-  /// Machines that must verify each platform, keyed by the platform's wire
-  /// name ("desktop"), since map keys cannot be enums.
+  /// Deprecated (0.19.0 K8): `required_machines_by_label` for the labels of
+  /// the `platform` group a 0.18 reader knows, keyed by the bare name
+  /// ("desktop").
   var requiredMachines: Dictionary<String,Hermes_Board_V1_StringList> = [:]
 
   /// The daemon that holds the board; linked computers forward to it.
   var homeDaemonID: String = String()
 
   var version: UInt64 = 0
+
+  /// Machines that must verify an item carrying the label, keyed by the
+  /// label (`platform:desktop`). Unset from a home older than 0.19: read
+  /// `required_machines`.
+  var requiredMachinesByLabel: Dictionary<String,Hermes_Board_V1_StringList> = [:]
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1016,7 +1046,7 @@ nonisolated struct Hermes_Board_V1_Item: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// "H-017"; immutable.
+  /// "RB-12"; immutable.
   var id: String {
     get {_storage._id}
     set {_uniqueStorage()._id = newValue}
@@ -1043,6 +1073,7 @@ nonisolated struct Hermes_Board_V1_Item: @unchecked Sendable {
     set {_uniqueStorage()._description_p = newValue}
   }
 
+  /// Deprecated (0.19.0 K8): filled from `labels` for 0.18 readers.
   var platforms: [Hermes_Board_V1_Platform] {
     get {_storage._platforms}
     set {_uniqueStorage()._platforms = newValue}
@@ -1114,6 +1145,7 @@ nonisolated struct Hermes_Board_V1_Item: @unchecked Sendable {
   /// Clears the value of `releaseID`. Subsequent reads from it will return its default value.
   mutating func clearReleaseID() {_uniqueStorage()._releaseID = nil}
 
+  /// Free labels; `<group>:<value>` ones belong to a board's label group.
   var labels: [String] {
     get {_storage._labels}
     set {_uniqueStorage()._labels = newValue}
@@ -1256,11 +1288,13 @@ nonisolated struct Hermes_Board_V1_ItemCard: @unchecked Sendable {
   /// Clears the value of `assignee`. Subsequent reads from it will return its default value.
   mutating func clearAssignee() {_uniqueStorage()._assignee = nil}
 
+  /// Deprecated (0.19.0 K8): filled from `labels` for 0.18 readers.
   var platforms: [Hermes_Board_V1_Platform] {
     get {_storage._platforms}
     set {_uniqueStorage()._platforms = newValue}
   }
 
+  /// Free labels; `<group>:<value>` ones belong to a board's label group.
   var labels: [String] {
     get {_storage._labels}
     set {_uniqueStorage()._labels = newValue}
@@ -1724,7 +1758,7 @@ nonisolated extension Hermes_Board_V1_StringList: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Board"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}name\0\u{1}key\0\u{1}description\0\u{1}ord\0\u{3}is_default\0\u{3}structure_policy\0\u{1}flow\0\u{1}automations\0\u{1}archived\0\u{1}version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}name\0\u{1}key\0\u{1}description\0\u{1}ord\0\u{3}is_default\0\u{3}structure_policy\0\u{1}flow\0\u{1}automations\0\u{1}archived\0\u{1}version\0\u{3}label_groups\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1744,6 +1778,7 @@ nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobu
       case 10: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.automations) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.archived) }()
       case 12: try { try decoder.decodeSingularUInt64Field(value: &self.version) }()
+      case 13: try { try decoder.decodeRepeatedMessageField(value: &self.labelGroups) }()
       default: break
       }
     }
@@ -1786,6 +1821,9 @@ nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobu
     if self.version != 0 {
       try visitor.visitSingularUInt64Field(value: self.version, fieldNumber: 12)
     }
+    if !self.labelGroups.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.labelGroups, fieldNumber: 13)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1802,6 +1840,42 @@ nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobu
     if lhs.automations != rhs.automations {return false}
     if lhs.archived != rhs.archived {return false}
     if lhs.version != rhs.version {return false}
+    if lhs.labelGroups != rhs.labelGroups {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Board_V1_LabelGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".LabelGroup"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}values\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.values) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.values.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.values, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Board_V1_LabelGroup, rhs: Hermes_Board_V1_LabelGroup) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.values != rhs.values {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1809,7 +1883,7 @@ nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Hermes_Board_V1_BoardSettings: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardSettings"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{3}next_seq\0\u{3}stale_after_hours\0\u{3}required_machines\0\u{3}home_daemon_id\0\u{1}version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{3}next_seq\0\u{3}stale_after_hours\0\u{3}required_machines\0\u{3}home_daemon_id\0\u{1}version\0\u{3}required_machines_by_label\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1824,6 +1898,7 @@ nonisolated extension Hermes_Board_V1_BoardSettings: SwiftProtobuf.Message, Swif
       case 5: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Hermes_Board_V1_StringList>.self, value: &self.requiredMachines) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.homeDaemonID) }()
       case 7: try { try decoder.decodeSingularUInt64Field(value: &self.version) }()
+      case 8: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Hermes_Board_V1_StringList>.self, value: &self.requiredMachinesByLabel) }()
       default: break
       }
     }
@@ -1851,6 +1926,9 @@ nonisolated extension Hermes_Board_V1_BoardSettings: SwiftProtobuf.Message, Swif
     if self.version != 0 {
       try visitor.visitSingularUInt64Field(value: self.version, fieldNumber: 7)
     }
+    if !self.requiredMachinesByLabel.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Hermes_Board_V1_StringList>.self, value: self.requiredMachinesByLabel, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1862,6 +1940,7 @@ nonisolated extension Hermes_Board_V1_BoardSettings: SwiftProtobuf.Message, Swif
     if lhs.requiredMachines != rhs.requiredMachines {return false}
     if lhs.homeDaemonID != rhs.homeDaemonID {return false}
     if lhs.version != rhs.version {return false}
+    if lhs.requiredMachinesByLabel != rhs.requiredMachinesByLabel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

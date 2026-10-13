@@ -99,6 +99,27 @@
           "boardId": "p1/main",
           "draft": true
         }
+      ],
+      "proposals": [
+        {
+          "id": "bp-1",
+          "boardId": "p1/main",
+          "summary": "add column “QA” with rules assignee_set",
+          "proposedBy": "bot:b-lead",
+          "decisionId": "dec-9",
+          "state": "open",
+          "at": "2026-10-13T08:00:00Z",
+          "columnAdd": {
+            "boardId": "p1/main",
+            "version": "3",
+            "name": "QA",
+            "kind": "COLUMN_KIND_ACTIVE",
+            "after": "doing",
+            "rules": [
+              "assignee_set"
+            ]
+          }
+        }
       ]
     }
   }

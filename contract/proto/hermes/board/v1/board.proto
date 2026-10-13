@@ -1,4 +1,4 @@
-// The board surface, contract version 1 (H-017, H-020 §1.1, ADR-001 §1).
+// The board surface, contract version 1 (ADR-001 §1).
 //
 // The single source of truth: Rust (prost), TypeScript (protobuf-es) and
 // Swift (swift-protobuf) are generated from this file. Additive changes keep
@@ -67,7 +67,10 @@ enum ItemType {
   ITEM_TYPE_CHORE = 5;
 }
 
-// Where an item's change lands; decides who must verify it.
+// Deprecated (0.19.0 K8): what 0.18 apps and linked computers read and
+// send. An item's platforms are its labels in the `platform` group
+// (`platform:ios`); a 0.19 home fills these fields from them and maps them
+// back on input. Read `labels` instead.
 enum Platform {
   PLATFORM_UNSPECIFIED = 0;
   PLATFORM_DESKTOP = 1;
@@ -170,22 +173,38 @@ message Board {
   map<string, string> automations = 10;
   bool archived = 11;
   uint64 version = 12;
+  // The label groups the board declares, for filters and pickers. An item's
+  // label `<group>:<value>` belongs to group `<group>`.
+  repeated LabelGroup label_groups = 13;
+}
+
+// Labels that go together, such as `platform: ios, android` (0.19.0 K8).
+message LabelGroup {
+  // Lowercase, no spaces or colons: `platform`, `area`.
+  string name = 1;
+  // The values offered, in order: `ios` stands for the label `platform:ios`.
+  repeated string values = 2;
 }
 
 // One project's board configuration.
 message BoardSettings {
   string project_id = 1;
-  // Item id prefix: "H" gives "H-017".
+  // Item id prefix: "RB" gives "RB-12".
   string key = 2;
   // The next item number; ids are never reused.
   uint32 next_seq = 3;
   uint32 stale_after_hours = 4;
-  // Machines that must verify each platform, keyed by the platform's wire
-  // name ("desktop"), since map keys cannot be enums.
+  // Deprecated (0.19.0 K8): `required_machines_by_label` for the labels of
+  // the `platform` group a 0.18 reader knows, keyed by the bare name
+  // ("desktop").
   map<string, StringList> required_machines = 5;
   // The daemon that holds the board; linked computers forward to it.
   string home_daemon_id = 6;
   uint64 version = 7;
+  // Machines that must verify an item carrying the label, keyed by the
+  // label (`platform:desktop`). Unset from a home older than 0.19: read
+  // `required_machines`.
+  map<string, StringList> required_machines_by_label = 8;
 }
 
 message BoardColumn {
@@ -257,13 +276,14 @@ message ItemVerification {
 
 // A work item in full, as the item drawer shows it.
 message Item {
-  // "H-017"; immutable.
+  // "RB-12"; immutable.
   string id = 1;
   uint32 seq = 2;
   ItemType type = 3;
   string title = 4;
   // Markdown, filled from the type's template.
   string description = 5;
+  // Deprecated (0.19.0 K8): filled from `labels` for 0.18 readers.
   repeated Platform platforms = 6;
   optional Size size = 7;
   Priority priority = 8;
@@ -275,6 +295,7 @@ message Item {
   optional string assignee = 13;
   optional string parent_id = 14;
   optional string release_id = 15;
+  // Free labels; `<group>:<value>` ones belong to a board's label group.
   repeated string labels = 16;
   repeated AcceptanceCriterion acceptance_criteria = 17;
   repeated ItemPerson people = 18;
@@ -304,7 +325,9 @@ message ItemCard {
   string rank = 6;
   string column_key = 7;
   optional string assignee = 8;
+  // Deprecated (0.19.0 K8): filled from `labels` for 0.18 readers.
   repeated Platform platforms = 9;
+  // Free labels; `<group>:<value>` ones belong to a board's label group.
   repeated string labels = 10;
   bool blocked = 11;
   bool stale = 12;

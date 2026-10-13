@@ -75,7 +75,7 @@ nonisolated struct Hermes_Board_V1_ReleaseCreate: Sendable {
   /// Clears the value of `displayVersion`. Subsequent reads from it will return its default value.
   mutating func clearDisplayVersion() {self._displayVersion = nil}
 
-  /// Item ids, e.g. "H-017"; each must be in Verify and in no other open package.
+  /// Item ids, e.g. "RB-12"; each must be in Verify and in no other open package.
   var items: [String] = []
 
   /// Markdown, compiled from the items' change notes.
@@ -133,7 +133,7 @@ nonisolated struct Hermes_Board_V1_ReleasePlan: Sendable {
   /// Clears the value of `displayVersion`. Subsequent reads from it will return its default value.
   mutating func clearDisplayVersion() {self._displayVersion = nil}
 
-  /// Item ids, e.g. "H-137"; each open and in no other open package.
+  /// Item ids, e.g. "RB-12"; each open and in no other open package.
   var items: [String] = []
 
   var changelog: String {
@@ -145,7 +145,7 @@ nonisolated struct Hermes_Board_V1_ReleasePlan: Sendable {
   /// Clears the value of `changelog`. Subsequent reads from it will return its default value.
   mutating func clearChangelog() {self._changelog = nil}
 
-  /// The release's REL work card, e.g. "H-244": the owner Run cards,
+  /// The release's REL work card, e.g. "RB-30": the owner Run cards,
   /// decisions and questions on it show on the release (H-247).
   var workItem: String {
     get {_workItem ?? String()}

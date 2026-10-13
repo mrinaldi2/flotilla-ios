@@ -26,7 +26,7 @@ message ReleaseCreate {
   string name = 2;
   // The version the owner sees, e.g. "0.16.0".
   optional string display_version = 3;
-  // Item ids, e.g. "H-017"; each must be in Verify and in no other open package.
+  // Item ids, e.g. "RB-12"; each must be in Verify and in no other open package.
   repeated string items = 4;
   // Markdown, compiled from the items' change notes.
   optional string changelog = 5;
@@ -46,10 +46,10 @@ message ReleasePlan {
   string name = 2;
   // The version the owner sees, e.g. "0.17.0".
   optional string display_version = 3;
-  // Item ids, e.g. "H-137"; each open and in no other open package.
+  // Item ids, e.g. "RB-12"; each open and in no other open package.
   repeated string items = 4;
   optional string changelog = 5;
-  // The release's REL work card, e.g. "H-244": the owner Run cards,
+  // The release's REL work card, e.g. "RB-30": the owner Run cards,
   // decisions and questions on it show on the release (H-247).
   optional string work_item = 6;
 }

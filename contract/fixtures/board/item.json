@@ -20,7 +20,9 @@
   },
   "assignee": "b-desktop-dev",
   "labels": [
-    "dashboard"
+    "dashboard",
+    "platform:daemon",
+    "platform:desktop"
   ],
   "acceptanceCriteria": [
     {
