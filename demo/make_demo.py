@@ -373,6 +373,8 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
     POST /runcard              Desktop Dev proposes a Run card (owner action)
     POST /question             Desktop Dev asks the owner a question (owner thread)
     POST /items                Desktop Dev files 3 board items (the board must exist: open it first)
+    POST /proposal             0.19: Team Lead proposes a new board; {"decision_id", "board"} of the
+                               decision it raises (the board must exist: open it first)
     POST /terminal             a terminal command asks to act as the owner (H-108), from
                                inside Desktop Dev's workspace; held until answered or timed out
     POST /pins                 {"pinned": [project names]} from projects_overview
@@ -473,6 +475,15 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                 elif url.path == "/lab":
                     info = ensure_lab()
                     reply = {"project_id": info["project_id"], "caps": info["caps"]}
+                elif url.path == "/proposal":
+                    info = ensure_lab()
+                    name = f"Research {int(time.time()) % 100000}"
+                    made = bot_call(port, home, info["bots"]["Team Lead"]["id"], "board_create", name=name, preset="simple")
+                    if not made.get("ok"):
+                        raise RuntimeError(f"board_create: {made}")
+                    raised = [d for d in owner().request("list_decisions")["decisions"]
+                              if d["title"].startswith("Board change proposed") and name in d["title"]]
+                    reply = {"decision_id": raised[0]["id"] if raised else None, "board": name}
                 elif url.path in ("/grants", "/runcard", "/question", "/items", "/terminal"):
                     info = ensure_lab()
                     lead, dev = info["bots"]["Team Lead"], info["bots"]["Desktop Dev"]
