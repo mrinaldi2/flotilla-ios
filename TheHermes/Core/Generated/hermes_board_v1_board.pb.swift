@@ -95,6 +95,55 @@ nonisolated enum Hermes_Board_V1_ColumnCategory: SwiftProtobuf.Enum, Swift.CaseI
 
 }
 
+/// What a column means to the board itself: open (not started), active (WIP,
+/// staleness and cycle time apply), done or cancelled. Every other meaning
+/// comes from the column's rules.
+nonisolated enum Hermes_Board_V1_ColumnKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  typealias RawValue = Int
+  case unspecified // = 0
+  case `open` // = 1
+  case active // = 2
+  case done // = 3
+  case cancelled // = 4
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .open
+    case 2: self = .active
+    case 3: self = .done
+    case 4: self = .cancelled
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .open: return 1
+    case .active: return 2
+    case .done: return 3
+    case .cancelled: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Hermes_Board_V1_ColumnKind] = [
+    .unspecified,
+    .open,
+    .active,
+    .done,
+    .cancelled,
+  ]
+
+}
+
 /// What a column's WIP limit counts.
 nonisolated enum Hermes_Board_V1_WipScope: SwiftProtobuf.Enum, Swift.CaseIterable {
   typealias RawValue = Int
@@ -145,6 +194,9 @@ nonisolated enum Hermes_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable {
   case reviewerUx // = 5
   case tester // = 6
   case dev // = 7
+
+  /// Reviews security work: permissions, identity, peers, confinement (H-261 §2.1).
+  case reviewerCe // = 8
   case UNRECOGNIZED(Int)
 
   init() {
@@ -161,6 +213,7 @@ nonisolated enum Hermes_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable {
     case 5: self = .reviewerUx
     case 6: self = .tester
     case 7: self = .dev
+    case 8: self = .reviewerCe
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -175,6 +228,7 @@ nonisolated enum Hermes_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable {
     case .reviewerUx: return 5
     case .tester: return 6
     case .dev: return 7
+    case .reviewerCe: return 8
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -189,6 +243,7 @@ nonisolated enum Hermes_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable {
     .reviewerUx,
     .tester,
     .dev,
+    .reviewerCe,
   ]
 
 }
@@ -472,6 +527,10 @@ nonisolated enum Hermes_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseIterabl
   case itemBlocks // = 7
   case itemRelates // = 8
   case itemDuplicates // = 9
+
+  /// A conversation about the item (0.19.0): the chat of a bot invited to
+  /// discuss it as a draft. `ref` is the bot's id.
+  case thread // = 10
   case UNRECOGNIZED(Int)
 
   init() {
@@ -490,6 +549,7 @@ nonisolated enum Hermes_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseIterabl
     case 7: self = .itemBlocks
     case 8: self = .itemRelates
     case 9: self = .itemDuplicates
+    case 10: self = .thread
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -506,6 +566,7 @@ nonisolated enum Hermes_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseIterabl
     case .itemBlocks: return 7
     case .itemRelates: return 8
     case .itemDuplicates: return 9
+    case .thread: return 10
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -522,6 +583,7 @@ nonisolated enum Hermes_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseIterabl
     .itemBlocks,
     .itemRelates,
     .itemDuplicates,
+    .thread,
   ]
 
 }
@@ -658,6 +720,46 @@ nonisolated struct Hermes_Board_V1_StringList: Sendable {
   init() {}
 }
 
+/// One board of a project (0.19.0). A project has a default board; others
+/// are made with `board_create`.
+nonisolated struct Hermes_Board_V1_Board: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var id: String = String()
+
+  var projectID: String = String()
+
+  var name: String = String()
+
+  /// The item-id prefix of the items created on it.
+  var key: String = String()
+
+  var description_p: String = String()
+
+  var ord: UInt32 = 0
+
+  var isDefault: Bool = false
+
+  /// "owner_confirms" or "lead_free": what a lead's structure change needs.
+  var structurePolicy: String = String()
+
+  /// "custom" (the columns' movers and rules decide) or "release_gated".
+  var flow: String = String()
+
+  /// Fact name (`pr.merged`) to the column key a custom board moves to.
+  var automations: Dictionary<String,String> = [:]
+
+  var archived: Bool = false
+
+  var version: UInt64 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 /// One project's board configuration.
 nonisolated struct Hermes_Board_V1_BoardSettings: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -715,6 +817,24 @@ nonisolated struct Hermes_Board_V1_BoardColumn: Sendable {
   var wipScope: Hermes_Board_V1_WipScope = .unspecified
 
   var visible: Bool = false
+
+  /// The board it belongs to. Empty from a home older than 0.19.
+  var boardID: String = String()
+
+  /// Unset from a home older than 0.19: derive it from `category`.
+  var kind: Hermes_Board_V1_ColumnKind = .unspecified
+
+  /// A custom board's rules for entering the column, as tokens: movers
+  /// `any_member`, `assignee`, `lead`, `owner`, `system`, `roles:dev,tester`
+  /// (none: any member); rules `assignee_set`, `fields_filled:Goal;Steps`,
+  /// `ac_present`, `ac_all_checked`, `size_at_most:M`, `blockers_done`,
+  /// `not_blocked`, `link:pr`, `independent`, `reason`, `predicate:<name>`;
+  /// `allowed_from` column keys (none: any).
+  var movers: [String] = []
+
+  var rules: [String] = []
+
+  var allowedFrom: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1061,6 +1181,20 @@ nonisolated struct Hermes_Board_V1_Item: @unchecked Sendable {
     set {_uniqueStorage()._version = newValue}
   }
 
+  /// The board it is on. Empty from a home older than 0.19.
+  var boardID: String {
+    get {_storage._boardID}
+    set {_uniqueStorage()._boardID = newValue}
+  }
+
+  /// "draft" (on no column yet: seen only by the owner and the bots invited
+  /// to discuss it), "live", or "discarded" (a draft the owner dropped, kept
+  /// with its history). Empty from a home older than 0.19, which means live.
+  var state: String {
+    get {_storage._state}
+    set {_uniqueStorage()._state = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1168,6 +1302,19 @@ nonisolated struct Hermes_Board_V1_ItemCard: @unchecked Sendable {
   /// Clears the value of `ownerCommentedAt`. Subsequent reads from it will return its default value.
   mutating func clearOwnerCommentedAt() {_uniqueStorage()._ownerCommentedAt = nil}
 
+  /// The board it is on. Empty from a home older than 0.19.
+  var boardID: String {
+    get {_storage._boardID}
+    set {_uniqueStorage()._boardID = newValue}
+  }
+
+  /// A draft's card, for the owner's drafts tray. Drafts are never in a
+  /// column's cards.
+  var draft: Bool {
+    get {_storage._draft}
+    set {_uniqueStorage()._draft = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1213,6 +1360,113 @@ nonisolated struct Hermes_Board_V1_ItemLink: Sendable {
 
   fileprivate var _label: String? = nil
   fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+}
+
+/// What an item carries for the work (0.19.0): a screenshot, a file or a
+/// linked document. An image can sit in the description as
+/// `![caption](attachment:<id>)`.
+nonisolated struct Hermes_Board_V1_ItemAttachment: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var id: String = String()
+
+  var itemID: String = String()
+
+  /// "image", "file" or "doc" (a project artifact or an external URL).
+  var kind: String = String()
+
+  var name: String = String()
+
+  var mime: String = String()
+
+  var bytes: UInt64 = 0
+
+  /// Of the stored bytes; empty for a doc. Linked computers cache by it.
+  var sha256: String = String()
+
+  /// Where the board's home keeps it: an image's or a file's stored copy, or
+  /// a doc's artifact. Empty for a URL.
+  var path: String = String()
+
+  var url: String = String()
+
+  var caption: String = String()
+
+  /// The actor as stored: `user`, `bot:<id>` or `device:<id>`.
+  var addedBy: String = String()
+
+  var at: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_at = newValue}
+  }
+  /// Returns true if `at` has been explicitly set.
+  var hasAt: Bool {self._at != nil}
+  /// Clears the value of `at`. Subsequent reads from it will return its default value.
+  mutating func clearAt() {self._at = nil}
+
+  /// Detached. Kept so that a reference to it shows a placeholder.
+  var removed: Bool = false
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+}
+
+/// One change to a draft, with its author (0.19.0).
+nonisolated struct Hermes_Board_V1_DraftRevision: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var id: Int64 = 0
+
+  var itemID: String = String()
+
+  /// The actor as stored: `user`, `bot:<id>` or `device:<id>`.
+  var actor: String = String()
+
+  var at: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_at ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_at = newValue}
+  }
+  /// Returns true if `at` has been explicitly set.
+  var hasAt: Bool {self._at != nil}
+  /// Clears the value of `at`. Subsequent reads from it will return its default value.
+  mutating func clearAt() {self._at = nil}
+
+  /// What changed: "title", "description", "type", "size", "priority",
+  /// "labels", "acceptance_criteria", "attachment" or "link".
+  var field: String = String()
+
+  var from: String {
+    get {_from ?? String()}
+    set {_from = newValue}
+  }
+  /// Returns true if `from` has been explicitly set.
+  var hasFrom: Bool {self._from != nil}
+  /// Clears the value of `from`. Subsequent reads from it will return its default value.
+  mutating func clearFrom() {self._from = nil}
+
+  var to: String {
+    get {_to ?? String()}
+    set {_to = newValue}
+  }
+  /// Returns true if `to` has been explicitly set.
+  var hasTo: Bool {self._to != nil}
+  /// Clears the value of `to`. Subsequent reads from it will return its default value.
+  mutating func clearTo() {self._to = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _at: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _from: String? = nil
+  fileprivate var _to: String? = nil
 }
 
 nonisolated struct Hermes_Board_V1_ItemComment: Sendable {
@@ -1390,12 +1644,16 @@ nonisolated extension Hermes_Board_V1_ColumnCategory: SwiftProtobuf._ProtoNamePr
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0COLUMN_CATEGORY_UNSPECIFIED\0\u{1}COLUMN_CATEGORY_INBOX\0\u{1}COLUMN_CATEGORY_READY\0\u{1}COLUMN_CATEGORY_DOING\0\u{1}COLUMN_CATEGORY_REVIEW\0\u{1}COLUMN_CATEGORY_VERIFY\0\u{1}COLUMN_CATEGORY_APPROVAL\0\u{1}COLUMN_CATEGORY_DEPLOYING\0\u{1}COLUMN_CATEGORY_DONE\0\u{1}COLUMN_CATEGORY_CANCELLED\0")
 }
 
+nonisolated extension Hermes_Board_V1_ColumnKind: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0COLUMN_KIND_UNSPECIFIED\0\u{1}COLUMN_KIND_OPEN\0\u{1}COLUMN_KIND_ACTIVE\0\u{1}COLUMN_KIND_DONE\0\u{1}COLUMN_KIND_CANCELLED\0")
+}
+
 nonisolated extension Hermes_Board_V1_WipScope: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0WIP_SCOPE_UNSPECIFIED\0\u{1}WIP_SCOPE_COLUMN\0\u{1}WIP_SCOPE_PER_ASSIGNEE\0")
 }
 
 nonisolated extension Hermes_Board_V1_Role: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ROLE_UNSPECIFIED\0\u{1}ROLE_LEAD\0\u{1}ROLE_COACH\0\u{1}ROLE_DEVOPS\0\u{1}ROLE_REVIEWER_ARCH\0\u{1}ROLE_REVIEWER_UX\0\u{1}ROLE_TESTER\0\u{1}ROLE_DEV\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ROLE_UNSPECIFIED\0\u{1}ROLE_LEAD\0\u{1}ROLE_COACH\0\u{1}ROLE_DEVOPS\0\u{1}ROLE_REVIEWER_ARCH\0\u{1}ROLE_REVIEWER_UX\0\u{1}ROLE_TESTER\0\u{1}ROLE_DEV\0\u{1}ROLE_REVIEWER_CE\0")
 }
 
 nonisolated extension Hermes_Board_V1_ItemType: SwiftProtobuf._ProtoNameProviding {
@@ -1423,7 +1681,7 @@ nonisolated extension Hermes_Board_V1_VerificationResult: SwiftProtobuf._ProtoNa
 }
 
 nonisolated extension Hermes_Board_V1_LinkKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LINK_KIND_UNSPECIFIED\0\u{1}LINK_KIND_TASK\0\u{1}LINK_KIND_DECISION\0\u{1}LINK_KIND_ARTIFACT\0\u{1}LINK_KIND_BRANCH\0\u{1}LINK_KIND_PR\0\u{1}LINK_KIND_MEETING\0\u{1}LINK_KIND_ITEM_BLOCKS\0\u{1}LINK_KIND_ITEM_RELATES\0\u{1}LINK_KIND_ITEM_DUPLICATES\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LINK_KIND_UNSPECIFIED\0\u{1}LINK_KIND_TASK\0\u{1}LINK_KIND_DECISION\0\u{1}LINK_KIND_ARTIFACT\0\u{1}LINK_KIND_BRANCH\0\u{1}LINK_KIND_PR\0\u{1}LINK_KIND_MEETING\0\u{1}LINK_KIND_ITEM_BLOCKS\0\u{1}LINK_KIND_ITEM_RELATES\0\u{1}LINK_KIND_ITEM_DUPLICATES\0\u{1}LINK_KIND_THREAD\0")
 }
 
 nonisolated extension Hermes_Board_V1_ItemEventKind: SwiftProtobuf._ProtoNameProviding {
@@ -1459,6 +1717,91 @@ nonisolated extension Hermes_Board_V1_StringList: SwiftProtobuf.Message, SwiftPr
 
   static func ==(lhs: Hermes_Board_V1_StringList, rhs: Hermes_Board_V1_StringList) -> Bool {
     if lhs.values != rhs.values {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Board_V1_Board: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Board"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}name\0\u{1}key\0\u{1}description\0\u{1}ord\0\u{3}is_default\0\u{3}structure_policy\0\u{1}flow\0\u{1}automations\0\u{1}archived\0\u{1}version\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.ord) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.isDefault) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.structurePolicy) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.flow) }()
+      case 10: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.automations) }()
+      case 11: try { try decoder.decodeSingularBoolField(value: &self.archived) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.version) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.projectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 2)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 3)
+    }
+    if !self.key.isEmpty {
+      try visitor.visitSingularStringField(value: self.key, fieldNumber: 4)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
+    }
+    if self.ord != 0 {
+      try visitor.visitSingularUInt32Field(value: self.ord, fieldNumber: 6)
+    }
+    if self.isDefault != false {
+      try visitor.visitSingularBoolField(value: self.isDefault, fieldNumber: 7)
+    }
+    if !self.structurePolicy.isEmpty {
+      try visitor.visitSingularStringField(value: self.structurePolicy, fieldNumber: 8)
+    }
+    if !self.flow.isEmpty {
+      try visitor.visitSingularStringField(value: self.flow, fieldNumber: 9)
+    }
+    if !self.automations.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: self.automations, fieldNumber: 10)
+    }
+    if self.archived != false {
+      try visitor.visitSingularBoolField(value: self.archived, fieldNumber: 11)
+    }
+    if self.version != 0 {
+      try visitor.visitSingularUInt64Field(value: self.version, fieldNumber: 12)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Board_V1_Board, rhs: Hermes_Board_V1_Board) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.projectID != rhs.projectID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.key != rhs.key {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.ord != rhs.ord {return false}
+    if lhs.isDefault != rhs.isDefault {return false}
+    if lhs.structurePolicy != rhs.structurePolicy {return false}
+    if lhs.flow != rhs.flow {return false}
+    if lhs.automations != rhs.automations {return false}
+    if lhs.archived != rhs.archived {return false}
+    if lhs.version != rhs.version {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1526,7 +1869,7 @@ nonisolated extension Hermes_Board_V1_BoardSettings: SwiftProtobuf.Message, Swif
 
 nonisolated extension Hermes_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardColumn"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{3}board_id\0\u{1}kind\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1542,6 +1885,11 @@ nonisolated extension Hermes_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftP
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self._wipLimit) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.wipScope) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.visible) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.boardID) }()
+      case 10: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 11: try { try decoder.decodeRepeatedStringField(value: &self.movers) }()
+      case 12: try { try decoder.decodeRepeatedStringField(value: &self.rules) }()
+      case 13: try { try decoder.decodeRepeatedStringField(value: &self.allowedFrom) }()
       default: break
       }
     }
@@ -1576,6 +1924,21 @@ nonisolated extension Hermes_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftP
     if self.visible != false {
       try visitor.visitSingularBoolField(value: self.visible, fieldNumber: 8)
     }
+    if !self.boardID.isEmpty {
+      try visitor.visitSingularStringField(value: self.boardID, fieldNumber: 9)
+    }
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 10)
+    }
+    if !self.movers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.movers, fieldNumber: 11)
+    }
+    if !self.rules.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.rules, fieldNumber: 12)
+    }
+    if !self.allowedFrom.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.allowedFrom, fieldNumber: 13)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1588,6 +1951,11 @@ nonisolated extension Hermes_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftP
     if lhs._wipLimit != rhs._wipLimit {return false}
     if lhs.wipScope != rhs.wipScope {return false}
     if lhs.visible != rhs.visible {return false}
+    if lhs.boardID != rhs.boardID {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.movers != rhs.movers {return false}
+    if lhs.rules != rhs.rules {return false}
+    if lhs.allowedFrom != rhs.allowedFrom {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1841,7 +2209,7 @@ nonisolated extension Hermes_Board_V1_ItemVerification: SwiftProtobuf.Message, S
 
 nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Item"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}seq\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}rank\0\u{3}column_key\0\u{1}category\0\u{1}blocked\0\u{1}assignee\0\u{3}parent_id\0\u{3}release_id\0\u{1}labels\0\u{3}acceptance_criteria\0\u{1}people\0\u{1}verifications\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{3}state_entered_at\0\u{3}done_at\0\u{1}version\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}seq\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}rank\0\u{3}column_key\0\u{1}category\0\u{1}blocked\0\u{1}assignee\0\u{3}parent_id\0\u{3}release_id\0\u{1}labels\0\u{3}acceptance_criteria\0\u{1}people\0\u{1}verifications\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{3}state_entered_at\0\u{3}done_at\0\u{1}version\0\u{3}board_id\0\u{1}state\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -1869,6 +2237,8 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
     var _stateEnteredAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
     var _doneAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
     var _version: UInt64 = 0
+    var _boardID: String = String()
+    var _state: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -1904,6 +2274,8 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
       _stateEnteredAt = source._stateEnteredAt
       _doneAt = source._doneAt
       _version = source._version
+      _boardID = source._boardID
+      _state = source._state
     }
   }
 
@@ -1947,6 +2319,8 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
         case 23: try { try decoder.decodeSingularMessageField(value: &_storage._stateEnteredAt) }()
         case 24: try { try decoder.decodeSingularMessageField(value: &_storage._doneAt) }()
         case 25: try { try decoder.decodeSingularUInt64Field(value: &_storage._version) }()
+        case 26: try { try decoder.decodeSingularStringField(value: &_storage._boardID) }()
+        case 27: try { try decoder.decodeSingularStringField(value: &_storage._state) }()
         default: break
         }
       }
@@ -2034,6 +2408,12 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
       if _storage._version != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._version, fieldNumber: 25)
       }
+      if !_storage._boardID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._boardID, fieldNumber: 26)
+      }
+      if !_storage._state.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._state, fieldNumber: 27)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2068,6 +2448,8 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._stateEnteredAt != rhs_storage._stateEnteredAt {return false}
         if _storage._doneAt != rhs_storage._doneAt {return false}
         if _storage._version != rhs_storage._version {return false}
+        if _storage._boardID != rhs_storage._boardID {return false}
+        if _storage._state != rhs_storage._state {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -2079,7 +2461,7 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCard"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2098,6 +2480,8 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
     var _acTotal: UInt32 = 0
     var _version: UInt64 = 0
     var _ownerCommentedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _boardID: String = String()
+    var _draft: Bool = false
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2124,6 +2508,8 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
       _acTotal = source._acTotal
       _version = source._version
       _ownerCommentedAt = source._ownerCommentedAt
+      _boardID = source._boardID
+      _draft = source._draft
     }
   }
 
@@ -2158,6 +2544,8 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
         case 14: try { try decoder.decodeSingularUInt32Field(value: &_storage._acTotal) }()
         case 15: try { try decoder.decodeSingularUInt64Field(value: &_storage._version) }()
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._ownerCommentedAt) }()
+        case 17: try { try decoder.decodeSingularStringField(value: &_storage._boardID) }()
+        case 18: try { try decoder.decodeSingularBoolField(value: &_storage._draft) }()
         default: break
         }
       }
@@ -2218,6 +2606,12 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
       try { if let v = _storage._ownerCommentedAt {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       } }()
+      if !_storage._boardID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._boardID, fieldNumber: 17)
+      }
+      if _storage._draft != false {
+        try visitor.visitSingularBoolField(value: _storage._draft, fieldNumber: 18)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2243,6 +2637,8 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
         if _storage._acTotal != rhs_storage._acTotal {return false}
         if _storage._version != rhs_storage._version {return false}
         if _storage._ownerCommentedAt != rhs_storage._ownerCommentedAt {return false}
+        if _storage._boardID != rhs_storage._boardID {return false}
+        if _storage._draft != rhs_storage._draft {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -2306,6 +2702,164 @@ nonisolated extension Hermes_Board_V1_ItemLink: SwiftProtobuf.Message, SwiftProt
     if lhs._label != rhs._label {return false}
     if lhs.createdBy != rhs.createdBy {return false}
     if lhs._at != rhs._at {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Board_V1_ItemAttachment: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ItemAttachment"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}item_id\0\u{1}kind\0\u{1}name\0\u{1}mime\0\u{1}bytes\0\u{1}sha256\0\u{1}path\0\u{1}url\0\u{1}caption\0\u{3}added_by\0\u{1}at\0\u{1}removed\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.itemID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.mime) }()
+      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.bytes) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.sha256) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.path) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.url) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.caption) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.addedBy) }()
+      case 12: try { try decoder.decodeSingularMessageField(value: &self._at) }()
+      case 13: try { try decoder.decodeSingularBoolField(value: &self.removed) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.itemID.isEmpty {
+      try visitor.visitSingularStringField(value: self.itemID, fieldNumber: 2)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 3)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 4)
+    }
+    if !self.mime.isEmpty {
+      try visitor.visitSingularStringField(value: self.mime, fieldNumber: 5)
+    }
+    if self.bytes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.bytes, fieldNumber: 6)
+    }
+    if !self.sha256.isEmpty {
+      try visitor.visitSingularStringField(value: self.sha256, fieldNumber: 7)
+    }
+    if !self.path.isEmpty {
+      try visitor.visitSingularStringField(value: self.path, fieldNumber: 8)
+    }
+    if !self.url.isEmpty {
+      try visitor.visitSingularStringField(value: self.url, fieldNumber: 9)
+    }
+    if !self.caption.isEmpty {
+      try visitor.visitSingularStringField(value: self.caption, fieldNumber: 10)
+    }
+    if !self.addedBy.isEmpty {
+      try visitor.visitSingularStringField(value: self.addedBy, fieldNumber: 11)
+    }
+    try { if let v = self._at {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    } }()
+    if self.removed != false {
+      try visitor.visitSingularBoolField(value: self.removed, fieldNumber: 13)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Board_V1_ItemAttachment, rhs: Hermes_Board_V1_ItemAttachment) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.itemID != rhs.itemID {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.mime != rhs.mime {return false}
+    if lhs.bytes != rhs.bytes {return false}
+    if lhs.sha256 != rhs.sha256 {return false}
+    if lhs.path != rhs.path {return false}
+    if lhs.url != rhs.url {return false}
+    if lhs.caption != rhs.caption {return false}
+    if lhs.addedBy != rhs.addedBy {return false}
+    if lhs._at != rhs._at {return false}
+    if lhs.removed != rhs.removed {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Board_V1_DraftRevision: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".DraftRevision"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}item_id\0\u{1}actor\0\u{1}at\0\u{1}field\0\u{1}from\0\u{1}to\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.itemID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.actor) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._at) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.field) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._from) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self._to) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.id != 0 {
+      try visitor.visitSingularInt64Field(value: self.id, fieldNumber: 1)
+    }
+    if !self.itemID.isEmpty {
+      try visitor.visitSingularStringField(value: self.itemID, fieldNumber: 2)
+    }
+    if !self.actor.isEmpty {
+      try visitor.visitSingularStringField(value: self.actor, fieldNumber: 3)
+    }
+    try { if let v = self._at {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
+    if !self.field.isEmpty {
+      try visitor.visitSingularStringField(value: self.field, fieldNumber: 5)
+    }
+    try { if let v = self._from {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
+    try { if let v = self._to {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 7)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Board_V1_DraftRevision, rhs: Hermes_Board_V1_DraftRevision) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.itemID != rhs.itemID {return false}
+    if lhs.actor != rhs.actor {return false}
+    if lhs._at != rhs._at {return false}
+    if lhs.field != rhs.field {return false}
+    if lhs._from != rhs._from {return false}
+    if lhs._to != rhs._to {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -42,6 +42,27 @@ nonisolated enum Hermes_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseIte
   case offBoard // = 8
   case servingOff // = 9
   case ownerQuestion // = 10
+
+  /// a PR waits for the owner's review (H-269)
+  case prReview // = 11
+
+  /// DevOps hasn't run a PR's merge in 30 min (H-284)
+  case prMergeStuck // = 12
+
+  /// main reached a PR's head with no merge gate pass (H-284)
+  case mainMovedOutside // = 13
+
+  /// a cleanup held 3 days, or failed: Remove anyway or Keep (H-275)
+  case cleanupHeld // = 14
+
+  /// a computer is under 20 GB free: Clean up (H-275)
+  case diskLow // = 15
+
+  /// a required check no computer can run, for 1 h (H-318)
+  case checkUnroutable // = 16
+
+  /// a bot changed a draft since the owner last looked (0.19.0)
+  case draftUpdated // = 17
   case UNRECOGNIZED(Int)
 
   init() {
@@ -61,6 +82,13 @@ nonisolated enum Hermes_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseIte
     case 8: self = .offBoard
     case 9: self = .servingOff
     case 10: self = .ownerQuestion
+    case 11: self = .prReview
+    case 12: self = .prMergeStuck
+    case 13: self = .mainMovedOutside
+    case 14: self = .cleanupHeld
+    case 15: self = .diskLow
+    case 16: self = .checkUnroutable
+    case 17: self = .draftUpdated
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -78,6 +106,13 @@ nonisolated enum Hermes_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseIte
     case .offBoard: return 8
     case .servingOff: return 9
     case .ownerQuestion: return 10
+    case .prReview: return 11
+    case .prMergeStuck: return 12
+    case .mainMovedOutside: return 13
+    case .cleanupHeld: return 14
+    case .diskLow: return 15
+    case .checkUnroutable: return 16
+    case .draftUpdated: return 17
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -95,6 +130,13 @@ nonisolated enum Hermes_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseIte
     .offBoard,
     .servingOff,
     .ownerQuestion,
+    .prReview,
+    .prMergeStuck,
+    .mainMovedOutside,
+    .cleanupHeld,
+    .diskLow,
+    .checkUnroutable,
+    .draftUpdated,
   ]
 
 }
@@ -533,98 +575,165 @@ nonisolated struct Hermes_Home_V1_AttentionSummary: Sendable {
   fileprivate var _oldestAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
-nonisolated struct Hermes_Home_V1_AttentionRow: Sendable {
+nonisolated struct Hermes_Home_V1_AttentionRow: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// stable: "<kind>:<daemon_id>:<target id>" (iOS M3)
-  var id: String = String()
+  var id: String {
+    get {_storage._id}
+    set {_uniqueStorage()._id = newValue}
+  }
 
-  var kind: Hermes_Home_V1_AttentionKind = .unspecified
+  var kind: Hermes_Home_V1_AttentionKind {
+    get {_storage._kind}
+    set {_uniqueStorage()._kind = newValue}
+  }
 
   /// the computer that acts on it
-  var daemonID: String = String()
+  var daemonID: String {
+    get {_storage._daemonID}
+    set {_uniqueStorage()._daemonID = newValue}
+  }
 
   /// in that computer's ids
-  var projectID: String = String()
+  var projectID: String {
+    get {_storage._projectID}
+    set {_uniqueStorage()._projectID = newValue}
+  }
 
   /// one line, at most 120 characters, set by the daemon
-  var title: String = String()
+  var title: String {
+    get {_storage._title}
+    set {_uniqueStorage()._title = newValue}
+  }
 
   var createdAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {_createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_createdAt = newValue}
+    get {_storage._createdAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_uniqueStorage()._createdAt = newValue}
   }
   /// Returns true if `createdAt` has been explicitly set.
-  var hasCreatedAt: Bool {self._createdAt != nil}
+  var hasCreatedAt: Bool {_storage._createdAt != nil}
   /// Clears the value of `createdAt`. Subsequent reads from it will return its default value.
-  mutating func clearCreatedAt() {self._createdAt = nil}
+  mutating func clearCreatedAt() {_uniqueStorage()._createdAt = nil}
 
-  var weight: UInt32 = 0
+  var weight: UInt32 {
+    get {_storage._weight}
+    set {_uniqueStorage()._weight = newValue}
+  }
 
-  var target: Hermes_Home_V1_AttentionRow.OneOf_Target? = nil
+  var target: OneOf_Target? {
+    get {return _storage._target}
+    set {_uniqueStorage()._target = newValue}
+  }
 
   var decisionID: String {
     get {
-      if case .decisionID(let v)? = target {return v}
+      if case .decisionID(let v)? = _storage._target {return v}
       return String()
     }
-    set {target = .decisionID(newValue)}
+    set {_uniqueStorage()._target = .decisionID(newValue)}
   }
 
   var releaseID: String {
     get {
-      if case .releaseID(let v)? = target {return v}
+      if case .releaseID(let v)? = _storage._target {return v}
       return String()
     }
-    set {target = .releaseID(newValue)}
+    set {_uniqueStorage()._target = .releaseID(newValue)}
   }
 
   /// owner action (H-117)
   var actionID: String {
     get {
-      if case .actionID(let v)? = target {return v}
+      if case .actionID(let v)? = _storage._target {return v}
       return String()
     }
-    set {target = .actionID(newValue)}
+    set {_uniqueStorage()._target = .actionID(newValue)}
   }
 
   /// permission prompt or terminal card
   var requestID: String {
     get {
-      if case .requestID(let v)? = target {return v}
+      if case .requestID(let v)? = _storage._target {return v}
       return String()
     }
-    set {target = .requestID(newValue)}
+    set {_uniqueStorage()._target = .requestID(newValue)}
   }
 
   /// bot_waiting, off_board, owner_question in a thread
   var bot: Hermes_Home_V1_BotRef {
     get {
-      if case .bot(let v)? = target {return v}
+      if case .bot(let v)? = _storage._target {return v}
       return Hermes_Home_V1_BotRef()
     }
-    set {target = .bot(newValue)}
+    set {_uniqueStorage()._target = .bot(newValue)}
   }
 
   /// p0_item, owner_question on a card
   var itemID: String {
     get {
-      if case .itemID(let v)? = target {return v}
+      if case .itemID(let v)? = _storage._target {return v}
       return String()
     }
-    set {target = .itemID(newValue)}
+    set {_uniqueStorage()._target = .itemID(newValue)}
+  }
+
+  /// pr_review: the PR, in the project's numbering
+  var prNumber: UInt32 {
+    get {
+      if case .prNumber(let v)? = _storage._target {return v}
+      return 0
+    }
+    set {_uniqueStorage()._target = .prNumber(newValue)}
+  }
+
+  /// cleanup_held: the job (cleanup_resolve)
+  var cleanupJobID: String {
+    get {
+      if case .cleanupJobID(let v)? = _storage._target {return v}
+      return String()
+    }
+    set {_uniqueStorage()._target = .cleanupJobID(newValue)}
+  }
+
+  /// disk_low: the computer (cleanup_now, disk_report)
+  var machine: String {
+    get {
+      if case .machine(let v)? = _storage._target {return v}
+      return String()
+    }
+    set {_uniqueStorage()._target = .machine(newValue)}
   }
 
   /// relayed_rulings only
-  var relayedCount: UInt32 = 0
+  var relayedCount: UInt32 {
+    get {_storage._relayedCount}
+    set {_uniqueStorage()._relayedCount = newValue}
+  }
 
   /// decision only: P0..P3
-  var priority: String = String()
+  var priority: String {
+    get {_storage._priority}
+    set {_uniqueStorage()._priority = newValue}
+  }
 
   /// owner_question on a card: the comment that asked (H-211)
-  var questionCommentID: String = String()
+  var questionCommentID: String {
+    get {_storage._questionCommentID}
+    set {_uniqueStorage()._questionCommentID = newValue}
+  }
+
+  /// cleanup_held: what the app words the row from (UX-055)
+  var cleanup: Hermes_Home_V1_CleanupRow {
+    get {_storage._cleanup ?? Hermes_Home_V1_CleanupRow()}
+    set {_uniqueStorage()._cleanup = newValue}
+  }
+  /// Returns true if `cleanup` has been explicitly set.
+  var hasCleanup: Bool {_storage._cleanup != nil}
+  /// Clears the value of `cleanup`. Subsequent reads from it will return its default value.
+  mutating func clearCleanup() {_uniqueStorage()._cleanup = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -639,12 +748,73 @@ nonisolated struct Hermes_Home_V1_AttentionRow: Sendable {
     case bot(Hermes_Home_V1_BotRef)
     /// p0_item, owner_question on a card
     case itemID(String)
+    /// pr_review: the PR, in the project's numbering
+    case prNumber(UInt32)
+    /// cleanup_held: the job (cleanup_resolve)
+    case cleanupJobID(String)
+    /// disk_low: the computer (cleanup_now, disk_report)
+    case machine(String)
 
   }
 
   init() {}
 
-  fileprivate var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// A held or failed cleanup, in fields: the app composes the words (UX-055).
+nonisolated struct Hermes_Home_V1_CleanupRow: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// held | failed
+  var state: String = String()
+
+  /// the computer the tree is on
+  var machine: String = String()
+
+  /// whose tree; unset when in no bot's folder
+  var bot: Hermes_Home_V1_BotRef {
+    get {_bot ?? Hermes_Home_V1_BotRef()}
+    set {_bot = newValue}
+  }
+  /// Returns true if `bot` has been explicitly set.
+  var hasBot: Bool {self._bot != nil}
+  /// Clears the value of `bot`. Subsequent reads from it will return its default value.
+  mutating func clearBot() {self._bot = nil}
+
+  /// 0 = found by the daily sweep, no PR
+  var prNumber: UInt32 = 0
+
+  /// changed or untracked files
+  var uncommitted: UInt32 = 0
+
+  /// commits on no remote
+  var unpushed: UInt32 = 0
+
+  /// its changes are saved: Remove anyway can work
+  var salvaged: Bool = false
+
+  /// why it is kept or failed, when not unsaved work
+  var reason: String = String()
+
+  /// held or failed since
+  var since: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {_since ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_since = newValue}
+  }
+  /// Returns true if `since` has been explicitly set.
+  var hasSince: Bool {self._since != nil}
+  /// Clears the value of `since`. Subsequent reads from it will return its default value.
+  mutating func clearSince() {self._since = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _bot: Hermes_Home_V1_BotRef? = nil
+  fileprivate var _since: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
 nonisolated struct Hermes_Home_V1_AttentionRows: Sendable {
@@ -837,6 +1007,9 @@ nonisolated struct Hermes_Home_V1_MessageBrief: Sendable {
   mutating func clearAt() {self._at = nil}
 
   var asks: Bool = false
+
+  /// see ThreadMessage
+  var unverifiedFrom: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1268,6 +1441,10 @@ nonisolated struct Hermes_Home_V1_ThreadMessage: Sendable {
   /// that question is still open
   var `open`: Bool = false
 
+  /// The owner's chat a linked computer sent without proof this computer
+  /// takes (H-303, H-306): that computer's name, and `from_owner` is false.
+  var unverifiedFrom: String = String()
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1593,7 +1770,7 @@ nonisolated struct Hermes_Home_V1_InstallOfferDismissRequest: Sendable {
 fileprivate nonisolated let _protobuf_package = "hermes.home.v1"
 
 nonisolated extension Hermes_Home_V1_AttentionKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0")
 }
 
 nonisolated extension Hermes_Home_V1_ProjectsOverviewRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -2260,7 +2437,266 @@ nonisolated extension Hermes_Home_V1_AttentionSummary: SwiftProtobuf.Message, Sw
 
 nonisolated extension Hermes_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AttentionRow"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{4}\u{5}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{4}\u{2}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0")
+
+  fileprivate class _StorageClass {
+    var _id: String = String()
+    var _kind: Hermes_Home_V1_AttentionKind = .unspecified
+    var _daemonID: String = String()
+    var _projectID: String = String()
+    var _title: String = String()
+    var _createdAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _weight: UInt32 = 0
+    var _target: Hermes_Home_V1_AttentionRow.OneOf_Target?
+    var _relayedCount: UInt32 = 0
+    var _priority: String = String()
+    var _questionCommentID: String = String()
+    var _cleanup: Hermes_Home_V1_CleanupRow? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _id = source._id
+      _kind = source._kind
+      _daemonID = source._daemonID
+      _projectID = source._projectID
+      _title = source._title
+      _createdAt = source._createdAt
+      _weight = source._weight
+      _target = source._target
+      _relayedCount = source._relayedCount
+      _priority = source._priority
+      _questionCommentID = source._questionCommentID
+      _cleanup = source._cleanup
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._id) }()
+        case 2: try { try decoder.decodeSingularEnumField(value: &_storage._kind) }()
+        case 3: try { try decoder.decodeSingularStringField(value: &_storage._daemonID) }()
+        case 4: try { try decoder.decodeSingularStringField(value: &_storage._projectID) }()
+        case 5: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
+        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._createdAt) }()
+        case 7: try { try decoder.decodeSingularUInt32Field(value: &_storage._weight) }()
+        case 10: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .decisionID(v)
+          }
+        }()
+        case 11: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .releaseID(v)
+          }
+        }()
+        case 12: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .actionID(v)
+          }
+        }()
+        case 13: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .requestID(v)
+          }
+        }()
+        case 14: try {
+          var v: Hermes_Home_V1_BotRef?
+          var hadOneofValue = false
+          if let current = _storage._target {
+            hadOneofValue = true
+            if case .bot(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._target = .bot(v)
+          }
+        }()
+        case 15: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .itemID(v)
+          }
+        }()
+        case 16: try {
+          var v: UInt32?
+          try decoder.decodeSingularUInt32Field(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .prNumber(v)
+          }
+        }()
+        case 17: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .cleanupJobID(v)
+          }
+        }()
+        case 18: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .machine(v)
+          }
+        }()
+        case 20: try { try decoder.decodeSingularUInt32Field(value: &_storage._relayedCount) }()
+        case 21: try { try decoder.decodeSingularStringField(value: &_storage._priority) }()
+        case 22: try { try decoder.decodeSingularStringField(value: &_storage._questionCommentID) }()
+        case 23: try { try decoder.decodeSingularMessageField(value: &_storage._cleanup) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._id.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._id, fieldNumber: 1)
+      }
+      if _storage._kind != .unspecified {
+        try visitor.visitSingularEnumField(value: _storage._kind, fieldNumber: 2)
+      }
+      if !_storage._daemonID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._daemonID, fieldNumber: 3)
+      }
+      if !_storage._projectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._projectID, fieldNumber: 4)
+      }
+      if !_storage._title.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 5)
+      }
+      try { if let v = _storage._createdAt {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      } }()
+      if _storage._weight != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._weight, fieldNumber: 7)
+      }
+      switch _storage._target {
+      case .decisionID?: try {
+        guard case .decisionID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 10)
+      }()
+      case .releaseID?: try {
+        guard case .releaseID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 11)
+      }()
+      case .actionID?: try {
+        guard case .actionID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 12)
+      }()
+      case .requestID?: try {
+        guard case .requestID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 13)
+      }()
+      case .bot?: try {
+        guard case .bot(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+      }()
+      case .itemID?: try {
+        guard case .itemID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 15)
+      }()
+      case .prNumber?: try {
+        guard case .prNumber(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularUInt32Field(value: v, fieldNumber: 16)
+      }()
+      case .cleanupJobID?: try {
+        guard case .cleanupJobID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 17)
+      }()
+      case .machine?: try {
+        guard case .machine(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 18)
+      }()
+      case nil: break
+      }
+      if _storage._relayedCount != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._relayedCount, fieldNumber: 20)
+      }
+      if !_storage._priority.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._priority, fieldNumber: 21)
+      }
+      if !_storage._questionCommentID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._questionCommentID, fieldNumber: 22)
+      }
+      try { if let v = _storage._cleanup {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Home_V1_AttentionRow, rhs: Hermes_Home_V1_AttentionRow) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._id != rhs_storage._id {return false}
+        if _storage._kind != rhs_storage._kind {return false}
+        if _storage._daemonID != rhs_storage._daemonID {return false}
+        if _storage._projectID != rhs_storage._projectID {return false}
+        if _storage._title != rhs_storage._title {return false}
+        if _storage._createdAt != rhs_storage._createdAt {return false}
+        if _storage._weight != rhs_storage._weight {return false}
+        if _storage._target != rhs_storage._target {return false}
+        if _storage._relayedCount != rhs_storage._relayedCount {return false}
+        if _storage._priority != rhs_storage._priority {return false}
+        if _storage._questionCommentID != rhs_storage._questionCommentID {return false}
+        if _storage._cleanup != rhs_storage._cleanup {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Home_V1_CleanupRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".CleanupRow"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}state\0\u{1}machine\0\u{1}bot\0\u{3}pr_number\0\u{1}uncommitted\0\u{1}unpushed\0\u{1}salvaged\0\u{1}reason\0\u{1}since\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2268,69 +2704,15 @@ nonisolated extension Hermes_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftP
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.daemonID) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.title) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._createdAt) }()
-      case 7: try { try decoder.decodeSingularUInt32Field(value: &self.weight) }()
-      case 10: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .decisionID(v)
-        }
-      }()
-      case 11: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .releaseID(v)
-        }
-      }()
-      case 12: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .actionID(v)
-        }
-      }()
-      case 13: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .requestID(v)
-        }
-      }()
-      case 14: try {
-        var v: Hermes_Home_V1_BotRef?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .bot(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .bot(v)
-        }
-      }()
-      case 15: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .itemID(v)
-        }
-      }()
-      case 20: try { try decoder.decodeSingularUInt32Field(value: &self.relayedCount) }()
-      case 21: try { try decoder.decodeSingularStringField(value: &self.priority) }()
-      case 22: try { try decoder.decodeSingularStringField(value: &self.questionCommentID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.state) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.machine) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._bot) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.prNumber) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.uncommitted) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.unpushed) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.salvaged) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.reason) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._since) }()
       default: break
       }
     }
@@ -2341,78 +2723,46 @@ nonisolated extension Hermes_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftP
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    if !self.state.isEmpty {
+      try visitor.visitSingularStringField(value: self.state, fieldNumber: 1)
     }
-    if self.kind != .unspecified {
-      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 2)
+    if !self.machine.isEmpty {
+      try visitor.visitSingularStringField(value: self.machine, fieldNumber: 2)
     }
-    if !self.daemonID.isEmpty {
-      try visitor.visitSingularStringField(value: self.daemonID, fieldNumber: 3)
-    }
-    if !self.projectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 4)
-    }
-    if !self.title.isEmpty {
-      try visitor.visitSingularStringField(value: self.title, fieldNumber: 5)
-    }
-    try { if let v = self._createdAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    try { if let v = self._bot {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
-    if self.weight != 0 {
-      try visitor.visitSingularUInt32Field(value: self.weight, fieldNumber: 7)
+    if self.prNumber != 0 {
+      try visitor.visitSingularUInt32Field(value: self.prNumber, fieldNumber: 4)
     }
-    switch self.target {
-    case .decisionID?: try {
-      guard case .decisionID(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 10)
-    }()
-    case .releaseID?: try {
-      guard case .releaseID(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 11)
-    }()
-    case .actionID?: try {
-      guard case .actionID(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 12)
-    }()
-    case .requestID?: try {
-      guard case .requestID(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 13)
-    }()
-    case .bot?: try {
-      guard case .bot(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .itemID?: try {
-      guard case .itemID(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 15)
-    }()
-    case nil: break
+    if self.uncommitted != 0 {
+      try visitor.visitSingularUInt32Field(value: self.uncommitted, fieldNumber: 5)
     }
-    if self.relayedCount != 0 {
-      try visitor.visitSingularUInt32Field(value: self.relayedCount, fieldNumber: 20)
+    if self.unpushed != 0 {
+      try visitor.visitSingularUInt32Field(value: self.unpushed, fieldNumber: 6)
     }
-    if !self.priority.isEmpty {
-      try visitor.visitSingularStringField(value: self.priority, fieldNumber: 21)
+    if self.salvaged != false {
+      try visitor.visitSingularBoolField(value: self.salvaged, fieldNumber: 7)
     }
-    if !self.questionCommentID.isEmpty {
-      try visitor.visitSingularStringField(value: self.questionCommentID, fieldNumber: 22)
+    if !self.reason.isEmpty {
+      try visitor.visitSingularStringField(value: self.reason, fieldNumber: 8)
     }
+    try { if let v = self._since {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Hermes_Home_V1_AttentionRow, rhs: Hermes_Home_V1_AttentionRow) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.kind != rhs.kind {return false}
-    if lhs.daemonID != rhs.daemonID {return false}
-    if lhs.projectID != rhs.projectID {return false}
-    if lhs.title != rhs.title {return false}
-    if lhs._createdAt != rhs._createdAt {return false}
-    if lhs.weight != rhs.weight {return false}
-    if lhs.target != rhs.target {return false}
-    if lhs.relayedCount != rhs.relayedCount {return false}
-    if lhs.priority != rhs.priority {return false}
-    if lhs.questionCommentID != rhs.questionCommentID {return false}
+  static func ==(lhs: Hermes_Home_V1_CleanupRow, rhs: Hermes_Home_V1_CleanupRow) -> Bool {
+    if lhs.state != rhs.state {return false}
+    if lhs.machine != rhs.machine {return false}
+    if lhs._bot != rhs._bot {return false}
+    if lhs.prNumber != rhs.prNumber {return false}
+    if lhs.uncommitted != rhs.uncommitted {return false}
+    if lhs.unpushed != rhs.unpushed {return false}
+    if lhs.salvaged != rhs.salvaged {return false}
+    if lhs.reason != rhs.reason {return false}
+    if lhs._since != rhs._since {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2742,7 +3092,7 @@ nonisolated extension Hermes_Home_V1_OwnerThread: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Hermes_Home_V1_MessageBrief: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".MessageBrief"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}num\0\u{3}from_owner\0\u{1}text\0\u{1}at\0\u{1}asks\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}num\0\u{3}from_owner\0\u{1}text\0\u{1}at\0\u{1}asks\0\u{3}unverified_from\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2755,6 +3105,7 @@ nonisolated extension Hermes_Home_V1_MessageBrief: SwiftProtobuf.Message, SwiftP
       case 3: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._at) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.asks) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.unverifiedFrom) }()
       default: break
       }
     }
@@ -2780,6 +3131,9 @@ nonisolated extension Hermes_Home_V1_MessageBrief: SwiftProtobuf.Message, SwiftP
     if self.asks != false {
       try visitor.visitSingularBoolField(value: self.asks, fieldNumber: 5)
     }
+    if !self.unverifiedFrom.isEmpty {
+      try visitor.visitSingularStringField(value: self.unverifiedFrom, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2789,6 +3143,7 @@ nonisolated extension Hermes_Home_V1_MessageBrief: SwiftProtobuf.Message, SwiftP
     if lhs.text != rhs.text {return false}
     if lhs._at != rhs._at {return false}
     if lhs.asks != rhs.asks {return false}
+    if lhs.unverifiedFrom != rhs.unverifiedFrom {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3511,7 +3866,7 @@ nonisolated extension Hermes_Home_V1_OwnerThreadPage: SwiftProtobuf.Message, Swi
 
 nonisolated extension Hermes_Home_V1_ThreadMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ThreadMessage"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}num\0\u{1}id\0\u{3}from_owner\0\u{1}text\0\u{1}at\0\u{1}asks\0\u{1}open\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}num\0\u{1}id\0\u{3}from_owner\0\u{1}text\0\u{1}at\0\u{1}asks\0\u{1}open\0\u{3}unverified_from\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3526,6 +3881,7 @@ nonisolated extension Hermes_Home_V1_ThreadMessage: SwiftProtobuf.Message, Swift
       case 5: try { try decoder.decodeSingularMessageField(value: &self._at) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.asks) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.`open`) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.unverifiedFrom) }()
       default: break
       }
     }
@@ -3557,6 +3913,9 @@ nonisolated extension Hermes_Home_V1_ThreadMessage: SwiftProtobuf.Message, Swift
     if self.`open` != false {
       try visitor.visitSingularBoolField(value: self.`open`, fieldNumber: 7)
     }
+    if !self.unverifiedFrom.isEmpty {
+      try visitor.visitSingularStringField(value: self.unverifiedFrom, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3568,6 +3927,7 @@ nonisolated extension Hermes_Home_V1_ThreadMessage: SwiftProtobuf.Message, Swift
     if lhs._at != rhs._at {return false}
     if lhs.asks != rhs.asks {return false}
     if lhs.`open` != rhs.`open` {return false}
+    if lhs.unverifiedFrom != rhs.unverifiedFrom {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

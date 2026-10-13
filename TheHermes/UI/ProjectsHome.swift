@@ -350,7 +350,8 @@ extension Fleet {
             // The card on the computer that keeps its board, where a comment is
             // accepted (H-210); the bot's computer would refuse it.
             if let home = boardComputer(itemId: id) ?? on { return .item(computerId: home.id, itemId: id) }
-        case nil:
+        case .prNumber?, .cleanupJobID?, .machine?, nil:
+            // PR reviews, cleanups and disk space are answered on the computer.
             break
         }
         switch row.kind {

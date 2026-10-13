@@ -26,6 +26,17 @@ enum ColumnCategory {
   COLUMN_CATEGORY_CANCELLED = 9;
 }
 
+// What a column means to the board itself: open (not started), active (WIP,
+// staleness and cycle time apply), done or cancelled. Every other meaning
+// comes from the column's rules.
+enum ColumnKind {
+  COLUMN_KIND_UNSPECIFIED = 0;
+  COLUMN_KIND_OPEN = 1;
+  COLUMN_KIND_ACTIVE = 2;
+  COLUMN_KIND_DONE = 3;
+  COLUMN_KIND_CANCELLED = 4;
+}
+
 // What a column's WIP limit counts.
 enum WipScope {
   WIP_SCOPE_UNSPECIFIED = 0;
@@ -43,6 +54,8 @@ enum Role {
   ROLE_REVIEWER_UX = 5;
   ROLE_TESTER = 6;
   ROLE_DEV = 7;
+  // Reviews security work: permissions, identity, peers, confinement (H-261 §2.1).
+  ROLE_REVIEWER_CE = 8;
 }
 
 enum ItemType {
@@ -104,6 +117,9 @@ enum LinkKind {
   LINK_KIND_ITEM_BLOCKS = 7;
   LINK_KIND_ITEM_RELATES = 8;
   LINK_KIND_ITEM_DUPLICATES = 9;
+  // A conversation about the item (0.19.0): the chat of a bot invited to
+  // discuss it as a draft. `ref` is the bot's id.
+  LINK_KIND_THREAD = 10;
 }
 
 // What an item-history event records. Metrics are computed from these.
@@ -135,6 +151,27 @@ message StringList {
   repeated string values = 1;
 }
 
+// One board of a project (0.19.0). A project has a default board; others
+// are made with `board_create`.
+message Board {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  // The item-id prefix of the items created on it.
+  string key = 4;
+  string description = 5;
+  uint32 ord = 6;
+  bool is_default = 7;
+  // "owner_confirms" or "lead_free": what a lead's structure change needs.
+  string structure_policy = 8;
+  // "custom" (the columns' movers and rules decide) or "release_gated".
+  string flow = 9;
+  // Fact name (`pr.merged`) to the column key a custom board moves to.
+  map<string, string> automations = 10;
+  bool archived = 11;
+  uint64 version = 12;
+}
+
 // One project's board configuration.
 message BoardSettings {
   string project_id = 1;
@@ -160,6 +197,19 @@ message BoardColumn {
   optional uint32 wip_limit = 6;
   WipScope wip_scope = 7;
   bool visible = 8;
+  // The board it belongs to. Empty from a home older than 0.19.
+  string board_id = 9;
+  // Unset from a home older than 0.19: derive it from `category`.
+  ColumnKind kind = 10;
+  // A custom board's rules for entering the column, as tokens: movers
+  // `any_member`, `assignee`, `lead`, `owner`, `system`, `roles:dev,tester`
+  // (none: any member); rules `assignee_set`, `fields_filled:Goal;Steps`,
+  // `ac_present`, `ac_all_checked`, `size_at_most:M`, `blockers_done`,
+  // `not_blocked`, `link:pr`, `independent`, `reason`, `predicate:<name>`;
+  // `allowed_from` column keys (none: any).
+  repeated string movers = 11;
+  repeated string rules = 12;
+  repeated string allowed_from = 13;
 }
 
 message ProjectRole {
@@ -236,6 +286,12 @@ message Item {
   optional google.protobuf.Timestamp done_at = 24;
   // Optimistic concurrency: every mutation names the version it read.
   uint64 version = 25;
+  // The board it is on. Empty from a home older than 0.19.
+  string board_id = 26;
+  // "draft" (on no column yet: seen only by the owner and the bots invited
+  // to discuss it), "live", or "discarded" (a draft the owner dropped, kept
+  // with its history). Empty from a home older than 0.19, which means live.
+  string state = 27;
 }
 
 // The compact form a board column lists; the drawer fetches the Item.
@@ -258,6 +314,11 @@ message ItemCard {
   // The owner's latest comment on it (H-211): a computer mirroring the board
   // closes its card questions asked before it.
   google.protobuf.Timestamp owner_commented_at = 16;
+  // The board it is on. Empty from a home older than 0.19.
+  string board_id = 17;
+  // A draft's card, for the owner's drafts tray. Drafts are never in a
+  // column's cards.
+  bool draft = 18;
 }
 
 message ItemLink {
@@ -268,6 +329,45 @@ message ItemLink {
   optional string label = 4;
   string created_by = 5;
   google.protobuf.Timestamp at = 6;
+}
+
+// What an item carries for the work (0.19.0): a screenshot, a file or a
+// linked document. An image can sit in the description as
+// `![caption](attachment:<id>)`.
+message ItemAttachment {
+  string id = 1;
+  string item_id = 2;
+  // "image", "file" or "doc" (a project artifact or an external URL).
+  string kind = 3;
+  string name = 4;
+  string mime = 5;
+  uint64 bytes = 6;
+  // Of the stored bytes; empty for a doc. Linked computers cache by it.
+  string sha256 = 7;
+  // Where the board's home keeps it: an image's or a file's stored copy, or
+  // a doc's artifact. Empty for a URL.
+  string path = 8;
+  string url = 9;
+  string caption = 10;
+  // The actor as stored: `user`, `bot:<id>` or `device:<id>`.
+  string added_by = 11;
+  google.protobuf.Timestamp at = 12;
+  // Detached. Kept so that a reference to it shows a placeholder.
+  bool removed = 13;
+}
+
+// One change to a draft, with its author (0.19.0).
+message DraftRevision {
+  int64 id = 1;
+  string item_id = 2;
+  // The actor as stored: `user`, `bot:<id>` or `device:<id>`.
+  string actor = 3;
+  google.protobuf.Timestamp at = 4;
+  // What changed: "title", "description", "type", "size", "priority",
+  // "labels", "acceptance_criteria", "attachment" or "link".
+  string field = 5;
+  optional string from = 6;
+  optional string to = 7;
 }
 
 message ItemComment {

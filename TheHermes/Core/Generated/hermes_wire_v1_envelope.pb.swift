@@ -78,6 +78,31 @@ nonisolated struct Hermes_Wire_V1_Envelope: Sendable {
     set {body = .homeResponse(newValue)}
   }
 
+  /// Pull requests and checks (H-261).
+  var prRequest: Hermes_Pr_V1_PrRequest {
+    get {
+      if case .prRequest(let v)? = body {return v}
+      return Hermes_Pr_V1_PrRequest()
+    }
+    set {body = .prRequest(newValue)}
+  }
+
+  var prResponse: Hermes_Pr_V1_PrResponse {
+    get {
+      if case .prResponse(let v)? = body {return v}
+      return Hermes_Pr_V1_PrResponse()
+    }
+    set {body = .prResponse(newValue)}
+  }
+
+  var prPush: Hermes_Pr_V1_PrPush {
+    get {
+      if case .prPush(let v)? = body {return v}
+      return Hermes_Pr_V1_PrPush()
+    }
+    set {body = .prPush(newValue)}
+  }
+
   var error: Hermes_Wire_V1_Error {
     get {
       if case .error(let v)? = body {return v}
@@ -98,6 +123,10 @@ nonisolated struct Hermes_Wire_V1_Envelope: Sendable {
     /// The projects home (H-128).
     case homeRequest(Hermes_Home_V1_HomeRequest)
     case homeResponse(Hermes_Home_V1_HomeResponse)
+    /// Pull requests and checks (H-261).
+    case prRequest(Hermes_Pr_V1_PrRequest)
+    case prResponse(Hermes_Pr_V1_PrResponse)
+    case prPush(Hermes_Pr_V1_PrPush)
     case error(Hermes_Wire_V1_Error)
 
   }
@@ -126,7 +155,7 @@ fileprivate nonisolated let _protobuf_package = "hermes.wire.v1"
 
 nonisolated extension Hermes_Wire_V1_Envelope: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Envelope"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}req_id\0\u{3}board_request\0\u{3}board_response\0\u{3}board_push\0\u{3}home_request\0\u{3}home_response\0\u{2}\u{9}error\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}req_id\0\u{3}board_request\0\u{3}board_response\0\u{3}board_push\0\u{3}home_request\0\u{3}home_response\0\u{3}pr_request\0\u{3}pr_response\0\u{3}pr_push\0\u{2}\u{6}error\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -200,6 +229,45 @@ nonisolated extension Hermes_Wire_V1_Envelope: SwiftProtobuf.Message, SwiftProto
           self.body = .homeResponse(v)
         }
       }()
+      case 7: try {
+        var v: Hermes_Pr_V1_PrRequest?
+        var hadOneofValue = false
+        if let current = self.body {
+          hadOneofValue = true
+          if case .prRequest(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.body = .prRequest(v)
+        }
+      }()
+      case 8: try {
+        var v: Hermes_Pr_V1_PrResponse?
+        var hadOneofValue = false
+        if let current = self.body {
+          hadOneofValue = true
+          if case .prResponse(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.body = .prResponse(v)
+        }
+      }()
+      case 9: try {
+        var v: Hermes_Pr_V1_PrPush?
+        var hadOneofValue = false
+        if let current = self.body {
+          hadOneofValue = true
+          if case .prPush(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.body = .prPush(v)
+        }
+      }()
       case 15: try {
         var v: Hermes_Wire_V1_Error?
         var hadOneofValue = false
@@ -246,6 +314,18 @@ nonisolated extension Hermes_Wire_V1_Envelope: SwiftProtobuf.Message, SwiftProto
     case .homeResponse?: try {
       guard case .homeResponse(let v)? = self.body else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .prRequest?: try {
+      guard case .prRequest(let v)? = self.body else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .prResponse?: try {
+      guard case .prResponse(let v)? = self.body else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .prPush?: try {
+      guard case .prPush(let v)? = self.body else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     }()
     case .error?: try {
       guard case .error(let v)? = self.body else { preconditionFailure() }
