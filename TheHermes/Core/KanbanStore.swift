@@ -23,7 +23,10 @@ protocol DraftService: AnyObject {
     func upload(_ chunk: Hermes_Board_V1_AttachmentUpload) async throws -> UInt64
     func attach(_ attach: Hermes_Board_V1_ItemAttach) async throws -> BoardItemDetail
     func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges
-    func invite(itemId: String, botId: String?) async throws -> BoardItemDetail
+    /// Invites a bot to discuss a draft (`item_invite`), or, with `remove`, ends its discussion.
+    func invite(itemId: String, botId: String?, remove: Bool) async throws -> BoardItemDetail
+    /// The draft as the daemon has it (`item_get`).
+    func item(_ id: String) async throws -> BoardItemDetail
     func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult
     func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult
     /// Takes back one revision (`item_draft_undo`, K5): the owner's alone.
@@ -124,10 +127,11 @@ extension AppStore: BoardService, DraftService {
         return result
     }
 
-    func invite(itemId: String, botId: String?) async throws -> BoardItemDetail {
+    func invite(itemId: String, botId: String?, remove: Bool) async throws -> BoardItemDetail {
         var invite = Hermes_Board_V1_ItemInvite()
         invite.id = itemId
         if let botId { invite.bot = botId }
+        if remove { invite.remove = true }
         guard case .item(let detail) = try await boardCall(.itemInvite(invite), name: "item_invite") else { throw unexpected("item_invite") }
         return detail
     }

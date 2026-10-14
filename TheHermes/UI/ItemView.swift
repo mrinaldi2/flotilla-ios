@@ -23,6 +23,8 @@ struct ItemView: View {
     /// A draft's review, its board (for the column to finalize into) and the
     /// bot whose chat is open about it.
     @State private var draftModel: DraftModel?
+    /// Who the draft is discussed with (`invited`), and the invite or removal in flight.
+    @State private var discussion: DiscussionModel?
     @State private var board: BoardState?
     @State private var chatting: String?
     /// Following the draft's project for its pushes, since which reconnect.
@@ -93,9 +95,9 @@ struct ItemView: View {
                     }
                 }
                 AttachmentsSection(attachments: detail.attachments)
-                if item.state == "draft", let draftModel {
+                if item.state == "draft", let draftModel, let discussion {
                     DraftSections(detail: detail, projectId: project, board: board, model: draftModel,
-                                  chatting: $chatting) { await load() }
+                                  discussion: discussion, chatting: $chatting) { await load() }
                 }
                 if live {
                     Section {
@@ -135,7 +137,7 @@ struct ItemView: View {
         }
         .errorAlert("Couldn’t check the columns.", $moveFailure)
         .navigationDestination(item: $chatting) { botId in
-            DraftChatView(botId: botId, itemId: itemId, title: detail?.item.title ?? "")
+            DraftChatView(botId: botId, itemId: itemId, title: detail?.item.title ?? "", discussion: discussion, projectId: project)
         }
         .sheet(item: $replying) { row in
             ReplySheet(to: CommentWords.author(row.author) { store.bot($0)?.name }, quote: row.body ?? "") { body in
@@ -167,14 +169,20 @@ struct ItemView: View {
     /// A draft refreshes as its bot edits it: its project's pushes, while on screen.
     private func followDraft(_ fresh: BoardItemDetail) async {
         if draftModel == nil { draftModel = DraftModel(itemId: itemId, service: store) }
+        if discussion == nil { discussion = DiscussionModel(itemId: itemId, service: store) }
+        discussion?.take(fresh)
         await draftModel?.load()
         guard let project, following?.reconnects != store.reconnects else { return }
         let token = following?.token ?? store.listen(projectId: project) { event in
-            if event.itemID == itemId { Task { await load() } }
+            guard event.itemID == itemId else { return }
+            // Another device's removal shows at once from a home whose cards carry `invited`.
+            discussion?.take(card: event.card)
+            Task { await load() }
         }
         following = (project, token, store.reconnects)
         if let snapshot = try? await store.watchBoard(projectId: project) {
             board = BoardState(snapshot: snapshot, remembered: fresh.item.boardID)
+            discussion?.take(drafts: snapshot.drafts)
         }
     }
 
