@@ -1,5 +1,5 @@
 proto/ and fixtures/ come from the Hermes repo at
-54a3369a29c8be572855ddb0b6693ad845760a06
+31a20368d8a334a5426c29afdd005c8a7812b375
 (proto/, crates/bus/fixtures/home/ and crates/bus/fixtures/board/).
 Refresh with scripts/contract/vendor.sh; never edit these files by hand.
 
@@ -118,10 +118,10 @@ abd9d3978192595c5550f7e0eeb9b31012d6334f16a00d6e885249f81801ab4b  fixtures/board
 1a04662899b81a6fc7e50997033a649349eb9afa626b43b9fb13dc74fb2a874a  fixtures/home/attention_rows.json
 e9ae263325e52a57fb82e3c1e7d5f39ce116e1d5adb2b9071fe931fa29fdd11f  fixtures/home/overview.json
 c6ae8b1172818826f2065845fb1913a58e321b259b15e9659012a56c5ae71cd7  fixtures/home/project_attention.json
-56a1b2e60404eeb052bd5c54f254c323fa548ef8423df8b1096fe0635efd0919  proto/hermes/board/v1/board.proto
+609e0860419c2f8aca7678ac9c2da7f5c20305aa6e7019e05a689d8cc029c385  proto/hermes/board/v1/board.proto
 2f629943d917470ddff369ed40c65a8815a64696d147aa42e8aeb88336d687c2  proto/hermes/board/v1/meetings.proto
 f025ff417b348464ecc4e90aaf8b1510a311214baaceb1ba547dff668c66eab1  proto/hermes/board/v1/releases.proto
-8764837724b99b5f2b473de9c261b7ed3676692f9a01eb9524374736cf7f88aa  proto/hermes/board/v1/requests.proto
+7d4411c4514c0ecf78bccd58adf68e7988fc0ccbf2a3d49ed5f38ae2d8caaa5f  proto/hermes/board/v1/requests.proto
 2536b09ec1aed74234192566f132e14519ca08925e46e5f77f7d5e53ed5e9ca9  proto/hermes/home/v1/home.proto
 1c63eefb0c7e377a2937efc913e1343224a1bc38257296d69dc93abb3be08dea  proto/hermes/pr/v1/pr.proto
 9771fe12478bbe1aa433dc1c7ad45518f131d797efaf5062c2c0c12413c37a9c  proto/hermes/pr/v1/tools.proto

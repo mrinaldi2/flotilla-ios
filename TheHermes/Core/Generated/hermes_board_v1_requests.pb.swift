@@ -1195,7 +1195,7 @@ nonisolated struct Hermes_Board_V1_ItemQuery: Sendable {
   /// Clears the value of `blocked`. Subsequent reads from it will return its default value.
   mutating func clearBlocked() {self._blocked = nil}
 
-  /// Cards carrying any of these labels (`platform:ios`).
+  /// Cards carrying any of these labels (`platform:web`).
   var labels: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -1346,7 +1346,7 @@ nonisolated struct Hermes_Board_V1_ItemCreate: Sendable {
   mutating func clearPriority() {self._priority = nil}
 
   /// Free labels. `<group>:<value>` is a label of the board's group of that
-  /// name: `platform:ios` gives the item the platform ios.
+  /// name: `platform:web` gives the item the platform web.
   var labels: [String] = []
 
   /// The epic this belongs to.
@@ -1452,7 +1452,7 @@ nonisolated struct Hermes_Board_V1_ItemUpdate: Sendable {
   mutating func clearPriority() {self._priority = nil}
 
   /// The whole list, replacing the old one. `<group>:<value>` is a label of
-  /// the board's group of that name: `platform:ios` gives the platform ios.
+  /// the board's group of that name: `platform:web` gives the platform web.
   var labels: Hermes_Board_V1_StringList {
     get {_labels ?? Hermes_Board_V1_StringList()}
     set {_labels = newValue}

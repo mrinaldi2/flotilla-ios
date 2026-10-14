@@ -182,7 +182,7 @@ message Board {
 message LabelGroup {
   // Lowercase, no spaces or colons: `platform`, `area`.
   string name = 1;
-  // The values offered, in order: `ios` stands for the label `platform:ios`.
+  // The values offered, in order: `web` stands for the label `platform:web`.
   repeated string values = 2;
 }
 
@@ -342,6 +342,9 @@ message ItemCard {
   // A draft's card, for the owner's drafts tray. Drafts are never in a
   // column's cards.
   bool draft = 18;
+  // A draft's invited bots, by id, so the owner's tray and drawer follow an
+  // invitation or its removal live. Empty on a live card.
+  repeated string invited = 19;
 }
 
 message ItemLink {

@@ -776,7 +776,7 @@ nonisolated struct Hermes_Board_V1_LabelGroup: Sendable {
   /// Lowercase, no spaces or colons: `platform`, `area`.
   var name: String = String()
 
-  /// The values offered, in order: `ios` stands for the label `platform:ios`.
+  /// The values offered, in order: `web` stands for the label `platform:web`.
   var values: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -1347,6 +1347,13 @@ nonisolated struct Hermes_Board_V1_ItemCard: @unchecked Sendable {
   var draft: Bool {
     get {_storage._draft}
     set {_uniqueStorage()._draft = newValue}
+  }
+
+  /// A draft's invited bots, by id, so the owner's tray and drawer follow an
+  /// invitation or its removal live. Empty on a live card.
+  var invited: [String] {
+    get {_storage._invited}
+    set {_uniqueStorage()._invited = newValue}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2540,7 +2547,7 @@ nonisolated extension Hermes_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCard"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2561,6 +2568,7 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
     var _ownerCommentedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
     var _boardID: String = String()
     var _draft: Bool = false
+    var _invited: [String] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2589,6 +2597,7 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
       _ownerCommentedAt = source._ownerCommentedAt
       _boardID = source._boardID
       _draft = source._draft
+      _invited = source._invited
     }
   }
 
@@ -2625,6 +2634,7 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._ownerCommentedAt) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._boardID) }()
         case 18: try { try decoder.decodeSingularBoolField(value: &_storage._draft) }()
+        case 19: try { try decoder.decodeRepeatedStringField(value: &_storage._invited) }()
         default: break
         }
       }
@@ -2691,6 +2701,9 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
       if _storage._draft != false {
         try visitor.visitSingularBoolField(value: _storage._draft, fieldNumber: 18)
       }
+      if !_storage._invited.isEmpty {
+        try visitor.visitRepeatedStringField(value: _storage._invited, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2718,6 +2731,7 @@ nonisolated extension Hermes_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProt
         if _storage._ownerCommentedAt != rhs_storage._ownerCommentedAt {return false}
         if _storage._boardID != rhs_storage._boardID {return false}
         if _storage._draft != rhs_storage._draft {return false}
+        if _storage._invited != rhs_storage._invited {return false}
         return true
       }
       if !storagesAreEqual {return false}
