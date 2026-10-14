@@ -75,7 +75,26 @@ final class FakeKanban: BoardService, DraftService {
         return answer
     }
 
-    func invite(itemId: String, botId: String?) async throws -> BoardItemDetail { BoardItemDetail() }
+    /// What `item_invite` answers (the draft with its `invited`), or throws.
+    var inviteReply = BoardItemDetail()
+    var inviteError: Error?
+    /// True: `item_invite` waits until it is set back, as a slow home would.
+    var holdInvites = false
+    private(set) var invites: [(bot: String?, remove: Bool)] = []
+    var itemReply = BoardItemDetail()
+    private(set) var itemReads = 0
+
+    func invite(itemId: String, botId: String?, remove: Bool) async throws -> BoardItemDetail {
+        invites.append((botId, remove))
+        while holdInvites { try await Task.sleep(for: .milliseconds(2)) }
+        if let inviteError { throw inviteError }
+        return inviteReply
+    }
+
+    func item(_ id: String) async throws -> BoardItemDetail {
+        itemReads += 1
+        return itemReply
+    }
 
     func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult {
         finalized.append((itemId, column))

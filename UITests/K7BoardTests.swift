@@ -148,6 +148,60 @@ final class K7BoardTests: XCTestCase {
         screenshot("K7-finalize")
     }
 
+    /// gravity#26: Discuss with a bot, then "Discussing with" and its Remove,
+    /// which asks first. On the demo's owner token the daemon refuses the
+    /// invite: the refusal shows in place and Discuss is on again.
+    func testDiscussWithTheLeadThenRemoveIt() throws {
+        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        allowSystemAlerts()
+        openBoard(app)
+        let plus = app.buttons["board-new-item"]
+        guard plus.waitForExistence(timeout: 15) else { throw XCTSkip("The demo daemon predates 0.19 (no boards, no drafts)") }
+        plus.tap()
+        let title = waitFor(app.descendants(matching: .any)["quick-add-title"])
+        title.tap()
+        title.typeText("K7 discuss \(Int(Date().timeIntervalSince1970))")
+        waitFor(app.buttons["quick-add-save"]).tap()
+        waitFor(app.descendants(matching: .any)["draft-banner"], 30)
+
+        let discuss = waitFor(app.descendants(matching: .any)["draft-discuss"])
+        discuss.tap()
+        let lead = app.buttons.matching(NSPredicate(format: "label ENDSWITH '(lead)'")).firstMatch
+        waitFor(lead, 10).tap()
+        let pin = app.descendants(matching: .any)["draft-chat-pin"]
+        let failure = app.descendants(matching: .any)["draft-discuss-failure"]
+        let answered = NSPredicate(format: "exists == true")
+        _ = XCTWaiter().wait(for: [expectation(for: answered, evaluatedWith: pin), expectation(for: answered, evaluatedWith: failure)],
+                             timeout: 20, enforceOrder: false)
+        if failure.exists {
+            // The owner token: refused in the daemon's words, nobody discussing, Discuss on again.
+            XCTAssertTrue(any(app, "label CONTAINS 'paired device' OR label CONTAINS 'owner token'").exists, "the daemon's refusal")
+            XCTAssertFalse(any(app, "label == 'Discussing with' OR label == 'DISCUSSING WITH'").exists)
+            XCTAssertTrue(discuss.isEnabled, "Discuss is on again after the refusal")
+            screenshot("K7-discuss-refused")
+            return
+        }
+        // A paired device: the chat opened pinned to the draft; back to the draft for Remove.
+        waitFor(pin, 5)
+        screenshot("K7-discuss-chat")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let remove = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'draft-remove-'")).firstMatch
+        waitFor(remove, 10)
+        screenshot("K7-discussing-with")
+        remove.tap()
+        let dialog = app.alerts.matching(NSPredicate(format: "label BEGINSWITH 'Remove ' AND label ENDSWITH '?'")).firstMatch
+        waitFor(dialog, 5)
+        screenshot("K7-remove-confirm")
+        dialog.buttons["Keep"].tap()
+        XCTAssertTrue(remove.exists, "Keep keeps the bot")
+        remove.tap()
+        waitFor(dialog, 5).buttons["Remove"].tap()
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: remove)
+        waitForExpectations(timeout: 15)
+        screenshot("K7-removed")
+    }
+
     func testALeadsBoardProposalShowsItsChange() throws {
         // The board exists once the Lab's board has been read.
         let warm = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
