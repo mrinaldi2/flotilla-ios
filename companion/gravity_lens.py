@@ -5,7 +5,7 @@ Every Gravity bot is a Claude Code session, and Claude Code logs each turn to
 ~/.claude/projects/<workspace>/<session>.jsonl. The daemon does not serve those
 logs, so this companion does: it parses them into turns (what the bot was
 asked, the commands it ran, the files it changed, what it answered) and serves
-them, plus the shared artifacts folder, as JSON for GravitiOS.
+them, plus the shared artifacts folder, as JSON for the Flotilla iPhone app.
 
 Access needs a Gravity device token with the `read` grant. Tokens are checked
 by handshaking with the daemon itself, so revoking a device in Gravity cuts it
@@ -461,7 +461,7 @@ class Transcript:
         elif bus == "raise_decision":
             event.update(title=f"Asked you to decide: {str(args.get('title', ''))[:100]}", minor=False)
         elif bus is not None:
-            event.update(title=f"Hermes: {bus.replace('_', ' ')}", minor=True)
+            event.update(title=f"Flotilla: {bus.replace('_', ' ')}", minor=True)
         elif name in ("ToolSearch", "Skill", "TaskStop", "TaskOutput"):
             event.update(title=f"{name}", minor=True)
         else:
@@ -1149,7 +1149,7 @@ def shared_roots(config: str) -> Optional[List[str]]:
 
 def main() -> None:
     home = os.path.expanduser("~")
-    parser = argparse.ArgumentParser(description="Read-only view of bots' work for The Hermes iOS app.")
+    parser = argparse.ArgumentParser(description="Read-only view of bots' work for the Flotilla iOS app.")
     parser.add_argument("--port", type=int, default=49778)
     parser.add_argument("--bind", action="append", help="address to listen on (default: gravityd's bind list)")
     parser.add_argument("--gravity-home", default=os.path.join(home, ".gravity"),

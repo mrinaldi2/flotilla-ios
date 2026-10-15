@@ -11,8 +11,9 @@
 #   SIMULATOR       name of an existing simulator that is yours alone (default
 #                   Gravity-iOSQA); it is addressed by UDID and ERASED before each run
 #   SCREENSHOT_DIR  where the tests also write their screenshots as PNG
-#   DEMO_DAEMON     the daemon binary the demo runs (default ~/.thehermes/bin/hermesd
-#                   when present, else make_demo.py looks for gravityd)
+#   DEMO_DAEMON     the daemon binary the demo runs (default ~/.flotilla/bin/flotillad,
+#                   else ~/.thehermes/bin/hermesd from before the rename, when present;
+#                   else make_demo.py looks for one)
 #   DEMO_OUT        the demo's folder, wiped on each run (default build/ui-tests-demo)
 #   LONG_CHAT       1: give iOS Dev's demo transcript LONG_CHAT_TURNS (default 120) earlier
 #                   turns (demo/long_chat.py) for the long-chat tests (QA010LongChatTests, H228Tests)
@@ -37,7 +38,9 @@ peer_port=${DEMO_PEER_PORT:-41302}
 control_port=${DEMO_CONTROL_PORT:-41303}
 log="$out.log"
 daemon_bin=${DEMO_DAEMON:-}
-if [ -z "$daemon_bin" ] && [ -x "$HOME/.thehermes/bin/hermesd" ]; then daemon_bin=$HOME/.thehermes/bin/hermesd; fi
+for candidate in "$HOME/.flotilla/bin/flotillad" "$HOME/.thehermes/bin/hermesd"; do
+    if [ -z "$daemon_bin" ] && [ -x "$candidate" ]; then daemon_bin=$candidate; fi
+done
 project=$(dirname "$(ls -d *.xcodeproj/project.pbxproj | head -1)")
 
 device=$(xcrun simctl list devices available | grep -F "    $simulator (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')

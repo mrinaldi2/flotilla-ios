@@ -76,7 +76,7 @@ $Principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 
 Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal `
-    -Description "Read-only view of bots' work for The Hermes phone app." -Force | Out-Null
+    -Description "Read-only view of bots' work for the Flotilla phone app." -Force | Out-Null
 Start-ScheduledTask -TaskName $TaskName
 
 Start-Sleep -Seconds 3

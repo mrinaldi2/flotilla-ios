@@ -12,14 +12,14 @@
 	<key>LSUIElement</key><true/>
 	<key>LSMinimumSystemVersion</key><string>12.0</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>Gravity Lens shows your Desktop in The Hermes file browser on your iPhone.</string>
+	<string>Gravity Lens shows your Desktop in the Flotilla file browser on your iPhone.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Gravity Lens shows your Documents in The Hermes file browser on your iPhone.</string>
+	<string>Gravity Lens shows your Documents in the Flotilla file browser on your iPhone.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Gravity Lens shows your Downloads in The Hermes file browser on your iPhone.</string>
+	<string>Gravity Lens shows your Downloads in the Flotilla file browser on your iPhone.</string>
 	<key>NSRemovableVolumesUsageDescription</key>
-	<string>Gravity Lens shows external drives in The Hermes file browser on your iPhone.</string>
+	<string>Gravity Lens shows external drives in the Flotilla file browser on your iPhone.</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>Gravity Lens shows network drives in The Hermes file browser on your iPhone.</string>
+	<string>Gravity Lens shows network drives in the Flotilla file browser on your iPhone.</string>
 </dict>
 </plist>

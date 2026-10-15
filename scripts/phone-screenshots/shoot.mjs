@@ -1,4 +1,4 @@
-// Screenshots of The Hermes on a real iPhone, through Appium. This script
+// Screenshots of Flotilla on a real iPhone, through Appium. This script
 // builds WebDriverAgent (the copy Appium's iOS driver ships) with your team's
 // signing, runs it on the phone through xcodebuild, which reaches it over
 // Wi-Fi too, and hands Appium its address. The first run builds for a few
@@ -19,7 +19,8 @@
 //   WDA_BUNDLE_ID  the runner's bundle id without ".xctrunner" (default: the
 //                  WebDriverAgentRunner already on the phone, so it is replaced
 //                  rather than a second one added)
-// The app's bundle id and team come from Config/Local.xcconfig.
+// The app's team comes from Config/Local.xcconfig, its bundle id from there or,
+// when Local.xcconfig does not set one, from Config/Signing.xcconfig.
 // Screenshots land in shots/<time>/.
 
 import { execFileSync, spawn } from "node:child_process";
@@ -60,8 +61,12 @@ function wdaBundleId(udid) {
 }
 
 function localSetting(name) {
-  const text = readFileSync(join(repo, "Config", "Local.xcconfig"), "utf8");
-  return text.match(new RegExp(`^${name}\\s*=\\s*(.+)$`, "m"))?.[1].trim();
+  for (const file of ["Local.xcconfig", "Signing.xcconfig"]) {
+    const path = join(repo, "Config", file);
+    if (!existsSync(path)) continue;
+    const value = readFileSync(path, "utf8").match(new RegExp(`^${name}\\s*=\\s*(.+)$`, "m"))?.[1].trim();
+    if (value) return value;
+  }
 }
 
 const wdaProject = join(here, ".appium", "node_modules", "appium-xcuitest-driver", "node_modules",

@@ -1,8 +1,8 @@
 {
-  "name": "thehermes-phone-screenshots",
+  "name": "flotilla-phone-screenshots",
   "private": true,
   "type": "module",
-  "description": "Screenshots of The Hermes on a real iPhone, through Appium and a preinstalled WebDriverAgent.",
+  "description": "Screenshots of Flotilla on a real iPhone, through Appium and a preinstalled WebDriverAgent.",
   "scripts": {
     "postinstall": "APPIUM_HOME=./.appium appium driver list --installed 2>&1 | grep -q xcuitest || APPIUM_HOME=./.appium appium driver install xcuitest@12.14.0",
     "shoot": "node shoot.mjs"

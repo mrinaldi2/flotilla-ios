@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copies the wire contract from a commit of the Hermes desktop/daemon repo
+# Copies the wire contract from a commit of the Flotilla desktop/daemon repo
+# (mrinaldi2/gravity)
 # (ADR-001): the protos, the home and board fixtures, where they came from
 # and their checksums.
 #

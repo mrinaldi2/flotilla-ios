@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds a development-signed The Hermes app for the phones in your provisioning
+# Builds a development-signed Flotilla app for the phones in your provisioning
 # profile and writes an over-the-air install page for it:
 #
 #   scripts/build-for-phone.sh <out-dir> <https-base-url>
@@ -11,7 +11,8 @@
 #   tailscale serve 8765
 #
 # then open the URL in Safari on the phone and tap Install. Needs
-# DEVELOPMENT_TEAM and PRODUCT_BUNDLE_IDENTIFIER in Config/Local.xcconfig.
+# DEVELOPMENT_TEAM in Config/Local.xcconfig (and PRODUCT_BUNDLE_IDENTIFIER there
+# when you sign with a team of your own; see Config/Signing.xcconfig).
 set -eu
 cd "$(dirname "$0")/.."
 out=${1:?usage: $0 <out-dir> <https-base-url>}
@@ -53,13 +54,13 @@ cat > "$out/site/manifest.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>items</key><array><dict>
 <key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>$base/Flotilla.ipa</string></dict></array>
-<key>metadata</key><dict><key>bundle-identifier</key><string>$bundle</string><key>bundle-version</key><string>$version</string><key>kind</key><string>software</string><key>title</key><string>The Hermes</string></dict>
+<key>metadata</key><dict><key>bundle-identifier</key><string>$bundle</string><key>bundle-version</key><string>$version</string><key>kind</key><string>software</string><key>title</key><string>Flotilla</string></dict>
 </dict></array></dict></plist>
 PLIST
 cat > "$out/site/index.html" <<HTML
-<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Install The Hermes</title>
+<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Install Flotilla</title>
 <body style="font:17px -apple-system;padding:40px 20px;text-align:center">
-<h2>The Hermes $version ($build)</h2><p style="color:#888">$commit</p>
+<h2>Flotilla $version ($build)</h2><p style="color:#888">$commit</p>
 <p><a style="display:inline-block;padding:14px 28px;background:#0a84ff;color:#fff;border-radius:12px;text-decoration:none" href="itms-services://?action=download-manifest&amp;url=$base/manifest.plist">Install</a></p></body>
 HTML
-echo "The Hermes $version ($build) $commit -> $out/site"
+echo "Flotilla $version ($build) $commit -> $out/site"

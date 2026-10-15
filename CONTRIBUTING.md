@@ -4,7 +4,7 @@ Thanks for helping. Bug reports, ideas and pull requests are all welcome.
 
 ## Getting set up
 
-1. Install [Gravity](https://getgravity.build) (the demo uses its daemon) and Xcode 16 or later.
+1. Install Flotilla on the Mac (the demo uses its daemon, `flotillad`) and Xcode 16 or later.
 2. Start the demo world, which needs no bots of your own and spends no tokens:
 
    ```bash
@@ -37,7 +37,7 @@ stamps the commit it was built from into About.
 
 ## Where things are
 
-- `Flotilla/Core/DaemonClient.swift`: the WebSocket client for Gravity's
+- `Flotilla/Core/DaemonClient.swift`: the WebSocket client for the daemon's
   [control-plane protocol](https://github.com/ahilles107/gravity/blob/main/docs/protocol.md).
 - `Flotilla/Core/Lens.swift` and `companion/gravity_lens.py`: the activity, image and report side.
 - `demo/make_demo.py`: add to the demo world when a feature needs data to show.

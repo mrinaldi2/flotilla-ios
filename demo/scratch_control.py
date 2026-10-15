@@ -96,7 +96,7 @@ def main() -> None:
 
     def owner() -> Socket:
         ws = Socket(args.port)
-        ws.request("hello", protocol_version=2, token=token, client="gravitios-qa-other-client")
+        ws.request("hello", protocol_version=2, token=token, client="flotilla-qa-other-client")
         return ws
 
     def raw(ws: Socket, kind: str, **fields):
