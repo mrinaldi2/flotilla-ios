@@ -61,7 +61,7 @@ struct PairingScannerSheet: View {
             }
             .ignoresSafeArea(edges: .bottom)
             .safeAreaInset(edge: .bottom) {
-                Text("Point the camera at the pairing code on your computer: The Hermes → Settings → Devices.")
+                Text("Point the camera at the pairing code on your computer: Flotilla → Settings → Devices.")
                     .font(.footnote)
                     .multilineTextAlignment(.center)
                     .padding()

@@ -36,12 +36,12 @@ enum ConnectionStatus: Equatable {
     }
 }
 
-/// WebSocket client for the gravityd control plane: handshake, `req_id`
+/// WebSocket client for the flotillad control plane: handshake, `req_id`
 /// request/reply, pushes, keepalive and reconnect with backoff.
 @MainActor
 final class DaemonClient {
     static let protocolVersion = 2
-    static let clientId = "gravitios/\(AppInfo.version)"
+    static let clientId = "flotilla-ios/\(AppInfo.version)"
     /// What this app can do for the daemon: it shows bots' permission prompts
     /// and answers them, so the daemon holds a prompt for it instead of
     /// leaving it in the bot's terminal. It shows what a decision option
@@ -164,7 +164,7 @@ final class DaemonClient {
     func request(_ type: String, _ fields: JSONDict = [:]) async throws -> JSONDict {
         await awaitConnection()
         guard status == .connected, let task else {
-            throw DaemonError(code: "not_connected", message: "Not connected to the Hermes service.")
+            throw DaemonError(code: "not_connected", message: "Not connected to the Flotilla service.")
         }
         let id = newRequestId()
         var body = fields
@@ -182,7 +182,7 @@ final class DaemonClient {
             // Long enough for a page to crawl in over a weak mobile link.
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(30))
-                self?.fail(id, DaemonError(code: "timeout", message: "The Hermes service did not answer \(type)."))
+                self?.fail(id, DaemonError(code: "timeout", message: "The Flotilla service did not answer \(type)."))
             }
         }
     }
@@ -192,7 +192,7 @@ final class DaemonClient {
     func request(_ body: Hermes_Wire_V1_Envelope.OneOf_Body, name: String) async throws -> Hermes_Wire_V1_Envelope {
         await awaitConnection()
         guard status == .connected, let task else {
-            throw DaemonError(code: "not_connected", message: "Not connected to the Hermes service.")
+            throw DaemonError(code: "not_connected", message: "Not connected to the Flotilla service.")
         }
         let id = nextEnvelopeId
         nextEnvelopeId += 1
@@ -208,7 +208,7 @@ final class DaemonClient {
             }
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(30))
-                self?.failEnvelope(id, DaemonError(code: "timeout", message: "The Hermes service did not answer \(name)."))
+                self?.failEnvelope(id, DaemonError(code: "timeout", message: "The Flotilla service did not answer \(name)."))
             }
         }
     }
@@ -352,7 +352,7 @@ final class DaemonClient {
         teardown()
         switch frame.str("code") {
         case "unsupported_version": status = .versionMismatch(message)
-        default: status = .authFailed(message.isEmpty ? "The Hermes service rejected the token." : message)
+        default: status = .authFailed(message.isEmpty ? "The Flotilla service rejected the token." : message)
         }
     }
 

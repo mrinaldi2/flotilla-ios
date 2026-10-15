@@ -59,7 +59,7 @@ struct PadRootView: View {
                     .badge(fleet.computers.filter { $0.store.status != .connected && $0.store.status != .connecting }.count)
                     .tag(Item.settings)
             }
-            .navigationTitle("The Hermes")
+            .navigationTitle("Flotilla")
         } detail: {
             detail
                 .toolbar {

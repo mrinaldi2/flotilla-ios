@@ -29,7 +29,7 @@ final class Dictation {
         guard !isListening else { return }
         transcript = ""
         guard await Self.authorized() else {
-            phase = .failed("Allow the microphone and Speech Recognition for The Hermes in the iPhone's Settings.")
+            phase = .failed("Allow the microphone and Speech Recognition for Flotilla in the iPhone's Settings.")
             return
         }
         guard let recognizer, recognizer.isAvailable else {

@@ -49,14 +49,14 @@ final class ReleaseInstallTests: XCTestCase {
         XCTAssertEqual(InstallWords.button(device: "iPhone", forTesting: false), "Install on this iPhone")
         XCTAssertEqual(InstallWords.button(device: "iPad", forTesting: false), "Install on this iPad")
         XCTAssertEqual(InstallWords.button(device: "iPhone", forTesting: true), "Install on this iPhone to test")
-        XCTAssertEqual(InstallWords.opensSafari, "Opens the install page in Safari. The Hermes closes while it updates.")
-        XCTAssertEqual(InstallWords.hint("0.6.1"), "Opens Safari to install The Hermes 0.6.1.")
+        XCTAssertEqual(InstallWords.opensSafari, "Opens the install page in Safari. Flotilla closes while it updates.")
+        XCTAssertEqual(InstallWords.hint("0.6.1"), "Opens Safari to install Flotilla 0.6.1.")
         XCTAssertEqual(InstallWords.siteOff(computer: "Studio Mac"),
                        "The build site on Studio Mac isn't serving. Ask DevOps to start it, then try again.")
         XCTAssertEqual(InstallWords.notPublished,
                        "This package has no iPhone or iPad build to install yet. DevOps publishes it after building.")
         XCTAssertEqual(InstallWords.sameVersion(device: "iPhone", version: "0.6.1", build: "12"),
-                       "✓ This iPhone has The Hermes 0.6.1 (12).")
+                       "✓ This iPhone has Flotilla 0.6.1 (12).")
         XCTAssertEqual(InstallWords.reinstall, "Reinstall")
         XCTAssertEqual(InstallWords.newer(device: "iPhone", version: "0.6.2"), "This iPhone has a newer version (0.6.2).")
         XCTAssertEqual(InstallWords.anyway("0.6.1"), "Install 0.6.1 anyway")
@@ -64,8 +64,8 @@ final class ReleaseInstallTests: XCTestCase {
                        "Can't reach the build site from this iPhone. Turn on Tailscale, then try again.")
         XCTAssertEqual(InstallWords.profile,
                        "If iOS says it can't install, this device may not be in the build's profile. Ask DevOps.")
-        XCTAssertEqual(InstallWords.banner("0.6.1"), "The Hermes 0.6.1 is ready to install")
-        XCTAssertEqual(InstallWords.updated("0.6.1"), "Updated to The Hermes 0.6.1.")
+        XCTAssertEqual(InstallWords.banner("0.6.1"), "Flotilla 0.6.1 is ready to install")
+        XCTAssertEqual(InstallWords.updated("0.6.1"), "Updated to Flotilla 0.6.1.")
     }
 
     // MARK: test 6: the button opens install_url
@@ -146,7 +146,7 @@ final class ReleaseInstallTests: XCTestCase {
             "page_url": "https://mac/index.html", "title": "The Hermes 0.6.1 (12) is ready to install",
         ] as JSONDict])
         XCTAssertEqual(store.installOffer?.releaseId, "r1")
-        XCTAssertEqual(store.installOffer.map { InstallWords.banner($0.version) }, "The Hermes 0.6.1 is ready to install")
+        XCTAssertEqual(store.installOffer.map { InstallWords.banner($0.version) }, "Flotilla 0.6.1 is ready to install")
         await store.dismissInstallOffer()
         XCTAssertNil(store.installOffer, "Not now hides it")
     }
@@ -229,9 +229,9 @@ final class ReleaseInstallTests: XCTestCase {
         defaults.removePersistentDomain(forName: "test-update-notice")
         XCTAssertNil(UpdateNotice.pending(defaults, version: "0.6.1", build: "12"), "first launch: nothing")
         XCTAssertNil(UpdateNotice.pending(defaults, version: "0.6.1", build: "12"), "same version: nothing")
-        XCTAssertEqual(UpdateNotice.pending(defaults, version: "0.6.2", build: "13"), "Updated to The Hermes 0.6.2.")
+        XCTAssertEqual(UpdateNotice.pending(defaults, version: "0.6.2", build: "13"), "Updated to Flotilla 0.6.2.")
         // QA-013: shown too early (a blank cold launch) and never seen: still owed.
-        XCTAssertEqual(UpdateNotice.pending(defaults, version: "0.6.2", build: "13"), "Updated to The Hermes 0.6.2.",
+        XCTAssertEqual(UpdateNotice.pending(defaults, version: "0.6.2", build: "13"), "Updated to Flotilla 0.6.2.",
                        "not marked until it was on screen")
         UpdateNotice.markShown(defaults, version: "0.6.2", build: "13")
         XCTAssertNil(UpdateNotice.pending(defaults, version: "0.6.2", build: "13"), "once seen, done")

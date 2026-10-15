@@ -1,15 +1,18 @@
-// Signing for GravitiOS.
+// Signing for Flotilla.
 //
-// Put your own values in Config/Local.xcconfig (git-ignored), for example:
+// The bundle identifier is Flotilla's own; its test bundles follow it as
+// $(inherited).tests and $(inherited).uitests. To sign a device build, put
+// your team in Config/Local.xcconfig (git-ignored), and a bundle identifier
+// of your own unless you sign with Flotilla's team, for example:
 //
 //   DEVELOPMENT_TEAM = ABCDE12345
-//   PRODUCT_BUNDLE_IDENTIFIER = com.yourname.gravitios
+//   PRODUCT_BUNDLE_IDENTIFIER = com.yourname.flotilla.ios
 //
 // The simulator builds without either.
 
 #include "Version.xcconfig"
 
-PRODUCT_BUNDLE_IDENTIFIER = com.example.gravitios
+PRODUCT_BUNDLE_IDENTIFIER = com.manuelrinaldi.flotilla.ios
 DEVELOPMENT_TEAM =
 
 #include? "Local.xcconfig"

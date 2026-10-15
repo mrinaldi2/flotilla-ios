@@ -97,7 +97,7 @@ final class QA013InstallStateTests: XCTestCase {
     /// device: "Install 0.6.1 anyway".
     func testSameVersionAndNewer() throws {
         let same = try open(release("deployed", name: "0.6.1"), install("deployed", version: "0.6.1", build: "12"))
-        see(same, "✓ This \(device) has The Hermes 0.6.1 (12).", "06a-same-version")
+        see(same, "✓ This \(device) has Flotilla 0.6.1 (12).", "06a-same-version")
         XCTAssertTrue(same.buttons["Reinstall"].exists, "No Reinstall")
         same.terminate()
         let older = try open(release("deployed", name: "0.6.1"), install("deployed", version: "0.6.1", build: "11"))

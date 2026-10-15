@@ -334,7 +334,7 @@ final class LensStore {
             let row = reply.dict("detail") ?? [:]
             guard let data = try? JSONSerialization.data(withJSONObject: row),
                   let detail = try? decoder.decode(LensEventDetail.self, from: data) else {
-                throw DaemonError(code: "decode", message: "Unexpected step detail from the Hermes service.")
+                throw DaemonError(code: "decode", message: "Unexpected step detail from the Flotilla service.")
             }
             return detail
         }
@@ -435,7 +435,7 @@ final class LensStore {
         return reply.text
     }
 
-    /// `~/.gravity/projects/<project>/artifacts/<name>` → its report, if it is one.
+    /// `~/.flotilla/projects/<project>/artifacts/<name>` → its report, if it is one.
     func report(forPath path: String) -> (project: String, name: String)? {
         let parts = path.replacingOccurrences(of: "\\", with: "/").split(separator: "/").map(String.init)
         guard let index = parts.lastIndex(of: "artifacts"), index >= 2, index + 1 < parts.count,
@@ -533,7 +533,7 @@ final class LensStore {
     private func readFile(_ fields: JSONDict) async throws -> DaemonFile {
         let reply = try await app.client.request("read_file", fields)
         guard let row = reply.dict("file") else {
-            throw DaemonError(code: "not_found", message: "The Hermes service did not return the file.")
+            throw DaemonError(code: "not_found", message: "The Flotilla service did not return the file.")
         }
         return DaemonFile(row)
     }

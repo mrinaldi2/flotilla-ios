@@ -4,7 +4,13 @@ import XCTest
 /// Pairing links from a scanned code or the clipboard, and what a failed
 /// connection tells the person to fix.
 final class PairingTests: XCTestCase {
-    func testTheHermesLink() {
+    func testFlotillaLink() {
+        let link = PairingLink.parse("flotilla://pair?host=mac-mini.tail1234.ts.net&port=49777&token=abc123")
+        XCTAssertEqual(link, PairingLink(host: "mac-mini.tail1234.ts.net", port: 49777, token: "abc123"))
+    }
+
+    /// The codes and links desktop apps from before the rename show.
+    func testLegacyTheHermesLink() {
         let link = PairingLink.parse("thehermes://pair?host=mac-mini.tail1234.ts.net&port=49777&token=abc123")
         XCTAssertEqual(link, PairingLink(host: "mac-mini.tail1234.ts.net", port: 49777, token: "abc123"))
     }
@@ -15,31 +21,35 @@ final class PairingTests: XCTestCase {
     }
 
     func testNameKindAndEncodedToken() {
-        let link = PairingLink.parse("thehermes://pair?host=pc&port=1&token=a%2Bb%3D%3D&name=Studio%20PC&kind=windows")
+        let link = PairingLink.parse("flotilla://pair?host=pc&port=1&token=a%2Bb%3D%3D&name=Studio%20PC&kind=windows")
         XCTAssertEqual(link?.token, "a+b==")
         XCTAssertEqual(link?.name, "Studio PC")
         XCTAssertEqual(link?.kind, .windows)
     }
 
     func testPortDefaultsAndIPv6Brackets() {
-        let link = PairingLink.parse("thehermes://pair?host=%5Bfd7a:115c::1%5D&token=x")
+        let link = PairingLink.parse("flotilla://pair?host=%5Bfd7a:115c::1%5D&token=x")
         XCTAssertEqual(link?.host, "fd7a:115c::1")
         XCTAssertEqual(link?.port, PairingLink.defaultPort)
     }
 
     func testLinkInsidePastedText() {
-        let text = "Pair your phone:\n  <THEHERMES://pair?host=mac&port=49777&token=xyz>  (shown once)"
+        let text = "Pair your phone:\n  <FLOTILLA://pair?host=mac&port=49777&token=xyz>  (shown once)"
         XCTAssertEqual(PairingLink.parse(text), PairingLink(host: "mac", port: 49777, token: "xyz"))
+        let legacy = "Pair your phone:\n  <THEHERMES://pair?host=mac&port=49777&token=xyz>  (shown once)"
+        XCTAssertEqual(PairingLink.parse(legacy), PairingLink(host: "mac", port: 49777, token: "xyz"))
     }
 
     func testNotAPairingLink() {
         XCTAssertNil(PairingLink.parse("abc123"))
         XCTAssertNil(PairingLink.parse("https://example.com/pair?host=mac&token=x"))
+        XCTAssertNil(PairingLink.parse("flotilla://open?host=mac&token=x"))
         XCTAssertNil(PairingLink.parse("thehermes://open?host=mac&token=x"))
-        XCTAssertNil(PairingLink.parse("thehermes://pair?host=mac"), "no token")
-        XCTAssertNil(PairingLink.parse("thehermes://pair?token=x"), "no host")
-        XCTAssertNil(PairingLink.parse("thehermes://pair?host=mac&port=99999&token=x"), "port out of range")
-        XCTAssertNil(PairingLink.parse("thehermes://pair?host=mac&port=http&token=x"), "port not a number")
+        XCTAssertNil(PairingLink.parse("hermes://pair?host=mac&token=x"), "never a pairing scheme")
+        XCTAssertNil(PairingLink.parse("flotilla://pair?host=mac"), "no token")
+        XCTAssertNil(PairingLink.parse("flotilla://pair?token=x"), "no host")
+        XCTAssertNil(PairingLink.parse("flotilla://pair?host=mac&port=99999&token=x"), "port out of range")
+        XCTAssertNil(PairingLink.parse("flotilla://pair?host=mac&port=http&token=x"), "port not a number")
     }
 
     func testRejectedTokenPointsAtTheToken() {

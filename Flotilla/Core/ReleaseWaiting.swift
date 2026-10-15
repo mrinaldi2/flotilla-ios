@@ -147,7 +147,7 @@ enum WaitingWords {
     }
 
     static func runOn(_ computer: String) -> String {
-        "Run it on \(computer.isEmpty ? "its computer" : computer), in The Hermes app."
+        "Run it on \(computer.isEmpty ? "its computer" : computer), in the Flotilla app."
     }
 
     /// Progress, on a service without owner_blockers.

@@ -4,7 +4,7 @@ import UIKit
 /// Card links on screen (H-204, UX-035): a tap pushes the card onto the
 /// stack the link is in; a long-press previews it with Open card and Copy.
 
-/// Opens `hermes://item/<id>` links from anything inside this navigation
+/// Opens `flotilla://item/<id>` links from anything inside this navigation
 /// stack. A card that isn't on its board, or whose computer is away, says so
 /// instead of navigating (§6).
 private struct OpensCardLinks: ViewModifier {

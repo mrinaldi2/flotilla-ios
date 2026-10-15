@@ -27,7 +27,7 @@ struct LinkProjectSheet: View {
             Form {
                 if !store.hasLinkedProjects {
                     Section {
-                        Text("The Hermes on \(store.computerName) does not link projects yet. It needs a Hermes service with linked projects; this phone already speaks it.")
+                        Text("Flotilla on \(store.computerName) does not link projects yet. It needs a Flotilla service with linked projects; this phone already speaks it.")
                             .foregroundStyle(Color.secondaryText)
                     }
                 }

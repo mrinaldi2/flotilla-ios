@@ -13,9 +13,9 @@ final class CardLinksTests: XCTestCase {
         let text = "see H-189 and UTF-8, branch H-189-project-clicks, `H-190`"
         XCTAssertEqual(CardLinker.ids(in: text, prefixes: prefixes), ["H-189", "H-190"])
         let linked = CardLinker.linked(text, prefixes: prefixes)
-        XCTAssertTrue(linked.hasPrefix("see [H-189](hermes://item/H-189) and UTF-8"))
+        XCTAssertTrue(linked.hasPrefix("see [H-189](flotilla://item/H-189) and UTF-8"))
         XCTAssertTrue(linked.contains("branch H-189-project-clicks,"), "a branch name stays text")
-        XCTAssertTrue(linked.hasSuffix("[`H-190`](hermes://item/H-190)"), "inline code that is the id is linked, as code")
+        XCTAssertTrue(linked.hasSuffix("[`H-190`](flotilla://item/H-190)"), "inline code that is the id is linked, as code")
     }
 
     func testCodeLinksAndURLsAreLeftAlone() {
@@ -36,9 +36,12 @@ final class CardLinksTests: XCTestCase {
 
     func testTheLinkURLRoundTrips() {
         XCTAssertEqual(CardLinker.id(from: CardLinker.url("H-293")), "H-293")
-        XCTAssertEqual(CardLinker.id(from: URL(string: "thehermes://item/H-293")!), "H-293", "from a notification")
+        XCTAssertEqual(CardLinker.url("H-293").absoluteString, "flotilla://item/H-293")
+        XCTAssertEqual(CardLinker.id(from: URL(string: "flotilla://item/H-293")!), "H-293", "from a notification")
+        XCTAssertEqual(CardLinker.id(from: URL(string: "thehermes://item/H-293")!), "H-293", "from before the rename")
+        XCTAssertEqual(CardLinker.id(from: URL(string: "hermes://item/H-293")!), "H-293", "a link written before the rename")
         XCTAssertNil(CardLinker.id(from: URL(string: "https://example.com/item/H-1")!))
-        XCTAssertNil(CardLinker.id(from: URL(string: "thehermes://pair?host=x")!))
+        XCTAssertNil(CardLinker.id(from: URL(string: "flotilla://pair?host=x")!))
     }
 
     func testTheProjectOnScreenWinsWhenPrefixesCollide() {
@@ -149,7 +152,7 @@ final class CardLinksTests: XCTestCase {
         XCTAssertEqual(offline.notice,
                        "H-293 is on The Hermes's board, kept on imac. imac is offline · last seen \(time).\nLast seen as: Main chat drops the bot's answer")
         XCTAssertEqual(CardPreview(id: "H-1", state: .oldService(computer: "win-pc")).notice,
-                       "Update the Hermes service on win-pc to see cards from here.")
+                       "Update the Flotilla service on win-pc to see cards from here.")
         XCTAssertEqual(CardPreview(id: "H-1", state: .missing).accessibilityName, "H-1, card")
     }
 

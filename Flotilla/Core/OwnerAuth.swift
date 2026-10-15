@@ -43,7 +43,7 @@ enum OwnerAuth {
             switch self {
             case .unavailable(let computer):
                 let place = computer.isEmpty ? "your computer" : computer
-                return "Set up Face ID or a passcode on this device to rule on access, or do it on \(place), in The Hermes app."
+                return "Set up Face ID or a passcode on this device to rule on access, or do it on \(place), in the Flotilla app."
             case .cancelled(let action):
                 return action.refused
             }

@@ -71,8 +71,8 @@ final class OwnerAuthTests: XCTestCase {
 
     func testUnavailableNamesWhereToRule() {
         XCTAssertEqual(OwnerAuth.Failure.unavailable(computer: "Studio Mac").localizedDescription,
-                       "Set up Face ID or a passcode on this device to rule on access, or do it on Studio Mac, in The Hermes app.")
+                       "Set up Face ID or a passcode on this device to rule on access, or do it on Studio Mac, in the Flotilla app.")
         XCTAssertEqual(OwnerAuth.Failure.unavailable(computer: "").localizedDescription,
-                       "Set up Face ID or a passcode on this device to rule on access, or do it on your computer, in The Hermes app.")
+                       "Set up Face ID or a passcode on this device to rule on access, or do it on your computer, in the Flotilla app.")
     }
 }

@@ -54,7 +54,7 @@ struct MainChatView: View {
                     } header: {
                         SectionTitle(computer.name)
                     } footer: {
-                        Text("Threads come with The Hermes 0.17 on \(computer.name). Until then, these open the bot’s chat.")
+                        Text("Threads come with version 0.17 on \(computer.name). Until then, these open the bot’s chat.")
                             .foregroundStyle(Color.secondaryText)
                     }
                 }

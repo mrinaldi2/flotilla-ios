@@ -337,7 +337,7 @@ extension Fleet {
             if let on, let bot = on.store.permissions.first(where: { $0.id == id })?.botId, bot != "terminal" {
                 return .bot(computerId: on.id, botId: bot, chat: false)
             }
-            return .note(title: row.title, text: "Answer it on \(place), in The Hermes app.")
+            return .note(title: row.title, text: "Answer it on \(place), in the Flotilla app.")
         case .bot(let ref)?:
             if let botComputer = computer(daemonId: ref.daemonID) ?? on {
                 return .bot(computerId: botComputer.id, botId: ref.botID, chat: true)
@@ -345,7 +345,7 @@ extension Fleet {
         case .releaseID(let id)?:
             if let on { return .release(computerId: on.id, releaseId: id) }
         case .actionID?:
-            return .note(title: row.title, text: "Run cards come to the phone in a later update. For now, run or reject it on \(place), in The Hermes app.")
+            return .note(title: row.title, text: "Run cards come to the phone in a later update. For now, run or reject it on \(place), in the Flotilla app.")
         case .itemID(let id)?:
             // The card on the computer that keeps its board, where a comment is
             // accepted (H-210); the bot's computer would refuse it.

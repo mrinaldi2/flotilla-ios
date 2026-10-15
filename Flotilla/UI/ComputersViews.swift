@@ -90,10 +90,10 @@ struct ComputerEditor: View {
                     TextField("49777", text: $port, prompt: .placeholder("49777")).keyboardType(.numberPad).multilineTextAlignment(.trailing)
                 }
             } header: {
-                Text("Hermes service").foregroundStyle(Color.secondaryText)
+                Text("Flotilla service").foregroundStyle(Color.secondaryText)
             }
             Section {
-                TextField("Address (empty: same as the Hermes service)", text: $record.lensHost, prompt: .placeholder("Address (empty: same as the Hermes service)"))
+                TextField("Address (empty: same as the Flotilla service)", text: $record.lensHost, prompt: .placeholder("Address (empty: same as the Flotilla service)"))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -120,12 +120,12 @@ struct ComputerEditor: View {
                 }
                 .disabled(token.trimmingCharacters(in: .whitespaces).isEmpty)
             } footer: {
-                Text("For a token that was revoked or rejected. Create one on \(computer.name) in The Hermes → Settings → Devices.").foregroundStyle(Color.secondaryText)
+                Text("For a token that was revoked or rejected. Create one on \(computer.name) in Flotilla → Settings → Devices.").foregroundStyle(Color.secondaryText)
             }
             Section {
                 Button("Remove \(computer.name)", role: .destructive) { confirmRemove = true }
             } footer: {
-                Text("Removes its token and screen password from this iPhone. To cut off a lost phone, revoke the device on that computer in The Hermes → Settings → Devices.").foregroundStyle(Color.secondaryText)
+                Text("Removes its token and screen password from this iPhone. To cut off a lost phone, revoke the device on that computer in Flotilla → Settings → Devices.").foregroundStyle(Color.secondaryText)
             }
         }
         .navigationTitle(computer.name)

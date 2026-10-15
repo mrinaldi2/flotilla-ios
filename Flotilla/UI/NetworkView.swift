@@ -68,7 +68,7 @@ struct NetworkView: View {
                     } header: {
                         Text("Connect").foregroundStyle(Color.secondaryText)
                     } footer: {
-                        Text("\(unpaired.first?.1.name ?? "The second computer") listens for the other, so it needs its Tailscale address under bind in gravityd.toml, as it does for this phone.").foregroundStyle(Color.secondaryText)
+                        Text("\(unpaired.first?.1.name ?? "The second computer") listens for the other, so it needs its Tailscale address under bind in flotillad.toml, as it does for this phone.").foregroundStyle(Color.secondaryText)
                     }
                 }
 
@@ -235,7 +235,7 @@ private struct InviteView: View {
             } header: {
                 Text("The other computer connects to this one").foregroundStyle(Color.secondaryText)
             } footer: {
-                Text("Paste the code on the other computer: hermesd peer add <name> \"<code>\". It holds a token and works once.").foregroundStyle(Color.secondaryText)
+                Text("Paste the code on the other computer: flotillad peer add <name> \"<code>\". It holds a token and works once.").foregroundStyle(Color.secondaryText)
             }
             Section {
                 TextField("ws://…/peer#…", text: $code, prompt: .placeholder("ws://…/peer#…"), axis: .vertical)
@@ -247,7 +247,7 @@ private struct InviteView: View {
             } header: {
                 Text("This computer connects to the other").foregroundStyle(Color.secondaryText)
             } footer: {
-                Text("Make the code on the other computer: hermesd peer invite <name>.").foregroundStyle(Color.secondaryText)
+                Text("Make the code on the other computer: flotillad peer invite <name>.").foregroundStyle(Color.secondaryText)
             }
         }
         .navigationTitle("Invite codes")

@@ -57,7 +57,7 @@ struct RootView: View {
         // Which card ids are links: each project's prefix (H-204). Projects
         // arrive after the connection does, so this follows them.
         .task(id: projectsKey) { await fleet.cards.refresh(fleet.computers) }
-        // thehermes://item/H-293 from outside (a notification): the card, on Projects.
+        // flotilla://item/H-293 from outside (a notification): the card, on Projects.
         .onChange(of: fleet.openCard) { _, id in if id != nil { tab = .projects } }
         .task(id: fleet.openCard) { await fleet.watchOpenCard() }
         // A card link whose id no project uses (H-216).

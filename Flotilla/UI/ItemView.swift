@@ -205,7 +205,7 @@ struct ItemView: View {
                 if let body = row.body {
                     LinkedText(markdown: body)
                 } else {
-                    Text("A comment. Its text shows once the Hermes service on \(store.computerName.isEmpty ? "your computer" : store.computerName) is updated.")
+                    Text("A comment. Its text shows once the Flotilla service on \(store.computerName.isEmpty ? "your computer" : store.computerName) is updated.")
                         .foregroundStyle(Color.secondaryText)
                 }
             }

@@ -80,7 +80,7 @@ struct InstallSection: View {
     }
 }
 
-/// "The Hermes 0.6.1 is ready to install" · Install · Not now, on Needs you and
+/// "Flotilla 0.6.1 is ready to install" · Install · Not now, on Needs you and
 /// Releases when this device has a waiting offer (UX-043 §3).
 struct InstallOfferBanner: View {
     let store: AppStore
@@ -115,7 +115,7 @@ struct InstallOfferBanner: View {
     }
 }
 
-/// "Updated to The Hermes 0.6.1.", once, at the first launch of a new version:
+/// "Updated to Flotilla 0.6.1.", once, at the first launch of a new version:
 /// shown once the app is active, and marked seen only after it was on screen.
 struct UpdatedToast: View {
     @Environment(\.scenePhase) private var scenePhase

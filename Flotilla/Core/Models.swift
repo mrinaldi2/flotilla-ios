@@ -1,6 +1,6 @@
 import Foundation
 
-// Entities of the gravityd control plane (protocol v2), see docs/protocol.md
+// Entities of the flotillad control plane (protocol v2), see docs/protocol.md
 // in github.com/ahilles107/gravity.
 
 struct Project: Identifiable, Equatable {
@@ -8,7 +8,7 @@ struct Project: Identifiable, Equatable {
     var name: String
     var leadBotId: String?
     var deletedAt: Date?
-    /// Its folder under ~/.gravity/projects.
+    /// Its folder under ~/.flotilla/projects.
     var dirName: String
     /// Projects on other daemons this one is linked with: one team across machines.
     var links: [ProjectLink]

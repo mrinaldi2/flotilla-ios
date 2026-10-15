@@ -1,7 +1,7 @@
 import Foundation
 
 // A bot's chat as the daemon serves it (`list_chat`, `chat_turns`): the same
-// turns Gravity Lens used to make from the transcripts, now parsed by gravityd.
+// turns Gravity Lens used to make from the transcripts, now parsed by the daemon.
 // See docs/superpowers/specs/2026-09-16-chat-pane-design.md in Gravity.
 
 /// How far back the phone's chat goes (H-228): the newest page and up to
@@ -25,7 +25,7 @@ enum ChatPaging {
     /// At the cap (UX): where the rest is, without a link.
     static func capped(computer: String, bot: String) -> String {
         let place = computer.isEmpty ? "its computer" : computer
-        return "Earlier activity is on \(place). Open \(bot) in The Hermes app there to see all of it."
+        return "Earlier activity is on \(place). Open \(bot) in the Flotilla app there to see all of it."
     }
 }
 

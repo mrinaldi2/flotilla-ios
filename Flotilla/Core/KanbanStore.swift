@@ -41,13 +41,13 @@ extension AppStore: BoardService, DraftService {
         board.request = request
         let envelope = try await client.request(.boardRequest(board), name: name)
         guard case .boardResponse(let response)? = envelope.body, let answer = response.response else {
-            throw DaemonError(code: "decode", message: "The Hermes service did not answer \(name).")
+            throw DaemonError(code: "decode", message: "The Flotilla service did not answer \(name).")
         }
         return answer
     }
 
     private func unexpected(_ name: String) -> DaemonError {
-        DaemonError(code: "decode", message: "The Hermes service answered \(name) with something else.")
+        DaemonError(code: "decode", message: "The Flotilla service answered \(name) with something else.")
     }
 
     // MARK: Watching

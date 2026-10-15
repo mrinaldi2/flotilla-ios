@@ -171,7 +171,7 @@ struct ComputerPage: View {
                     LabeledContent("Address", value: "\(endpoint.host):\(endpoint.port)")
                 }
                 if !store.serverVersion.isEmpty {
-                    LabeledContent("Hermes service", value: store.serverVersion)
+                    LabeledContent("Flotilla service", value: store.serverVersion)
                 }
                 LabeledContent("Access", value: store.grants.sorted().joined(separator: ", "))
                 if let diagnostics {
@@ -182,13 +182,13 @@ struct ComputerPage: View {
                     LabeledContent("Undelivered messages", value: "\(diagnostics.deliveryBacklog)")
                     LabeledContent("Uptime", value: uptime(diagnostics.uptimeSeconds))
                     if diagnostics.staleBuild {
-                        Label("The Hermes service was updated on disk and needs a restart.", systemImage: "exclamationmark.triangle")
+                        Label("The Flotilla service was updated on disk and needs a restart.", systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(Color.warningText)
                     }
                 }
             } header: {
-                SectionTitle("Hermes service")
+                SectionTitle("Flotilla service")
             }
             Section {
                 LabeledContent("Status", value: lens.status.label)
@@ -200,7 +200,7 @@ struct ComputerPage: View {
             } header: {
                 SectionTitle("Lens")
             } footer: {
-                Text("The companion that turns the bots' logs into Activity and artifacts, and serves the file browser. It uses the same device token as the Hermes service.").foregroundStyle(Color.secondaryText)
+                Text("The companion that turns the bots' logs into Activity and artifacts, and serves the file browser. It uses the same device token as the Flotilla service.").foregroundStyle(Color.secondaryText)
             }
             MacSettingsSection()
             Section {

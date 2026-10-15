@@ -142,7 +142,7 @@ struct BotsView: View {
 
     private var emptyDetail: String {
         switch store.status {
-        case .connected: "Create a project and bots in Hermes on \(store.computerName)."
+        case .connected: "Create a project and bots in Flotilla on \(store.computerName)."
         case .disconnected(let reason): reason
         case .authFailed(let reason), .versionMismatch(let reason): reason
         default: ""

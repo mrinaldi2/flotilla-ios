@@ -24,7 +24,7 @@ enum HomeJSON {
 
     static func decode<M: SwiftProtobuf.Message>(_ type: M.Type, _ value: Any?) throws -> M {
         guard let value, JSONSerialization.isValidJSONObject(value) else {
-            throw DaemonError(code: "decode", message: "The Hermes service sent an unreadable \(M.protoMessageName).")
+            throw DaemonError(code: "decode", message: "The Flotilla service sent an unreadable \(M.protoMessageName).")
         }
         return try M(jsonUTF8Data: JSONSerialization.data(withJSONObject: value), options: options)
     }

@@ -70,7 +70,7 @@ struct BotReportsPane: View {
                 EmptyNote(text: "\(bot?.name ?? "This bot") hasn't reported to you yet.", systemImage: "text.quote")
             }
             if !store.hasOwnerThreads {
-                Text("Reports come from The Hermes 0.17 on \(store.computerName). Until then, this shows what the bot is doing.")
+                Text("Reports come with version 0.17 on \(store.computerName). Until then, this shows what the bot is doing.")
                     .font(.footnote).foregroundStyle(Color.secondaryText)
             }
             if let failure {

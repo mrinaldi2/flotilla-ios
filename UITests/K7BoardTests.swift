@@ -25,13 +25,13 @@ final class K7BoardTests: XCTestCase {
     /// daemon refused them (0.18.3 wants a board role the demo's bots lack).
     @discardableResult
     private func openBoard(_ app: XCUIApplication) -> Bool {
-        waitFor(app.navigationBars["Hermes Lab"], 20)
+        waitFor(app.navigationBars["Flotilla Lab"], 20)
         sleep(3) // board_get creates the Lab board
         return (try? DemoControl.post("/items"))?["ok"] as? Bool ?? false
     }
 
     func testTheBoardIsLiveAndAMoveSaysWhatItNeeds() throws {
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board"])
         allowSystemAlerts()
         guard openBoard(app) else { throw XCTSkip("The demo daemon refused the seed cards (item_create needs a board role)") }
         // Filed after the board opened: they arrive by push, with no pull to refresh.
@@ -98,7 +98,7 @@ final class K7BoardTests: XCTestCase {
         .appendingPathComponent("docs/hero.png").path
 
     func testPlusSavesADraftWithAnImageAndOpensIt() throws {
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board", "-attachFixture", Self.fixture])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board", "-attachFixture", Self.fixture])
         allowSystemAlerts()
         openBoard(app)
         let plus = app.buttons["board-new-item"]
@@ -152,7 +152,7 @@ final class K7BoardTests: XCTestCase {
     /// which asks first. On the demo's owner token the daemon refuses the
     /// invite: the refusal shows in place and Discuss is on again.
     func testDiscussWithTheLeadThenRemoveIt() throws {
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board"])
         allowSystemAlerts()
         openBoard(app)
         let plus = app.buttons["board-new-item"]
@@ -204,7 +204,7 @@ final class K7BoardTests: XCTestCase {
 
     func testALeadsBoardProposalShowsItsChange() throws {
         // The board exists once the Lab's board has been read.
-        let warm = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        let warm = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board"])
         allowSystemAlerts()
         openBoard(warm)
         guard let reply = try? DemoControl.post("/proposal"), let id = reply["decision_id"] as? String,

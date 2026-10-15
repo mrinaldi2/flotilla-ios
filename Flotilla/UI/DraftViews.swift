@@ -105,7 +105,7 @@ struct DraftSections: View {
                         Label("Discuss with a bot", systemImage: "bubble.left.and.text.bubble.right")
                         if discussion.inviting != nil {
                             Spacer(minLength: 8)
-                            ProgressView().accessibilityLabel("Waiting for the Hermes service")
+                            ProgressView().accessibilityLabel("Waiting for the Flotilla service")
                         }
                     }
                 }
@@ -431,7 +431,7 @@ struct DraftChatView: View {
                 BotChatPane(botId: botId, searching: $searching, itemId: pinned ? itemId : nil)
             } else {
                 ContentUnavailableView("Chat needs an update", systemImage: "arrow.up.circle",
-                                       description: Text("Update The Hermes on \(store.computerName) to discuss the draft here."))
+                                       description: Text("Update Flotilla on \(store.computerName) to discuss the draft here."))
             }
         }
         .navigationTitle(store.bot(botId)?.name ?? "Bot")

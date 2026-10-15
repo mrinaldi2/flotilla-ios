@@ -90,9 +90,9 @@ final class ItemCommentsTests: XCTestCase {
 
     func testAFailedCommentKeepsItsTextAndReason() {
         var posted = PendingComment(body: "Hold this one", replyTo: nil)
-        posted.state = .failed("Not connected to the Hermes service.")
+        posted.state = .failed("Not connected to the Flotilla service.")
         let rows = CommentThread.rows(comments: [], history: [], pending: [posted])
-        XCTAssertEqual(rows[0].status, .failed("Not connected to the Hermes service."))
+        XCTAssertEqual(rows[0].status, .failed("Not connected to the Flotilla service."))
         XCTAssertEqual(rows[0].body, "Hold this one")
         XCTAssertEqual(CommentThread.stillPending([posted], comments: []).count, 1, "kept for Retry")
     }

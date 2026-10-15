@@ -3,7 +3,7 @@ import Security
 
 /// Device tokens and screen passwords live in the Keychain, never in UserDefaults.
 enum Keychain {
-    private static let service = "\(Bundle.main.bundleIdentifier ?? "gravitios").daemon"
+    private static let service = "\(Bundle.main.bundleIdentifier ?? "flotilla").daemon"
     /// Where the single token lived before there could be several computers.
     private static let account = "device-token"
 

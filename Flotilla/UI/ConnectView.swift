@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Where a computer's Hermes service is and the device token to use: the
+/// Where a computer's Flotilla service is and the device token to use: the
 /// first-run screen, and the sheet that adds another computer. A pairing code
 /// or link fills everything in one step; the sheet stays open until the
 /// service answers, and says which field to fix when it does not.
@@ -26,13 +26,13 @@ struct ConnectView: View {
     @State private var scannerMissing = false
     @State private var pasteFailed = false
     /// The computer being tried: connected on its own, saved only once its
-    /// Hermes service answers.
+    /// Flotilla service answers.
     @State private var trying: Computer?
     @State private var failure: PairingFailure?
 
     private static let errorRow = "pairing-error"
 
-    /// How long to wait for the Hermes service to answer.
+    /// How long to wait for the Flotilla service to answer.
     static let answerTimeout: Duration = .seconds(15)
 
     /// The computers already here that could be paired with the new one.
@@ -51,7 +51,7 @@ struct ConnectView: View {
     }
 
     private var configPath: String {
-        kind == .mac ? "~/.gravity/gravityd.toml" : "%USERPROFILE%\\.gravity\\gravityd.toml"
+        kind == .mac ? "~/.flotilla/flotillad.toml" : "%USERPROFILE%\\.flotilla\\flotillad.toml"
     }
 
     var body: some View {
@@ -84,11 +84,11 @@ struct ConnectView: View {
                         }
                     } footer: {
                         if pasteFailed {
-                            Text("That isn’t a pairing link. It starts with thehermes://pair and comes from The Hermes on your computer: Settings → Devices.")
+                            Text("That isn’t a pairing link. It starts with flotilla://pair and comes from Flotilla on your computer: Settings → Devices.")
                                 .foregroundStyle(Color.warningText)
                         } else {
                             // Until desktop shows pairing codes (H-010 desktop), it may show only a token.
-                            Text("On your computer, open The Hermes → Settings → Devices and create a device. Scan its pairing code, or, if it shows only a token, choose Enter manually.")
+                            Text("On your computer, open Flotilla → Settings → Devices and create a device. Scan its pairing code, or, if it shows only a token, choose Enter manually.")
                                 .foregroundStyle(Color.secondaryText)
                         }
                     }
@@ -149,7 +149,7 @@ struct ConnectView: View {
                     }
                 }
             }
-            .navigationTitle(adding ? "Add a computer" : "Connect to The Hermes")
+            .navigationTitle(adding ? "Add a computer" : "Connect to Flotilla")
             .onAppear {
                 linkWith = Set(linkable.map(\.id))
                 #if DEBUG
@@ -207,9 +207,9 @@ struct ConnectView: View {
             }
             if let failure, failure.field == .address { failureText(failure).id(Self.errorRow) }
         } header: {
-            Text("Hermes service").foregroundStyle(Color.secondaryText)
+            Text("Flotilla service").foregroundStyle(Color.secondaryText)
         } footer: {
-            Text("The computer running The Hermes, as Tailscale shows it. The Hermes service must list that Tailscale address under bind in \(configPath).").foregroundStyle(Color.secondaryText)
+            Text("The computer running Flotilla, as Tailscale shows it. The Flotilla service must list that Tailscale address under bind in \(configPath).").foregroundStyle(Color.secondaryText)
         }
 
         Section {
@@ -223,7 +223,7 @@ struct ConnectView: View {
         } header: {
             Text("Device token").foregroundStyle(Color.secondaryText)
         } footer: {
-            Text("In The Hermes on that computer: Settings → Devices → add a device with read, control and approve. The token is shown once. It is stored in this iPhone's Keychain.").foregroundStyle(Color.secondaryText)
+            Text("In Flotilla on that computer: Settings → Devices → add a device with read, control and approve. The token is shown once. It is stored in this iPhone's Keychain.").foregroundStyle(Color.secondaryText)
         }
 
         Section {

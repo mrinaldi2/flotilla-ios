@@ -59,11 +59,11 @@ final class QA014WaitingTests: XCTestCase {
 
     // MARK: 1–4, iPhone and iPad
 
-    /// 1: one Run card: the "Run it on mac, in The Hermes app." row with no button.
+    /// 1: one Run card: the "Run it on mac, in the Flotilla app." row with no button.
     func test1RunCardRowHasNoButton() throws {
         let app = try open(release("approved", blockers: [blocker("run", "a-1", "Clear the stale build cache", item: "H-242", computer: "mac", at: 8)]))
         XCTAssertTrue(any(app, "Waiting for you").waitForExistence(timeout: 20), "No Waiting for you section")
-        XCTAssertTrue(any(app, "Run it on mac, in The Hermes app.").exists, "The Run row doesn't say where to run it")
+        XCTAssertTrue(any(app, "Run it on mac, in the Flotilla app.").exists, "The Run row doesn't say where to run it")
         for label in ["Answer", "Review", "Review…"] {
             XCTAssertFalse(app.buttons[label].exists, "The Run row has a \(label) button")
         }

@@ -405,11 +405,11 @@ struct LensEmptyState: View {
             ContentUnavailableView {
                 Label("Lens not reachable", systemImage: "eye.slash")
             } description: {
-                Text("The activity view needs the Lens companion running on \(store.computerName), on port \(String(lens.port)). See the README in The Hermes iOS project.")
+                Text("The activity view needs the Lens companion running on \(store.computerName), on port \(String(lens.port)). See the README in the Flotilla iOS project.")
             }
         case .unauthorized:
             ContentUnavailableView("Token rejected", systemImage: "lock",
-                                   description: Text("Lens checks the same device token as the Hermes service. It needs read access."))
+                                   description: Text("Lens checks the same device token as the Flotilla service. It needs read access."))
         case .ok:
             ContentUnavailableView("Nothing yet", systemImage: "text.bubble",
                                    description: Text("Turns appear here as the bots work."))

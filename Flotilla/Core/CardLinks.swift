@@ -5,11 +5,16 @@ import SwiftProtobuf
 /// that card, and a long-press previews it.
 
 enum CardLinker {
-    /// `hermes://item/H-293`; `thehermes://item/H-293` from outside the app.
-    static func url(_ id: String) -> URL { URL(string: "hermes://item/\(id)")! }
+    /// `flotilla://item/H-293`, inside the app and from outside it.
+    static func url(_ id: String) -> URL { URL(string: "\(scheme)://item/\(id)")! }
+
+    static let scheme = "flotilla"
+    /// Also read: `hermes://item/…` (the app's own links, and the desktop's,
+    /// before the rename) and `thehermes://item/…` (links from outside, then).
+    static let schemes = [scheme, "hermes", "thehermes"]
 
     static func id(from url: URL) -> String? {
-        guard let scheme = url.scheme?.lowercased(), scheme == "hermes" || scheme == "thehermes",
+        guard let scheme = url.scheme?.lowercased(), schemes.contains(scheme),
               url.host?.lowercased() == "item" else { return nil }
         let id = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return id.isEmpty ? nil : id
@@ -34,7 +39,7 @@ enum CardLinker {
         return seen
     }
 
-    /// Markdown with each known id as a link: `[H-293](hermes://item/H-293)`.
+    /// Markdown with each known id as a link: `[H-293](flotilla://item/H-293)`.
     static func linked(_ markdown: String, prefixes: Set<String>) -> String {
         guard !prefixes.isEmpty else { return markdown }
         return segments(markdown, prefixes: prefixes).map { piece in
@@ -160,7 +165,7 @@ struct CardPreview: Equatable {
             let seen = lastSeen.map { " · last seen \($0.formatted(date: .omitted, time: .shortened))" } ?? ""
             return "\(id) is on \(board), kept on \(computer). \(computer) is offline\(seen).\(cached)"
         case .oldService(let computer):
-            return "Update the Hermes service on \(computer) to see cards from here."
+            return "Update the Flotilla service on \(computer) to see cards from here."
         }
     }
 

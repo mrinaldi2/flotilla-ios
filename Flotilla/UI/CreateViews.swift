@@ -25,7 +25,7 @@ struct NewProjectSheet: View {
                         .submitLabel(.done)
                         .onSubmit(create)
                 } footer: {
-                    Text("Its bots share a folder of artifacts on \(store.computerName): ~/.gravity/projects/<name>.").foregroundStyle(Color.secondaryText)
+                    Text("Its bots share a folder of artifacts on \(store.computerName): ~/.flotilla/projects/<name>.").foregroundStyle(Color.secondaryText)
                 }
                 if store.hasLinkedProjects, !peers.isEmpty {
                     Section {
@@ -128,7 +128,7 @@ struct NewBotSheet: View {
                         .textInputAutocapitalization(.words)
                 } footer: {
                     if full {
-                        Text("This project already has 12 bots on \(store.computerName), the most Hermes allows. Delete one on your computer first\(links.isEmpty ? "" : ", or run the new one on a linked computer").")
+                        Text("This project already has 12 bots on \(store.computerName), the most Flotilla allows. Delete one on your computer first\(links.isEmpty ? "" : ", or run the new one on a linked computer").")
                             .foregroundStyle(Color.warningText)
                     }
                 }
@@ -153,7 +153,7 @@ struct NewBotSheet: View {
                         Text("Engine and computer").foregroundStyle(Color.secondaryText)
                     } footer: {
                         Text(peerId.isEmpty
-                             ? "Default is the engine Hermes on \(store.computerName) is set to. The bot can switch engines later and keeps its workspace."
+                             ? "Default is the engine Flotilla on \(store.computerName) is set to. The bot can switch engines later and keeps its workspace."
                              : "It runs on \(links.first { $0.peerId == peerId }?.peerName ?? "the other computer"), in the linked project, and works with the bots here as one team.")
                             .foregroundStyle(Color.secondaryText)
                     }

@@ -18,7 +18,7 @@ struct MacSettingsSection: View {
 
     var body: some View {
         Section {
-            TextField("Address (empty: same as the Hermes service)", text: $host, prompt: .placeholder("Address (empty: same as the Hermes service)"))
+            TextField("Address (empty: same as the Flotilla service)", text: $host, prompt: .placeholder("Address (empty: same as the Flotilla service)"))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)

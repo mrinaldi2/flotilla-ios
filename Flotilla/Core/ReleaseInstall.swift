@@ -115,10 +115,10 @@ enum InstallWords {
         forTesting ? "Install on this \(device) to test" : "Install on this \(device)"
     }
 
-    static let opensSafari = "Opens the install page in Safari. The Hermes closes while it updates."
+    static let opensSafari = "Opens the install page in Safari. Flotilla closes while it updates."
     static let profile = "If iOS says it can't install, this device may not be in the build's profile. Ask DevOps."
 
-    static func hint(_ version: String) -> String { "Opens Safari to install The Hermes \(version)." }
+    static func hint(_ version: String) -> String { "Opens Safari to install Flotilla \(version)." }
 
     static func siteOff(computer: String) -> String {
         "The build site on \(computer.isEmpty ? "its computer" : computer) isn't serving. Ask DevOps to start it, then try again."
@@ -128,7 +128,7 @@ enum InstallWords {
     static let notPublished = "This package has no iPhone or iPad build to install yet. DevOps publishes it after building."
 
     static func sameVersion(device: String, version: String, build: String) -> String {
-        "✓ This \(device) has The Hermes \(version) (\(build))."
+        "✓ This \(device) has Flotilla \(version) (\(build))."
     }
 
     static let reinstall = "Reinstall"
@@ -143,12 +143,12 @@ enum InstallWords {
 
     static let tryAgain = "Try again"
 
-    static func banner(_ version: String) -> String { "The Hermes \(version) is ready to install" }
+    static func banner(_ version: String) -> String { "Flotilla \(version) is ready to install" }
 
     static let install = "Install"
     static let notNow = "Not now"
 
-    static func updated(_ version: String) -> String { "Updated to The Hermes \(version)." }
+    static func updated(_ version: String) -> String { "Updated to Flotilla \(version)." }
 }
 
 /// Install on this device: check the page answers from here, then hand the
@@ -191,7 +191,7 @@ enum InstallAction {
     }
 }
 
-/// "Updated to The Hermes 0.6.1.", once per new version (UX-043 §5). The new
+/// "Updated to Flotilla 0.6.1.", once per new version (UX-043 §5). The new
 /// version counts as announced only once the toast was seen (QA-013: a cold
 /// launch can stay blank for seconds, and a toast shown then was lost).
 enum UpdateNotice {

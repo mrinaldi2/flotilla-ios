@@ -188,7 +188,7 @@ final class KanbanDiscussionTests: XCTestCase {
 
         // Remove the same way, and an error turns it back on too.
         fake.holdInvites = true
-        fake.inviteError = DaemonError(code: "unavailable", message: "The Hermes service is not connected.")
+        fake.inviteError = DaemonError(code: "unavailable", message: "The Flotilla service is not connected.")
         let removing = Task { await model.remove("b-lead") }
         let again = Task { await model.remove("b-lead") }
         await eventually("the removal is out") { fake.invites.count == 2 }

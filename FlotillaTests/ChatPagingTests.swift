@@ -72,8 +72,8 @@ final class ChatPagingTests: XCTestCase {
 
     func testTheCapSaysWhereTheRestIs() {
         XCTAssertEqual(ChatPaging.capped(computer: "Studio Mac", bot: "iOS Dev"),
-                       "Earlier activity is on Studio Mac. Open iOS Dev in The Hermes app there to see all of it.")
+                       "Earlier activity is on Studio Mac. Open iOS Dev in the Flotilla app there to see all of it.")
         XCTAssertEqual(ChatPaging.capped(computer: "", bot: "iOS Dev"),
-                       "Earlier activity is on its computer. Open iOS Dev in The Hermes app there to see all of it.")
+                       "Earlier activity is on its computer. Open iOS Dev in the Flotilla app there to see all of it.")
     }
 }

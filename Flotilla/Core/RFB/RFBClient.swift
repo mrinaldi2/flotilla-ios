@@ -34,7 +34,7 @@ final class RFBClient: @unchecked Sendable {
 
     private let connection: NWConnection
     private let credentials: Credentials
-    private let queue = DispatchQueue(label: "thehermes.rfb")
+    private let queue = DispatchQueue(label: "flotilla.rfb")
     private var buffer: [UInt8] = []
     private var bufferOffset = 0
     private var task: Task<Void, Never>?
@@ -208,7 +208,7 @@ final class RFBClient: @unchecked Sendable {
             } else if offered.contains(30) {
                 throw RFBError.auth("Enter the Mac's user name and password in Settings.")
             } else {
-                throw RFBError.auth("The Mac asked for a sign-in method Hermes does not support (\(offered)).")
+                throw RFBError.auth("The Mac asked for a sign-in method Flotilla does not support (\(offered)).")
             }
             send([type])
         } else {
@@ -280,7 +280,7 @@ final class RFBClient: @unchecked Sendable {
                 let text = String(decoding: try await read(Int(try await u32())), as: UTF8.self)
                 await MainActor.run { [onClipboard] in onClipboard?(text) }
             case let other:
-                throw RFBError.protocolError("The Mac sent a message Hermes does not understand (\(other)).")
+                throw RFBError.protocolError("The Mac sent a message Flotilla does not understand (\(other)).")
             }
         }
     }
@@ -318,7 +318,7 @@ final class RFBClient: @unchecked Sendable {
             case -223:
                 framebuffer.resize(width: w, height: h)
             default:
-                throw RFBError.protocolError("The Mac used a screen encoding Hermes does not support (\(encoding)).")
+                throw RFBError.protocolError("The Mac used a screen encoding Flotilla does not support (\(encoding)).")
             }
         }
     }

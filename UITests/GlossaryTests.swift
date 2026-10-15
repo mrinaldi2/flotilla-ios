@@ -1,18 +1,17 @@
 import XCTest
 
-/// R1-I1: the display name is "The Hermes", and the main screens use the glossary's
+/// R1-I1: the display name is "Flotilla", and the main screens use the glossary's
 /// words, with none of the retired ones.
 final class GlossaryTests: XCTestCase {
     /// Words the glossary retired, as they would show on screen.
-    static let retired = ["Gravity", "gravityd", "GravitiOS", "Permission prompts", "Waiting on you",
+    static let retired = ["Gravity", "gravityd", "GravitiOS", "The Hermes", "Hermes", "hermesd", "Permission prompts", "Waiting on you",
                           "Answer and publish", "Hold for later", "Restart session", "Clear chat",
                           "Runtime", "Grants", "Delivery backlog", "Auth failed",
                           "Version mismatch", "Something went wrong", "Retry", "Between bots",
                           "Charter", "Standing instructions", "Note from Gravity", "Allow for this session",
                           "decisions waiting", "decision waiting"]
-    /// Allowed although they contain a retired word: the About attribution, and the
-    /// config path that stays until R2.
-    static let allowed = ["Based on Gravity by", "gravityd.toml"]
+    /// Allowed although they contain a retired word: the About attribution.
+    static let allowed = ["Based on Gravity by"]
 
     var app: XCUIApplication!
 
@@ -25,11 +24,11 @@ final class GlossaryTests: XCTestCase {
     }
 
     func testDisplayName() {
-        XCTAssertEqual(app.label, "The Hermes")
+        XCTAssertEqual(app.label, "Flotilla")
         XCUIDevice.shared.press(.home)
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let icon = springboard.icons["The Hermes"]
-        XCTAssertTrue(icon.waitForExistence(timeout: 5), "No home-screen icon named The Hermes")
+        let icon = springboard.icons["Flotilla"]
+        XCTAssertTrue(icon.waitForExistence(timeout: 5), "No home-screen icon named Flotilla")
         screenshot("QA-004-display-name")
         app.activate()
     }
@@ -76,7 +75,7 @@ final class GlossaryTests: XCTestCase {
         app.buttons.containing(NSPredicate(format: "label CONTAINS 'Demo Mac'")).firstMatch.tap()
         sleep(2)
         look("computer")
-        let service = app.labelled("Hermes service")
+        let service = app.labelled("Flotilla service")
         app.scroll(to: service)
         look("computer-service")
 
@@ -95,7 +94,7 @@ final class GlossaryTests: XCTestCase {
         XCTAssertTrue(app.buttons["Put on hold"].exists)
         look("decision-detail")
 
-        XCTAssertTrue(seen.contains { $0.contains("Hermes service") }, "\"Hermes service\" not on the computer page")
+        XCTAssertTrue(seen.contains { $0.contains("Flotilla service") }, "\"Flotilla service\" not on the computer page")
         XCTAssertTrue(seen.contains("Allow for session"), "No Allow for session answer on a permission card")
         XCTAssertTrue(seen.contains { $0.hasPrefix("Needs you") || $0.contains("need you") || $0.contains("needs you") },
                       "\"Needs you\" not on the main screens")

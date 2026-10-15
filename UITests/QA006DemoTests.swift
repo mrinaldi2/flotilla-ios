@@ -12,7 +12,7 @@ final class QA006DemoTests: XCTestCase {
     }
 
     private func openLabCard(_ app: XCUIApplication, _ title: String) {
-        waitFor(app.navigationBars["Hermes Lab"], 20)
+        waitFor(app.navigationBars["Flotilla Lab"], 20)
         sleep(3) // board_get creates the Lab board
         _ = try? DemoControl.post("/items")
         app.pane("Overview").tap()
@@ -39,7 +39,7 @@ final class QA006DemoTests: XCTestCase {
 
     func testCommentNotPostedThenRetryAndDiscard() throws {
         try DemoControl.post("/lab")
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board"])
         allowSystemAlerts()
         openLabCard(app, "Board chips on iPad")
 

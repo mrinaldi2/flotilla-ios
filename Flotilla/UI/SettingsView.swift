@@ -41,7 +41,7 @@ struct SettingsView: View {
                 } header: {
                     SectionTitle("Terminal")
                 } footer: {
-                    Text("Opening a bot's terminal resizes it to fit this screen. The terminal is shared, so Hermes on the computer shows that size too until it resizes it again.").foregroundStyle(Color.secondaryText)
+                    Text("Opening a bot's terminal resizes it to fit this screen. The terminal is shared, so Flotilla on the computer shows that size too until it resizes it again.").foregroundStyle(Color.secondaryText)
                 }
 
                 Section {
@@ -63,7 +63,7 @@ struct SettingsView: View {
                 } header: {
                     SectionTitle("Notifications")
                 } footer: {
-                    Text("While The Hermes is open or recently used, it tells you when a bot needs a decision, asks for permission or is waiting for you.").foregroundStyle(Color.secondaryText)
+                    Text("While Flotilla is open or recently used, it tells you when a bot needs a decision, asks for permission or is waiting for you.").foregroundStyle(Color.secondaryText)
                 }
 
                 Section {
@@ -78,7 +78,7 @@ struct SettingsView: View {
                 } header: {
                     SectionTitle("About")
                 } footer: {
-                    Text("The Hermes is open source under the MIT License. Based on Gravity by P. Mikołajczuk.").foregroundStyle(Color.secondaryText)
+                    Text("Flotilla is open source under the MIT License. Based on Gravity by P. Mikołajczuk.").foregroundStyle(Color.secondaryText)
                 }
             }
             .navigationTitle("Settings")

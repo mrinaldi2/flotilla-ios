@@ -23,7 +23,7 @@ final class QA013InstallTests: XCTestCase {
                                     "No DEMO_PROJECT_ID: run scripts/ui-tests.sh")
         let offer: [String: Any] = ["release_id": "r1", "project_id": project, "device_id": "d1", "device_name": "iPhone",
                                     "version": "0.6.2", "build": "13", "install_url": Self.link, "page_url": Self.page,
-                                    "title": "The Hermes 0.6.2 (13) is ready to install",
+                                    "title": "Flotilla 0.6.2 (13) is ready to install",
                                     "body": "Approved on 8 Oct 2026. Tap to install."]
         let data = try JSONSerialization.data(withJSONObject: ["offers": [offer]], options: [.withoutEscapingSlashes])
         return String(decoding: data, as: UTF8.self)
@@ -35,7 +35,7 @@ final class QA013InstallTests: XCTestCase {
         let app = try DemoApp.launch(["-installOfferStub", try offerStub().asArgumentString])
         allowSystemAlerts()
         app.tab("Needs you")
-        let banner = any(app, "The Hermes 0.6.2 is ready to install")
+        let banner = any(app, "Flotilla 0.6.2 is ready to install")
         XCTAssertTrue(banner.waitForExistence(timeout: 40), "No offer banner on Needs you")
         screenshot("QA-013-07-STUB-offer-banner-needs-you")
 
@@ -64,14 +64,14 @@ final class QA013InstallTests: XCTestCase {
         screenshot("QA-013-07-STUB-not-now")
     }
 
-    /// UX-047 #8: "Updated to The Hermes 0.6.1." once after an update (145df7e: it waits
+    /// UX-047 #8: "Updated to Flotilla 0.6.1." once after an update (145df7e: it waits
     /// until the UI is drawn, then stays 4 s). The relaunch goes without the argument:
     /// the argument domain would override the stored value.
     func testUpdatedToastOnceAfterAnUpdate() throws {
         if UIDevice.current.userInterfaceIdiom == .pad { throw XCTSkip("iPhone capture") }
         let app = try DemoApp.launch(["-lastLaunchedVersion", "0.6.0 (11)".asArgumentString, "-noNotificationPrompt", "YES"])
-        let toast = any(app, "Updated to The Hermes 0.6.1.")
-        XCTAssertTrue(toast.waitForExistence(timeout: 10), "No 'Updated to The Hermes 0.6.1.' toast after an update")
+        let toast = any(app, "Updated to Flotilla 0.6.1.")
+        XCTAssertTrue(toast.waitForExistence(timeout: 10), "No 'Updated to Flotilla 0.6.1.' toast after an update")
         screenshot("QA-013-08-updated-toast")
         allowSystemAlerts()
         XCTAssertTrue(toast.waitForNonExistence(timeout: 10), "The toast stayed")
@@ -79,7 +79,7 @@ final class QA013InstallTests: XCTestCase {
 
         let again = try DemoApp.launch(["-noNotificationPrompt", "YES"])
         allowSystemAlerts()
-        XCTAssertFalse(any(again, "Updated to The Hermes").waitForExistence(timeout: 8), "The toast showed again")
+        XCTAssertFalse(any(again, "Updated to Flotilla").waitForExistence(timeout: 8), "The toast showed again")
         screenshot("QA-013-08-no-toast-on-relaunch")
     }
 }

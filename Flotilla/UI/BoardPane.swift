@@ -29,7 +29,7 @@ struct BoardPane: View {
         Group {
             if let home, !home.computer.store.speaksProto {
                 ContentUnavailableView("Board needs an update", systemImage: "arrow.up.circle",
-                                       description: Text("Update The Hermes on \(home.computer.name) to see the board here."))
+                                       description: Text("Update Flotilla on \(home.computer.name) to see the board here."))
             } else if let home, let model {
                 BoardContent(model: model, computer: home.computer, homeName: homeName)
             } else {

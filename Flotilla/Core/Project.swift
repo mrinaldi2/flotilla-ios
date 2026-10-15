@@ -303,7 +303,7 @@ extension AppStore {
         request.request = .boardGet(get)
         let envelope = try await client.request(.boardRequest(request), name: "board_get")
         guard case .boardResponse(let response)? = envelope.body, case .board(let board)? = response.response else {
-            throw DaemonError(code: "decode", message: "The Hermes service did not return the board.")
+            throw DaemonError(code: "decode", message: "The Flotilla service did not return the board.")
         }
         return board
     }
@@ -315,7 +315,7 @@ extension AppStore {
         request.request = .itemGet(get)
         let envelope = try await client.request(.boardRequest(request), name: "item_get")
         guard case .boardResponse(let response)? = envelope.body, case .item(let item)? = response.response else {
-            throw DaemonError(code: "decode", message: "The Hermes service did not return \(id).")
+            throw DaemonError(code: "decode", message: "The Flotilla service did not return \(id).")
         }
         return item
     }

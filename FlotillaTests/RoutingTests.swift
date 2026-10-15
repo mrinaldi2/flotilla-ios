@@ -45,15 +45,18 @@ final class RoutingTests: XCTestCase {
     }
 
     func testPairingURLsOpenConnect() {
-        let url = URL(string: "thehermes://pair?host=mac&port=49777&token=abc&name=Studio")!
+        let url = URL(string: "flotilla://pair?host=mac&port=49777&token=abc&name=Studio")!
         XCTAssertEqual(IncomingURL.pairing(url), PairingLink(host: "mac", port: 49777, token: "abc", name: "Studio"))
+        let older = URL(string: "thehermes://pair?host=mac&port=49777&token=abc")!
+        XCTAssertEqual(IncomingURL.pairing(older), PairingLink(host: "mac", port: 49777, token: "abc"))
         let legacy = URL(string: "gravity://pair?host=mac&token=abc")!
         XCTAssertEqual(IncomingURL.pairing(legacy)?.port, PairingLink.defaultPort)
     }
 
     func testOtherURLsAreIgnored() {
         XCTAssertNil(IncomingURL.pairing(URL(string: "https://example.com/pair?host=mac&token=abc")!))
-        XCTAssertNil(IncomingURL.pairing(URL(string: "thehermes://open?host=mac&token=abc")!))
-        XCTAssertNil(IncomingURL.pairing(URL(string: "thehermes://pair?host=mac")!))
+        XCTAssertNil(IncomingURL.pairing(URL(string: "flotilla://open?host=mac&token=abc")!))
+        XCTAssertNil(IncomingURL.pairing(URL(string: "flotilla://pair?host=mac")!))
+        XCTAssertNil(IncomingURL.pairing(URL(string: "flotilla://item/H-293")!), "a card link")
     }
 }

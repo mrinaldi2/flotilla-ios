@@ -1,11 +1,12 @@
 import Foundation
 
-/// What a pairing code or link carries: where the Hermes service is and the
-/// device token to use. `thehermes://pair?host=…&port=…&token=…`, optionally
-/// with `name` and `kind` (mac or windows). The `gravity://pair?…` form from
-/// before the rename is read the same way.
+/// What a pairing code or link carries: where the Flotilla service is and the
+/// device token to use. `flotilla://pair?host=…&port=…&token=…`, optionally
+/// with `name` and `kind` (mac or windows). The `thehermes://pair?…` and
+/// `gravity://pair?…` forms that desktop apps from before the renames show
+/// are read the same way.
 struct PairingLink: Equatable {
-    static let schemes = ["thehermes", "gravity"]
+    static let schemes = ["flotilla", "thehermes", "gravity"]
     static let defaultPort = 49777
 
     var host: String
@@ -66,7 +67,7 @@ struct PairingFailure: Equatable {
                                   message: "Token rejected — check it on \(computer) under Settings → Devices.")
         case .versionMismatch:
             return PairingFailure(field: .version,
-                                  message: "Update needed — this iPhone and the Hermes service on \(computer) speak different versions. Update the older one.")
+                                  message: "Update needed — this iPhone and the Flotilla service on \(computer) speak different versions. Update the older one.")
         case .disconnected:
             return unreachable(host: host, port: port)
         }
@@ -76,6 +77,6 @@ struct PairingFailure: Equatable {
     /// listening on that address.
     static func unreachable(host: String, port: Int) -> PairingFailure {
         PairingFailure(field: .address,
-                       message: "Couldn’t reach \(host):\(port) — check the address, and that the Hermes service is running and lists it under bind in gravityd.toml.")
+                       message: "Couldn’t reach \(host):\(port) — check the address, and that the Flotilla service is running and lists it under bind in flotillad.toml.")
     }
 }

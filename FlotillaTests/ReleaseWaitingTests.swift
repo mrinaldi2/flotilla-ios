@@ -66,7 +66,7 @@ final class ReleaseWaitingTests: XCTestCase {
         // A Run card has no phone flow: the row says where to run it (decision on #233).
         let now = ISO8601DateFormatter().date(from: "2026-10-08T08:25:00Z")!
         XCTAssertEqual(WaitingWords.meta(b[1], bot: "DevOps", computer: "Studio Mac", now: now),
-                       "on H-242 · 25m\nRun it on mac, in The Hermes app.", "card · age, then where to run it")
+                       "on H-242 · 25m\nRun it on mac, in the Flotilla app.", "card · age, then where to run it")
         XCTAssertEqual(WaitingWords.age(now.addingTimeInterval(-3 * 3600), now: now), "3h")
         XCTAssertEqual(WaitingWords.age(now.addingTimeInterval(-2 * 86400), now: now), "2d")
         XCTAssertTrue(WaitingWords.meta(b[3], bot: "UX Designer", computer: "Studio Mac").hasPrefix("UX Designer · Studio Mac · "),

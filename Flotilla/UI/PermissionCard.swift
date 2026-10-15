@@ -141,7 +141,7 @@ struct TerminalCommandCard: View {
     private var warning: String? {
         request.origin?.bot.map { "It was started inside \($0)’s workspace, so a bot is probably asking, not you." }
     }
-    private var action: String { "Answer this on \(store.computerName), in The Hermes app." }
+    private var action: String { "Answer this on \(store.computerName), in the Flotilla app." }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
