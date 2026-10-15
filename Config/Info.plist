@@ -12,9 +12,9 @@
 	<string>The Hermes listens while you dictate a message to a bot or text to type on your computer.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>The Hermes turns what you dictate into text. It stays on this iPhone when your language supports on-device recognition.</string>
-	<!-- Set from THEHERMES_COMMIT (Config/Version.xcconfig); shown in Settings > About. -->
-	<key>TheHermesCommit</key>
-	<string>$(THEHERMES_COMMIT)</string>
+	<!-- Set from FLOTILLA_COMMIT (Config/Version.xcconfig); shown in Settings > About. -->
+	<key>FlotillaCommit</key>
+	<string>$(FLOTILLA_COMMIT)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

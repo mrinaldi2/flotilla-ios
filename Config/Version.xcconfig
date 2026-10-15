@@ -9,4 +9,4 @@ CURRENT_PROJECT_VERSION = 13
 
 // The commit a build was made from, shown in Settings > About. Set on the
 // command line (scripts/bump-version.sh prints how); empty in Xcode builds.
-THEHERMES_COMMIT =
+FLOTILLA_COMMIT =

@@ -11,7 +11,7 @@ Thanks for helping. Bug reports, ideas and pull requests are all welcome.
    python3 demo/make_demo.py --serve
    ```
 
-3. Open `TheHermes.xcodeproj`, edit the **TheHermes** scheme (Run → Arguments), enable the demo
+3. Open `Flotilla.xcodeproj`, edit the **Flotilla** scheme (Run → Arguments), enable the demo
    launch argument and replace `PASTE_DEMO_TOKEN` with the token the demo printed. Run it on a
    simulator. These arguments are read only in Debug builds.
 
@@ -21,7 +21,7 @@ No signing is needed for the simulator. For a device, put your team in `Config/L
 ## Before you open a pull request
 
 - `python3 -m unittest discover tests` passes (the companion must keep working on Python 3.9).
-- The app builds: `xcodebuild -project TheHermes.xcodeproj -scheme TheHermes -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`.
+- The app builds: `xcodebuild -project Flotilla.xcodeproj -scheme Flotilla -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`.
 - UI tests pass: `scripts/ui-tests.sh` (starts its own demo world, runs the `UITests` scheme on the
   iPhone 18 Pro simulator; `SIMULATOR=…` for another, extra args go to xcodebuild).
 - UI changes come with a before/after screenshot from the demo world, never from real bots.
@@ -37,9 +37,9 @@ stamps the commit it was built from into About.
 
 ## Where things are
 
-- `TheHermes/Core/DaemonClient.swift`: the WebSocket client for Gravity's
+- `Flotilla/Core/DaemonClient.swift`: the WebSocket client for Gravity's
   [control-plane protocol](https://github.com/ahilles107/gravity/blob/main/docs/protocol.md).
-- `TheHermes/Core/Lens.swift` and `companion/gravity_lens.py`: the activity, image and report side.
+- `Flotilla/Core/Lens.swift` and `companion/gravity_lens.py`: the activity, image and report side.
 - `demo/make_demo.py`: add to the demo world when a feature needs data to show.
 
 Style: follow the code around you. Swift uses SwiftUI and Observation. Keep the companion to the

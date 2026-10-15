@@ -2,7 +2,7 @@
 
 ## Gravity bot avatars
 
-`TheHermes/Assets.xcassets/avatar-*.imageset/*.png` are copied from
+`Flotilla/Assets.xcassets/avatar-*.imageset/*.png` are copied from
 [ahilles107/gravity](https://github.com/ahilles107/gravity) (`apps/desktop/src/assets/avatars`).
 
 ```

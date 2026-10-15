@@ -24,10 +24,10 @@ commit=$(git rev-parse --short HEAD)
 git diff --quiet HEAD -- || commit="$commit+changes"
 team=$(sed -n 's/^DEVELOPMENT_TEAM = //p' Config/Local.xcconfig)
 
-rm -rf "$out/TheHermes.xcarchive" "$out/site"
-xcodebuild archive -project TheHermes.xcodeproj -scheme TheHermes -configuration Release \
-  -destination 'generic/platform=iOS' -archivePath "$out/TheHermes.xcarchive" \
-  -allowProvisioningUpdates THEHERMES_COMMIT="$commit" -quiet
+rm -rf "$out/Flotilla.xcarchive" "$out/site"
+xcodebuild archive -project Flotilla.xcodeproj -scheme Flotilla -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath "$out/Flotilla.xcarchive" \
+  -allowProvisioningUpdates FLOTILLA_COMMIT="$commit" -quiet
 
 cat > "$out/export.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -39,11 +39,11 @@ cat > "$out/export.plist" <<PLIST
 <key>thinning</key><string>&lt;none&gt;</string>
 </dict></plist>
 PLIST
-xcodebuild -exportArchive -archivePath "$out/TheHermes.xcarchive" -exportOptionsPlist "$out/export.plist" \
+xcodebuild -exportArchive -archivePath "$out/Flotilla.xcarchive" -exportOptionsPlist "$out/export.plist" \
   -exportPath "$out/site" -allowProvisioningUpdates -quiet
 rm -f "$out/site/DistributionSummary.plist" "$out/site/ExportOptions.plist" "$out/site/Packaging.log"
 
-info="$out/TheHermes.xcarchive/Products/Applications/TheHermes.app/Info.plist"
+info="$out/Flotilla.xcarchive/Products/Applications/Flotilla.app/Info.plist"
 bundle=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$info")
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$info")
 build=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$info")
@@ -52,7 +52,7 @@ cat > "$out/site/manifest.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>items</key><array><dict>
-<key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>$base/TheHermes.ipa</string></dict></array>
+<key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>$base/Flotilla.ipa</string></dict></array>
 <key>metadata</key><dict><key>bundle-identifier</key><string>$bundle</string><key>bundle-version</key><string>$version</string><key>kind</key><string>software</string><key>title</key><string>The Hermes</string></dict>
 </dict></array></dict></plist>
 PLIST
