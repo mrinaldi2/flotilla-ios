@@ -58,7 +58,8 @@ struct ConnectView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
-                    if !adding { welcome }
+                    // Out of the way once there are fields to fill.
+                    if !adding, !manual { welcome }
 
                     Section {
                         Button { scan() } label: {

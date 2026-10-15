@@ -3,8 +3,9 @@ import XCTest
 /// R1-I1: the display name is "Flotilla", and the main screens use the glossary's
 /// words, with none of the retired ones.
 final class GlossaryTests: XCTestCase {
-    /// Words the glossary retired, as they would show on screen.
-    static let retired = ["Gravity", "gravityd", "GravitiOS", "The Hermes", "Hermes", "hermesd", "Permission prompts", "Waiting on you",
+    /// Words the glossary retired, as they would show on screen. Bare "Hermes" is
+    /// not one: a daemon from before the rename signs its own notes with it.
+    static let retired = ["Gravity", "gravityd", "GravitiOS", "The Hermes", "Hermes service", "hermesd", "Permission prompts", "Waiting on you",
                           "Answer and publish", "Hold for later", "Restart session", "Clear chat",
                           "Runtime", "Grants", "Delivery backlog", "Auth failed",
                           "Version mismatch", "Something went wrong", "Retry", "Between bots",
