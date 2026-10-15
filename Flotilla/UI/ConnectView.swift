@@ -58,6 +58,8 @@ struct ConnectView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
+                    if !adding { welcome }
+
                     Section {
                         Button { scan() } label: {
                             Label("Scan pairing code", systemImage: "qrcode.viewfinder")
@@ -149,7 +151,7 @@ struct ConnectView: View {
                     }
                 }
             }
-            .navigationTitle(adding ? "Add a computer" : "Connect to Flotilla")
+            .navigationTitle(adding ? "Add a computer" : "Welcome to Flotilla")
             .onAppear {
                 linkWith = Set(linkable.map(\.id))
                 #if DEBUG
@@ -174,6 +176,32 @@ struct ConnectView: View {
             } message: {
                 Text("This iPhone can’t scan codes right now. Paste the pairing link, or enter it manually.")
             }
+        }
+    }
+
+    /// The first run: nothing is paired yet. That is also where an iPhone
+    /// that had The Hermes starts, since Flotilla is a new app with a
+    /// Keychain of its own and cannot read the old app's tokens.
+    private var welcome: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Image("FlotillaWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 64)
+                    .accessibilityHidden(true)
+                Text("Pair with your Flotilla computer")
+                    .font(.title2.weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
+                Text("Flotilla on this iPhone follows and steers the bots on your Mac or PC. Pair it once with each computer; its device token stays in this iPhone's Keychain.")
+                    .font(.callout)
+                    .foregroundStyle(Color.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 6)
+        } footer: {
+            Text("Used The Hermes on this iPhone before? Flotilla replaces it as a new app, so pair again here, then delete The Hermes.")
+                .foregroundStyle(Color.secondaryText)
         }
     }
 

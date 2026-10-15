@@ -26,7 +26,7 @@ final class PairingTests: XCTestCase {
     /// then Paste pairing link.
     private func launchAndPaste(_ text: String) -> XCUIApplication {
         let app = DemoApp.launchFirstRun()
-        waitFor(app.navigationBars["Connect to Flotilla"])
+        waitFor(app.navigationBars["Welcome to Flotilla"])
         app.buttons["Enter manually"].tap()
         let field = waitFor(app.textFields["Address"])
         field.tap()
@@ -88,7 +88,7 @@ final class PairingTests: XCTestCase {
     func testOpenedLinkFillsConnectWithoutAdding() throws {
         let token = try XCTUnwrap(DemoApp.token)
         let app = DemoApp.launchFirstRun()
-        waitFor(app.navigationBars["Connect to Flotilla"])
+        waitFor(app.navigationBars["Welcome to Flotilla"])
         open(link(token: token), in: app)
         waitFor(app.staticTexts["Opened from a pairing link. Check the computer and its address, then tap Connect."])
         XCTAssertEqual(app.textFields["Address"].value as? String, "127.0.0.1")
