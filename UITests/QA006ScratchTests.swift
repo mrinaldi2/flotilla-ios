@@ -27,7 +27,7 @@ final class QA006ScratchTests: XCTestCase {
     // MARK: H-200: release item states
 
     /// The project opens from the cache before the connection is up ("Not connected to
-    /// the Hermes service."): tap the segment again until `target` shows.
+    /// the Flotilla service."): tap the segment again until `target` shows.
     private func segment(_ app: XCUIApplication, _ name: String, until target: XCUIElement, timeout: TimeInterval = 40) {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {

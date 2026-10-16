@@ -3,7 +3,7 @@ import XCTest
 /// H-134 against a 0.17 daemon (the demo world on desktop 0.17.0's hermesd): the live
 /// overview, pinning, cache-first, Run cards, decision grants (H-118), the terminal
 /// command card (H-108), the binary board and owner threads. Each test seeds what it
-/// needs through the demo's control endpoint, in its own "Hermes Lab" project, and
+/// needs through the demo's control endpoint, in its own "Flotilla Lab" project, and
 /// skips on an older daemon.
 final class H134LiveTests: XCTestCase {
     override func setUpWithError() throws {
@@ -140,7 +140,7 @@ final class H134LiveTests: XCTestCase {
             .allElementsBoundByIndex.map(\.label).joined(separator: " | ")
         XCTAssertTrue(text.contains("git push --force origin main"), "No command on the card: \(text)")
         let words = app.visibleWords.joined(separator: " | ")
-        for part in ["Desktop Dev’s workspace, so a bot is probably asking, not you", "Answer this on Demo Mac, in The Hermes app"] {
+        for part in ["Desktop Dev’s workspace, so a bot is probably asking, not you", "Answer this on Demo Mac, in the Flotilla app"] {
             XCTAssertTrue(words.contains(part) || text.contains(part), "\"\(part)\" missing from the card")
         }
         // Read-only: no answers here, and it sits above the project sections.
@@ -171,9 +171,9 @@ final class H134LiveTests: XCTestCase {
 
     func testLiveBoard() throws {
         try seed("/lab")
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "board"])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "board"])
         allowSystemAlerts()
-        waitFor(app.navigationBars["Hermes Lab"], 20)
+        waitFor(app.navigationBars["Flotilla Lab"], 20)
         sleep(3) // board_get creates the board for the owner
         let items = try seed("/items")
         XCTAssertEqual(items["ok"] as? Bool, true, "Seeding items: \(items)")
@@ -254,11 +254,11 @@ final class H134LiveTests: XCTestCase {
 
     func testLiveBotReports() throws {
         try seed("/question")
-        let app = try DemoApp.launch(["-openProject", "Hermes Lab", "-openSegment", "team"])
+        let app = try DemoApp.launch(["-openProject", "Flotilla Lab", "-openSegment", "team"])
         allowSystemAlerts()
         waitFor(app.botRow("Desktop Dev"), 20).tap()
         waitFor(app.pane("Reports"))
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Reports come from The Hermes 0.17'")).firstMatch.exists,
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Reports come with version 0.17'")).firstMatch.exists,
                        "A 0.17 daemon still gets the Reports fallback")
         let question = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Should the release notes mention the new board?'"))
         waitFor(question.firstMatch, 15)
@@ -306,8 +306,8 @@ final class H134LivePadTests: XCTestCase {
         _ = try DemoControl.post("/grants")
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        waitFor(app.navigationBars["The Hermes"], 20)
-        let lab = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Hermes Lab'")).firstMatch
+        waitFor(app.navigationBars["Flotilla"], 20)
+        let lab = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Flotilla Lab'")).firstMatch
         waitFor(lab, 20)
         screenshot("QA-005-live-ipad-sidebar")
         lab.tap()

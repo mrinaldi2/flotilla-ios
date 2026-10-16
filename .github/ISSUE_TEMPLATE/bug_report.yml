@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in GravitiOS or Gravity Lens does not work
+description: Something in Flotilla for iPhone or Gravity Lens does not work
 labels: [bug]
 body:
   - type: textarea
@@ -17,7 +17,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      placeholder: iOS 18.2, Gravity 0.13.0, GravitiOS commit abc1234
+      placeholder: iOS 18.2, Flotilla 0.19.0 on the Mac, Flotilla for iPhone commit abc1234
   - type: textarea
     id: logs
     attributes:

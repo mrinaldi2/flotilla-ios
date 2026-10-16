@@ -3,7 +3,7 @@
 version: v2
 plugins:
   - remote: buf.build/apple/swift:v1.38.1
-    out: ../TheHermes/Core/Generated
+    out: ../Flotilla/Core/Generated
     opt:
       - Visibility=Internal
       - FileNaming=PathToUnderscores

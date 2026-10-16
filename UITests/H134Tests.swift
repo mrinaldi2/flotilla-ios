@@ -66,7 +66,7 @@ final class H134Tests: XCTestCase {
         allowSystemAlerts()
         app.tab("Needs you")
         // Grouped by project, in rank order.
-        // Ranks depend on what else is waiting (the live tests add Hermes Lab): order only.
+        // Ranks depend on what else is waiting (the live tests add Flotilla Lab): order only.
         let first = waitFor(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Aurora Notes · #'")).firstMatch)
         let second = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Website · #'")).firstMatch
         app.scroll(to: second)
@@ -147,7 +147,7 @@ final class H134Tests: XCTestCase {
         XCTAssertTrue(reports.isSelected, "The bot page did not open on Reports")
         for pane in ["Chat", "Terminal", "More"] { XCTAssertTrue(app.pane(pane).exists, pane) }
         XCTAssertFalse(app.pane("Work").exists, "Work should be inside More")
-        let note = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Reports come from The Hermes 0.17'")).firstMatch
+        let note = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Reports come with version 0.17'")).firstMatch
         if note.waitForExistence(timeout: 5) {
             // Older daemon: the note and the bot's live activity.
             XCTAssertTrue(note.label.contains("Demo Mac"), note.label)
@@ -162,7 +162,7 @@ final class H134Tests: XCTestCase {
         allowSystemAlerts()
         app.tab("Chat")
         waitFor(app.navigationBars["Chat"])
-        let footer = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Threads come with The Hermes 0.17'")).firstMatch
+        let footer = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Threads come with version 0.17'")).firstMatch
         if footer.waitForExistence(timeout: 5) {
             // Older daemon: its bots under its name, each opening the bot's chat.
             waitFor(app.staticTexts["Demo Mac"])
@@ -213,7 +213,7 @@ final class H134PadTests: XCTestCase {
     func testSidebarAndProjectDetail() throws {
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        waitFor(app.navigationBars["The Hermes"], 20)
+        waitFor(app.navigationBars["Flotilla"], 20)
         for item in ["Needs you", "Chat", "All projects", "Settings"] {
             XCTAssertTrue(waitFor(sidebarItem(app, item), 5).exists, item)
         }
@@ -233,7 +233,7 @@ final class H134PadTests: XCTestCase {
     func testMainChatSlidesOver() throws {
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        waitFor(app.navigationBars["The Hermes"], 20)
+        waitFor(app.navigationBars["Flotilla"], 20)
         sidebarItem(app, "Aurora Notes").tap()
         waitFor(app.buttons["Overview"].firstMatch, 10)
         waitFor(app.buttons["Main chat"]).tap()

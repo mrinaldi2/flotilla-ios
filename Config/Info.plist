@@ -2,19 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- gravityd serves plain ws:// on the tailnet; WireGuard is the encryption. -->
+	<!-- flotillad serves plain ws:// on the tailnet; WireGuard is the encryption. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>The Hermes listens while you dictate a message to a bot or text to type on your computer.</string>
+	<string>Flotilla listens while you dictate a message to a bot or text to type on your computer.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>The Hermes turns what you dictate into text. It stays on this iPhone when your language supports on-device recognition.</string>
-	<!-- Set from THEHERMES_COMMIT (Config/Version.xcconfig); shown in Settings > About. -->
-	<key>TheHermesCommit</key>
-	<string>$(THEHERMES_COMMIT)</string>
+	<string>Flotilla turns what you dictate into text. It stays on this iPhone when your language supports on-device recognition.</string>
+	<!-- Set from FLOTILLA_COMMIT (Config/Version.xcconfig); shown in Settings > About. -->
+	<key>FlotillaCommit</key>
+	<string>$(FLOTILLA_COMMIT)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -22,16 +22,18 @@
 			<string>Pairing link</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>flotilla</string>
+				<!-- Links and codes from desktop apps before the rename. -->
 				<string>thehermes</string>
 				<string>gravity</string>
 			</array>
 		</dict>
 	</array>
 	<key>NSFaceIDUsageDescription</key>
-	<string>The Hermes asks for Face ID before it publishes or confirms a ruling that gives a bot more permissions.</string>
+	<string>Flotilla asks for Face ID before it publishes or confirms a ruling that gives a bot more permissions.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>The Hermes scans the pairing code your computer shows, to connect to it, and takes photos you attach to a new board item.</string>
+	<string>Flotilla scans the pairing code your computer shows, to connect to it, and takes photos you attach to a new board item.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>The Hermes connects to the Hermes service on your computer, over your own network or tailnet.</string>
+	<string>Flotilla connects to the Flotilla service on your computer, over your own network or tailnet.</string>
 </dict>
 </plist>

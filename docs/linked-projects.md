@@ -1,6 +1,6 @@
-# Linked projects: the protocol GravitiOS expects
+# Linked projects: the protocol Flotilla for iPhone expects
 
-GravitiOS lets you connect two Gravity daemons, link a project across them, and
+Flotilla for iPhone lets you connect two daemons, link a project across them, and
 create bots on either machine. The phone uses Gravity's existing peer requests
 (`list_peers`, `create_peer_invite`, `add_peer`, `revoke_peer`) and
 `create_bot`'s `runtime`. Everything else on this page is an addition to the

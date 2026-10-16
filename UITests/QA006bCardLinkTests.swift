@@ -3,7 +3,7 @@ import XCTest
 /// QA-006b: H-204 card ids as links (UX-035), against the scratch daemon on a copy of
 /// this Mac's board: the release changelog, a decision, a chat thread, a bot's
 /// Reports, meeting minutes and comments; Back; the long-press menu; missing ids;
-/// thehermes://item/…; names that are not ids. Skips without SCRATCH_PORT/SCRATCH_TOKEN.
+/// flotilla://item/…; names that are not ids. Skips without SCRATCH_PORT/SCRATCH_TOKEN.
 final class QA006bCardLinkTests: XCTestCase {
     private var env: [String: String] { DemoApp.environment }
     /// In the copy: an open decision that names H-195.
@@ -228,7 +228,7 @@ final class QA006bCardLinkTests: XCTestCase {
 
     /// warm: through the system, into the running app; cold: XCUIApplication.open relaunches the app with the URL.
     private func openOutside(_ app: XCUIApplication, _id: String, warm: Bool = true) {
-        let url = URL(string: "thehermes://item/\(_id)")!
+        let url = URL(string: "flotilla://item/\(_id)")!
         if warm { XCUIDevice.shared.system.open(url) } else { app.open(url) }
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         if springboard.buttons["Open"].waitForExistence(timeout: 3) { springboard.buttons["Open"].tap() }
@@ -246,7 +246,7 @@ final class QA006bCardLinkTests: XCTestCase {
         while app.navigationBars.buttons["BackButton"].exists { app.navigationBars.buttons["BackButton"].tap(); sleep(1) }
         waitFor(app.navigationBars["Projects"], 10)
         openOutside(app, _id: "H-189")
-        XCTAssertTrue(app.navigationBars["H-189"].waitForExistence(timeout: 20), "thehermes://item/H-189 did not open the card")
+        XCTAssertTrue(app.navigationBars["H-189"].waitForExistence(timeout: 20), "flotilla://item/H-189 did not open the card")
         XCTAssertTrue(app.tabBars.buttons["Projects"].isSelected, "Not opened on the Projects tab")
         screenshot("QA-006b-outside-link")
         app.navigationBars.buttons["BackButton"].tap()
@@ -260,6 +260,6 @@ final class QA006bCardLinkTests: XCTestCase {
         openOutside(app, _id: "H-189", warm: false)
         let opened = app.navigationBars["H-189"].waitForExistence(timeout: 30)
         screenshot("QA-006b-outside-link-cold")
-        XCTAssertTrue(opened, "thehermes://item/H-189 on a cold start did not open the card")
+        XCTAssertTrue(opened, "flotilla://item/H-189 on a cold start did not open the card")
     }
 }

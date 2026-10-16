@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A stand-in for macOS Screen Sharing, for developing GravitiOS's screen view.
+"""A stand-in for macOS Screen Sharing, for developing Flotilla's screen view.
 
 Serves demo/assets/desktop.png over RFB 3.8 with ZRLE, and signs in the way a
 Mac does (security type 30: Diffie-Hellman, then the user name and password

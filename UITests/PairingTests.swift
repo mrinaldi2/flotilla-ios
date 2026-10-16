@@ -1,14 +1,14 @@
 import XCTest
 
 /// H-010 and H-011: pairing from a pasted link, verified before it is saved, and a
-/// thehermes:// link from outside the app that fills Connect without adding anything.
+/// flotilla:// link from outside the app that fills Connect without adding anything.
 final class PairingTests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
     private func link(host: String = "127.0.0.1", port: String? = nil, token: String) -> String {
         let port = port ?? DemoApp.environment["GRAV_PORT"] ?? "49790"
         let token = token.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? token
-        return "thehermes://pair?host=\(host)&port=\(port)&token=\(token)&name=Demo%20Mac&kind=mac"
+        return "flotilla://pair?host=\(host)&port=\(port)&token=\(token)&name=Demo%20Mac&kind=mac"
     }
 
     /// iOS asks once before the app reads the clipboard.
@@ -26,7 +26,7 @@ final class PairingTests: XCTestCase {
     /// then Paste pairing link.
     private func launchAndPaste(_ text: String) -> XCUIApplication {
         let app = DemoApp.launchFirstRun()
-        waitFor(app.navigationBars["Connect to The Hermes"])
+        waitFor(app.navigationBars["Welcome to Flotilla"])
         app.buttons["Enter manually"].tap()
         let field = waitFor(app.textFields["Address"])
         field.tap()
@@ -88,7 +88,7 @@ final class PairingTests: XCTestCase {
     func testOpenedLinkFillsConnectWithoutAdding() throws {
         let token = try XCTUnwrap(DemoApp.token)
         let app = DemoApp.launchFirstRun()
-        waitFor(app.navigationBars["Connect to The Hermes"])
+        waitFor(app.navigationBars["Welcome to Flotilla"])
         open(link(token: token), in: app)
         waitFor(app.staticTexts["Opened from a pairing link. Check the computer and its address, then tap Connect."])
         XCTAssertEqual(app.textFields["Address"].value as? String, "127.0.0.1")
@@ -131,7 +131,7 @@ final class PairingTests: XCTestCase {
         XCTAssertGreaterThan(error.frame.minY, field.frame.minY, "The error is not under its field", file: file, line: line)
     }
 
-    /// The system's "Open in “The Hermes”?" is confirmed when it shows.
+    /// The system's "Open in “Flotilla”?" is confirmed when it shows.
     private func open(_ link: String, in app: XCUIApplication) {
         app.open(URL(string: link)!)
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")

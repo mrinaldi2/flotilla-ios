@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A made-up Gravity team for trying GravitiOS without your own bots.
+"""A made-up team for trying Flotilla on the phone without your own bots.
 
 Starts a throwaway gravityd in its own folder with the deterministic "double"
 runtime (no Claude sessions, no tokens spent), creates two projects and eight
@@ -8,7 +8,7 @@ Gravity Lens to read, and optionally serves the lot:
 
     python3 demo/make_demo.py --serve
 
-Nothing outside the output folder (default /tmp/gravitios-demo) is touched.
+Nothing outside the output folder (default /tmp/flotilla-demo) is touched.
 Everything in it is fiction. Standard library only.
 """
 from __future__ import annotations
@@ -119,11 +119,12 @@ class Socket:
 
 
 def find_gravityd(explicit: Optional[str]) -> str:
-    for path in (explicit, os.path.expanduser("~/.gravity/bin/gravityd"),
+    for path in (explicit, os.path.expanduser("~/.flotilla/bin/flotillad"),
+                 os.path.expanduser("~/.thehermes/bin/hermesd"), os.path.expanduser("~/.gravity/bin/gravityd"),
                  "/Applications/Gravity.app/Contents/MacOS/gravityd"):
         if path and os.access(path, os.X_OK):
             return path
-    raise SystemExit("gravityd not found: install Gravity (getgravity.build) or pass --gravityd")
+    raise SystemExit("no daemon found: install Flotilla on this Mac or pass --gravityd")
 
 
 def healthy(port: int) -> bool:
@@ -262,7 +263,7 @@ def link_peer(ws: "Socket", out: str, gravityd: str, port: int, project_id: str)
     peer = start_daemon(gravityd, peer_out, port)
     with open(os.path.join(peer_out, "gravity", "secrets", "client.token")) as handle:
         other = Socket(port)
-        other.request("hello", protocol_version=2, token=handle.read().strip(), client="gravitios-demo")
+        other.request("hello", protocol_version=2, token=handle.read().strip(), client="flotilla-demo")
     try:
         invite = other.request("create_peer_invite", name="Demo Mac", url=f"ws://127.0.0.1:{port}/peer")["invite"]
     except SystemExit as refusal:
@@ -324,7 +325,7 @@ def hold_permissions(port: int, token: str) -> None:
         while True:
             try:
                 holder = Socket(port)
-                holder.request("hello", protocol_version=2, token=token, client="gravitios-demo-holder",
+                holder.request("hello", protocol_version=2, token=token, client="flotilla-demo-holder",
                                features=["permission_cards", "terminal_card", "owner_actions", "decision_grants"])
                 while True:
                     holder.receive()
@@ -353,10 +354,10 @@ def bot_call(port: int, home: str, bot_id: str, tool: str, **arguments: Any) -> 
 
 
 # The 0.17 flows (UI tests, on demand): a project whose bots have board roles by name.
-LAB = ("Hermes Lab", [
-    ("Team Lead", "icon:orbit", "Leads Hermes Lab: plans releases and runs the stand-up."),
-    ("Desktop Dev", "icon:ember", "Builds the desktop app for Hermes Lab."),
-    ("DevOps", "icon:frost", "Ships Hermes Lab: builds, installs and restarts."),
+LAB = ("Flotilla Lab", [
+    ("Team Lead", "icon:orbit", "Leads Flotilla Lab: plans releases and runs the stand-up."),
+    ("Desktop Dev", "icon:ember", "Builds the desktop app for Flotilla Lab."),
+    ("DevOps", "icon:frost", "Ships Flotilla Lab: builds, installs and restarts."),
 ])
 
 
@@ -367,7 +368,7 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
     POST /permissions          the 3 demo prompts are pending again (missing ones re-asked)
     POST /approval?bot=<name>  that bot waits on a permission prompt in its own terminal
 
-    0.17 daemons, in the "Hermes Lab" project (created on first use):
+    0.17 daemons, in the "Flotilla Lab" project (created on first use):
     POST /lab                  the project and its bots; {"project_id", "caps"}
     POST /grants               Team Lead raises a decision whose first option grants extras
     POST /runcard              Desktop Dev proposes a Run card (owner action)
@@ -388,7 +389,7 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
 
     def owner() -> "Socket":
         ws = Socket(port)
-        hello = ws.request("hello", protocol_version=2, token=token, client="gravitios-demo-control",
+        hello = ws.request("hello", protocol_version=2, token=token, client="flotilla-demo-control",
                            features=["permission_cards", "terminal_card", "owner_actions", "decision_grants"])
         caps[:] = hello.get("capabilities", [])
         return ws
@@ -505,7 +506,7 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                                                   {"key": "wait", "label": "Not yet"}],
                                          recommendation="grant")
                     elif url.path == "/runcard":
-                        reply = bot_call(port, home, dev["id"], "propose_owner_action", content="rm -rf ~/Library/Caches/hermes-lab",
+                        reply = bot_call(port, home, dev["id"], "propose_owner_action", content="rm -rf ~/Library/Caches/flotilla-lab",
                                          reason="Clear the stale build cache", cwd=dev["workspace"])
                     elif url.path == "/question":
                         reply = bot_call(port, home, dev["id"], "message_owner", asks=True,
@@ -934,7 +935,7 @@ def write_home(home: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", default="/tmp/gravitios-demo")
+    parser.add_argument("--out", default="/tmp/flotilla-demo")
     parser.add_argument("--port", type=int, default=49790, help="demo gravityd port")
     parser.add_argument("--lens-port", type=int, default=49788)
     parser.add_argument("--gravityd", help="path to gravityd (default: the one Gravity installed)")
@@ -962,7 +963,7 @@ def main() -> None:
         token = handle.read().strip()
     ws = Socket(args.port)
     # It answers permission prompts, so the daemon holds them while the demo runs.
-    hello = ws.request("hello", protocol_version=2, token=token, client="gravitios-demo",
+    hello = ws.request("hello", protocol_version=2, token=token, client="flotilla-demo",
                        features=["permission_cards"])
 
     bots: Dict[str, Dict[str, str]] = {}

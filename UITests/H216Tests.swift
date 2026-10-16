@@ -1,6 +1,6 @@
 import XCTest
 
-/// H-216: a thehermes://item link opened while the app is closed is kept until the
+/// H-216: a flotilla://item link opened while the app is closed is kept until the
 /// projects load, then opens its card; an id no project uses says so.
 final class H216Tests: XCTestCase {
     override func setUpWithError() throws {
@@ -24,7 +24,7 @@ final class H216Tests: XCTestCase {
 
     func testColdLinkToAnUnknownIdSaysNotFound() throws {
         let app = try closedApp()
-        app.open(URL(string: "thehermes://item/ZZ-404")!)
+        app.open(URL(string: "flotilla://item/ZZ-404")!)
         let alert = app.alerts["ZZ-404"]
         XCTAssertTrue(alert.waitForExistence(timeout: 30), "The link did nothing")
         XCTAssertTrue(alert.staticTexts[Self.unseen].exists)
@@ -36,7 +36,7 @@ final class H216Tests: XCTestCase {
     /// UX-044: with no computer answering, the link says "Opening…" after 3 s and gives up after 15 s.
     func testColdLinkThatCannotLoadGivesUp() throws {
         let app = try closedApp(port: "41209") // in my range, nothing listens there
-        app.open(URL(string: "thehermes://item/ZZ-404")!)
+        app.open(URL(string: "flotilla://item/ZZ-404")!)
         XCTAssertTrue(app.staticTexts["Opening ZZ-404…"].waitForExistence(timeout: 8), "No \"Opening…\" while it waits")
         screenshot("H-216-cold-link-opening")
         let alert = app.alerts["ZZ-404"]
@@ -53,16 +53,16 @@ final class H216Tests: XCTestCase {
         _ = try post(port, "/lab")
         // board_get creates the board for the owner; then the cards can be filed.
         let app = try closedApp()
-        app.launchArguments += ["-openProject", "Hermes Lab", "-openSegment", "board"]
+        app.launchArguments += ["-openProject", "Flotilla Lab", "-openSegment", "board"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hermes Lab"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.navigationBars["Flotilla Lab"].waitForExistence(timeout: 30))
         sleep(3)
         let items = try post(port, "/items")
         let id = try XCTUnwrap(Self.itemId(in: items), "No card id in \(items)")
 
         app.terminate()
         app.launchArguments.removeLast(4)
-        app.open(URL(string: "thehermes://item/\(id)")!)
+        app.open(URL(string: "flotilla://item/\(id)")!)
         XCTAssertTrue(app.navigationBars[id].waitForExistence(timeout: 30), "The link to \(id) was dropped")
         screenshot("H-216-cold-link-card")
     }

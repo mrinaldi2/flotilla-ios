@@ -9,7 +9,7 @@ enum DemoApp {
 
     static var token: String? {
         if let token = environment["GRAV_TOKEN"], !token.isEmpty { return token }
-        let path = (environment["GRAV_DEMO_DIR"] ?? "/tmp/gravitios-demo") + "/gravity/secrets/client.token"
+        let path = (environment["GRAV_DEMO_DIR"] ?? "/tmp/flotilla-demo") + "/gravity/secrets/client.token"
         return (try? String(contentsOfFile: path, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

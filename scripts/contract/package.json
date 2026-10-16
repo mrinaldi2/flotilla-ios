@@ -1,5 +1,5 @@
 {
-  "name": "thehermes-contract",
+  "name": "flotilla-contract",
   "private": true,
   "description": "Generates the Swift types for the wire contracts from the vendored protos (ADR-001).",
   "devDependencies": {
