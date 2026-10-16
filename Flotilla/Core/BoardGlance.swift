@@ -144,6 +144,12 @@ enum BoardGlance {
         }
     }
 
+    /// Pull-down search (§3): the projects whose name has the words typed.
+    static func matches(_ card: HomeCard, search: String) -> Bool {
+        let words = search.split(whereSeparator: \.isWhitespace)
+        return words.allSatisfy { card.row.name.localizedStandardContains($0) }
+    }
+
     /// Each chip's number: All counts every project, the others their group.
     static func counts(_ cards: [HomeCard], now: Date = Date()) -> [HomeFilter: Int] {
         Dictionary(uniqueKeysWithValues: HomeFilter.allCases.map { filter in
@@ -172,6 +178,8 @@ struct BoardSegment: Equatable {
     let shade: Shade
     /// The columns it stands for: one, or several folded into "+N more".
     var columns = 1
+    /// The column it is, to open as a sheet (§4); nil for "+N more".
+    var key: String?
 }
 
 enum MiniBoard {
@@ -201,7 +209,8 @@ enum MiniBoard {
         // Hidden columns (a preset's Cancelled) are left out (§4).
         let columns = columns.filter { !$0.hidden }
         let all = columns.enumerated().map { index, column in
-            BoardSegment(name: column.name, count: Int(column.count), shade: shade(column, at: index, of: columns.count))
+            BoardSegment(name: column.name, count: Int(column.count), shade: shade(column, at: index, of: columns.count),
+                         key: column.key.isEmpty ? nil : column.key)
         }
         guard all.count > maxSegments else { return all }
         let doneIndex = all.lastIndex { $0.shade == .done } ?? all.count - 1

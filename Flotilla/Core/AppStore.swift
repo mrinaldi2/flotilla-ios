@@ -595,6 +595,14 @@ final class AppStore {
         return project
     }
 
+    /// Archives the project with its bots; what it left on disk goes to the
+    /// Trash (the owner's, from the app or a paired device).
+    func deleteProject(_ projectId: String) async throws {
+        _ = try await client.request("delete_project", ["project_id": projectId])
+        projects.removeAll { $0.id == projectId }
+        bots.removeAll { $0.projectId == projectId }
+    }
+
     /// Only the project is required: without a name the daemon picks "New Bot",
     /// and without a charter the bot starts by asking what it is for.
     func createBot(projectId: String, name: String, description: String, instructions: String,

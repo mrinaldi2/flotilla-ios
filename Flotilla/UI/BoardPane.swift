@@ -12,6 +12,8 @@ struct BoardPane: View {
     let home: (computer: Computer, projectId: String)?
     /// The computer that keeps this project's board, for when this one can't show it.
     var homeName: String?
+    /// Opens a new card's sheet once the board is in (a card's Add a card).
+    var addCard = false
     @State private var model: BoardModel?
 
     /// A new model when the project or computer changes; a reload when the link comes back.
@@ -31,7 +33,7 @@ struct BoardPane: View {
                 ContentUnavailableView("Board needs an update", systemImage: "arrow.up.circle",
                                        description: Text("Update Flotilla on \(home.computer.name) to see the board here."))
             } else if let home, let model {
-                BoardContent(model: model, computer: home.computer, homeName: homeName)
+                BoardContent(model: model, computer: home.computer, homeName: homeName, addCard: addCard)
             } else {
                 ProgressView()
             }
@@ -59,8 +61,11 @@ private struct BoardContent: View {
     @Bindable var model: BoardModel
     let computer: Computer
     let homeName: String?
+    var addCard = false
     @State private var moving: BoardCard?
     @State private var adding = false
+    /// `addCard` opens the sheet once, not again on every reload.
+    @State private var addedCard = false
     /// A draft just saved, opened at once.
     @State private var opened: String?
     @State private var saveNotice: String?
@@ -86,6 +91,12 @@ private struct BoardContent: View {
 
     @ViewBuilder private func loaded(_ state: BoardState) -> some View {
         VStack(spacing: 0) {
+            Color.clear.frame(height: 0)
+                .task {
+                    guard addCard, !addedCard, state.hasBoards, store.canControl else { return }
+                    addedCard = true
+                    adding = true
+                }
             BoardBar(model: model, state: state)
             LabelFilterBar(model: model, groups: state.labelGroups())
             if let notice = saveNotice ?? model.notice {

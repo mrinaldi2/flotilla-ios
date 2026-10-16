@@ -112,17 +112,25 @@ private struct Hatch: View {
     }
 }
 
-/// Counts and names under the bar: "9 To do".
+/// Counts and names under the bar: "9 To do". With `open`, each column is a
+/// tap target for its sheet (§4, case 5).
 struct MiniBoardLegend: View {
     let segments: [BoardSegment]
+    var open: ((BoardSegment) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
-                (Text("\(segment.count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
-                    + Text(" \(segment.name)").font(.caption).foregroundStyle(Color.secondaryText))
+                let label = (Text("\(segment.count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
+                    + Text(" \(segment.name)").font(.caption).foregroundStyle(segment.shade == .review ? Tone.needsYou.text : Color.secondaryText))
                     .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: open == nil ? nil : 44, alignment: .topLeading)
+                if let open, segment.key != nil {
+                    Button { open(segment) } label: { label.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                } else {
+                    label
+                }
             }
         }
         .accessibilityHidden(true)
@@ -132,12 +140,13 @@ struct MiniBoardLegend: View {
 /// At accessibility text sizes the bar becomes a row per column (§6, case 7).
 struct MiniBoardRows: View {
     let segments: [BoardSegment]
+    var open: ((BoardSegment) -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
                 if index > 0 { Divider() }
-                HStack(spacing: 12) {
+                let row = HStack(spacing: 12) {
                     RoundedRectangle(cornerRadius: 4, style: .continuous).fill(segment.shade.color)
                         .frame(width: 14, height: 14)
                     Text(segment.name).fontWeight(segment.shade == .review ? .bold : .regular)
@@ -146,6 +155,12 @@ struct MiniBoardRows: View {
                 }
                 .frame(minHeight: 50)
                 .padding(.horizontal, 14)
+                .contentShape(Rectangle())
+                if let open, segment.key != nil {
+                    Button { open(segment) } label: { row }.buttonStyle(.plain)
+                } else {
+                    row
+                }
             }
         }
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -243,6 +258,8 @@ struct FleetAvatars: View {
 struct ProjectCardBody: View {
     let card: HomeCard
     var bots: [GlanceBot] = []
+    /// Opens a column of the board as a sheet (case 5); nil when it can't.
+    var openColumn: ((BoardSegment) -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var row: HomeRow { card.row }
@@ -314,11 +331,11 @@ struct ProjectCardBody: View {
                 }
             }
         } else if large {
-            MiniBoardRows(segments: segments)
+            MiniBoardRows(segments: segments, open: readOnly ? nil : openColumn)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 MiniBoardBar(segments: segments).opacity(readOnly ? 0.6 : 1)
-                MiniBoardLegend(segments: segments)
+                MiniBoardLegend(segments: segments, open: readOnly ? nil : openColumn)
             }
         }
     }
