@@ -27,7 +27,7 @@ enum Tone {
     var text: Color {
         switch self {
         case .ready: .successText
-        case .working: .accentColor
+        case .working: .workingText
         case .needsYou: .warningText
         case .failed: .errorText
         case .quiet: .secondaryText
@@ -45,6 +45,9 @@ extension Color {
     /// screen, whatever the elevation (QA-004).
     static let answerBase = Color(light: 0xFFFFFF, dark: 0x1C1C1E)
     static let workerText = Color(light: 0x007A8F, dark: 0x40CBE0)
+    /// Working words, in the accent's hue. Text in the accent tint itself is
+    /// under 4.5:1 on grouped backgrounds and pills.
+    static let workingText = Color(light: 0x3451C6, dark: 0x8FA8FF)
     /// Secondary words: captions, footers, placeholders, quiet badges. The
     /// system's secondary and placeholder greys are 3.4:1 and 1.7:1 on white;
     /// this stays above 4.5:1 on every list, fill and card background.
