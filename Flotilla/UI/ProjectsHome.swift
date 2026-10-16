@@ -1,13 +1,28 @@
 import SwiftUI
 
-// UX-024: the app opens on Projects, ranked by how much each needs you, and
-// Needs you gathers what is waiting across projects. Both span every
-// computer and show the last answer at once.
+// UX-024, 0.20 Board glance: the app opens on Projects, every project as a
+// card of its board, its fleet and what it needs from you, across every
+// computer, with the last answer shown at once. What waits for you is the
+// Needs you filter there, and each card's asks.
 
 /// A project to open from the home, on the computer that answered for it.
-struct HomeProjectLink: Hashable {
+struct HomeProjectLink: Hashable, Identifiable {
     let computerId: String
     let projectId: String
+    /// What it opens on: the Overview, unless a card's menu or a quiet row asks for more.
+    var page = Page.overview
+
+    enum Page: Hashable {
+        case overview, board, settings
+    }
+
+    var id: String { "\(computerId):\(projectId):\(page)" }
+
+    func showing(_ page: Page) -> HomeProjectLink {
+        var link = self
+        link.page = page
+        return link
+    }
 }
 
 /// Where a Needs-you row leads.
@@ -46,89 +61,451 @@ enum ReleaseStatusWords {}
 
 // MARK: Projects
 
+/// The Projects tab (0.20, BG-Rules): every project as a card of its board,
+/// its fleet and what it needs from you, Needs you first. Needs you is one of
+/// its filters, which routes from outside turn on.
 struct ProjectsHomeView: View {
     @Environment(Fleet.self) private var fleet
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var path = NavigationPath()
     @State private var debugOpened = false
-    /// Set from outside (a notification, Needs you): opens that project.
-    var openProject: Binding<HomeProjectLink?> = .constant(nil)
+    /// Cards whose whole list of asks is open ("N more").
+    @State private var expanded: Set<String> = []
+    @State private var showingDecisions = false
+    @State private var addingLead: HomeProjectLink?
+    /// Bumped by every route that lands here (RootView): back to the list,
+    /// then the screen in `openNeeds`, if any.
+    var landings = 0
+    var openNeeds: Binding<NeedsDestination?> = .constant(nil)
     /// On iPad the sidebar shows the project: a card selects it there instead of pushing.
     var open: ((HomeProjectLink) -> Void)?
 
     private var feed: HomeFeed { fleet.home }
-    private var cards: [HomeCard] { feed.cards(fleet.computers) }
+    private var filter: Binding<HomeFilter> { Binding(get: { fleet.home.filter }, set: { fleet.home.filter = $0 }) }
+    private var hasTerminal: Bool { fleet.computers.contains { $0.store.permissions.contains(where: \.isTerminal) } }
+
+    /// What the tab shows now, in order, split into full cards and quiet rows.
+    private struct Shown {
+        let all: [HomeCard]
+        let full: [HomeCard]
+        let quiet: [HomeCard]
+        let counts: [HomeFilter: Int]
+    }
+
+    private func shown(_ now: Date = Date()) -> Shown {
+        let all = BoardGlance.ordered(feed.cards(fleet.computers), now: now)
+        let visible = all.filter { BoardGlance.matches($0, feed.filter, now: now) }
+        return Shown(all: all,
+                     full: visible.filter { BoardGlance.group($0, now: now) != .quiet },
+                     quiet: visible.filter { BoardGlance.group($0, now: now) == .quiet },
+                     counts: BoardGlance.counts(all, now: now))
+    }
 
     var body: some View {
+        let shown = shown()
         NavigationStack(path: $path) {
-            List {
-                if cards.isEmpty {
-                    EmptyNote(text: fleet.computers.contains { $0.store.status == .connected }
-                              ? "No projects yet" : "Connecting…", systemImage: "folder")
+            ScrollViewReader { proxy in
+                Group {
+                    if sizeClass == .regular { grid(shown) } else { list(shown) }
                 }
-                ForEach(cards) { card in
-                    Section {
-                        let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
-                        Group {
-                            if let open {
-                                Button { open(link) } label: { ProjectCard(card: card).contentShape(Rectangle()) }
-                                    .buttonStyle(.plain)
-                            } else {
-                                NavigationLink(value: link) { ProjectCard(card: card) }
-                            }
-                        }
-                        // iPad pointer (UX-023 §2.7).
-                        .hoverEffect(.highlight)
-                        .contextMenu { pinButton(card) }
-                        // The project that needs you most is outlined (UX-024).
-                        .listRowBackground(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(.secondarySystemGroupedBackground))
-                                .overlay {
-                                    if card.rank == 1 {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.orange, lineWidth: 2)
-                                    }
-                                }
-                        )
+                // "See all in Needs you" on a project's Overview: its list, open, in view.
+                .onChange(of: feed.needsFocus, initial: true) { _, id in
+                    guard let id else { return }
+                    if !id.isEmpty { expanded.insert(id) }
+                    // After the landing pops the stack; cleared only then, so RootView sees it too.
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        if !id.isEmpty { withAnimation { proxy.scrollTo(id, anchor: .top) } }
+                        if feed.needsFocus == id { feed.needsFocus = nil }
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .listSectionSpacing(10)
             .navigationTitle("Projects")
-            .refreshable { await feed.refreshAll(fleet.computers, force: true) }
-            #if DEBUG
-            .onChange(of: cards.map(\.row.projectID), initial: true) {
-                guard !debugOpened, let name = UserDefaults.standard.string(forKey: "openProject"),
-                      let card = cards.first(where: { $0.row.name.lowercased().hasPrefix(name.lowercased()) }) else { return }
-                debugOpened = true
-                let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
-                if let open { open(link) } else { path = NavigationPath([link]) }
+            .toolbar {
+                // Every decision, settled ones too (UX-024), as Needs you offered.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Decisions") { showingDecisions = true }
+                }
+                ToolbarItem(placement: .topBarTrailing) { NewProjectButton() }
             }
-            #endif
-            .navigationDestination(for: HomeProjectLink.self) { link in
-                if let computer = fleet.computers.first(where: { $0.id == link.computerId }) {
-                    ProjectScreen(projectId: link.projectId).computerEnvironment(computer)
+            .sheet(isPresented: $showingDecisions) { DecisionsView(openDecision: .constant(nil)) }
+            .sheet(item: $addingLead) { link in
+                if let computer = fleet.computer(id: link.computerId) {
+                    NewBotSheet(projectId: link.projectId) { _ in
+                        addingLead = nil
+                        Task { await feed.refresh(computer, force: true) }
+                    }
+                    .computerEnvironment(computer)
                 }
             }
+            .refreshable { await feed.refreshAll(fleet.computers, force: true) }
+            #if DEBUG
+            .onChange(of: shown.all.map(\.row.projectID), initial: true) {
+                guard !debugOpened, let name = UserDefaults.standard.string(forKey: "openProject"),
+                      let card = shown.all.first(where: { $0.row.name.lowercased().hasPrefix(name.lowercased()) }) else { return }
+                debugOpened = true
+                openProject(HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID))
+            }
+            #endif
+            .homeProjectDestinations()
             .needsDestinations()
             // A card link from outside (iPad: PadRootView opens it in the project column).
             // On a cold start the link arrives before the projects: try again as they load (H-216).
             .onChange(of: fleet.openCard, initial: true) { openLinkedCard() }
             .onChange(of: fleet.cards.homes) { openLinkedCard() }
             .onChange(of: fleet.cards.settled) { openLinkedCard() }
-            .onChange(of: openProject.wrappedValue, initial: true) { _, link in
-                guard let link else { return }
-                path = NavigationPath([link])
-                openProject.wrappedValue = nil
-            }
+            .onChange(of: landings, initial: true) { land() }
         }
         // Card ids anywhere in this stack open the card here (H-204).
         .opensCardLinks { path.append($0) }
     }
 
+    /// A route landed (a notification, a toast, ⌘⇧N): back to the list, then its screen.
+    private func land() {
+        guard landings > 0 else { return }
+        path = NavigationPath()
+        guard let destination = openNeeds.wrappedValue else { return }
+        openNeeds.wrappedValue = nil
+        // On iPad a route switches the sidebar to Projects and arrives as this
+        // column first shows; pushed in that same update it is lost, since the
+        // split view rebuilds the detail stack right after. Push on the next turn (H-230).
+        Task { @MainActor in path = NeedsRoute.path(to: destination) }
+    }
+
     private func openLinkedCard() {
         guard open == nil, let (id, home) = fleet.takeOpenCard() else { return }
         path.append(NeedsDestination.item(computerId: home.computerId, itemId: id))
+    }
+
+    private func openProject(_ link: HomeProjectLink) {
+        if let open { open(link) } else { path.append(link) }
+    }
+
+    // MARK: iPhone: one column of cards
+
+    private func list(_ shown: Shown) -> some View {
+        List {
+            if !shown.all.isEmpty {
+                // A header, not a row: a row's rounded corners would clip the words.
+                Section {
+                } header: {
+                    header(shown)
+                        .textCase(nil)
+                        .padding(.horizontal, -16)
+                        .padding(.bottom, -4)
+                }
+            }
+            ForEach(away(shown)) { item in
+                Section { NotConnectedBanner(computer: item.computer, asOf: item.asOf) }
+            }
+            if feed.filter == .all || feed.filter == .needsYou {
+                // A release waiting to be installed here (H-230).
+                ForEach(fleet.computers) { computer in InstallOfferBanner(store: computer.store) }
+                // Terminal commands acting as the owner sit above everything, read-only (H-108).
+                ForEach(fleet.computers) { computer in
+                    let terminal = computer.store.permissions.filter(\.isTerminal)
+                    if !terminal.isEmpty {
+                        Section {
+                            ForEach(terminal) { TerminalCommandCard(request: $0) }
+                        }
+                        .computerEnvironment(computer)
+                    }
+                }
+            }
+            if shown.all.isEmpty {
+                Section { empty }
+            } else if shown.full.isEmpty, shown.quiet.isEmpty, !(feed.filter == .needsYou && hasTerminal) {
+                EmptyNote(text: emptyFilterText, systemImage: feed.filter == .needsYou ? "checkmark.circle" : "folder")
+            }
+            ForEach(shown.full) { card in
+                Section {
+                    cardBody(card)
+                    asks(card, inList: true)
+                }
+                .id(card.id)
+            }
+            if !shown.quiet.isEmpty {
+                Section {
+                    ForEach(shown.quiet) { card in quietButton(card) }
+                } header: {
+                    SectionTitle("Quiet", count: shown.quiet.count)
+                } footer: {
+                    Text(quietFooter).foregroundStyle(Color.secondaryText)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(12)
+    }
+
+    // MARK: iPad: a grid of cards
+
+    private func grid(_ shown: Shown) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if !shown.all.isEmpty { header(shown) }
+                ForEach(away(shown)) { item in
+                    tile { NotConnectedBanner(computer: item.computer, asOf: item.asOf) }
+                }
+                if feed.filter == .all || feed.filter == .needsYou {
+                    ForEach(fleet.computers) { computer in
+                        if computer.store.installOffer != nil { tile { InstallOfferBanner(store: computer.store) } }
+                    }
+                    ForEach(fleet.computers) { computer in
+                        ForEach(computer.store.permissions.filter(\.isTerminal)) { request in
+                            tile { TerminalCommandCard(request: request) }.computerEnvironment(computer)
+                        }
+                    }
+                }
+                if shown.all.isEmpty {
+                    tile { empty }
+                } else if shown.full.isEmpty, shown.quiet.isEmpty, !(feed.filter == .needsYou && hasTerminal) {
+                    EmptyNote(text: emptyFilterText, systemImage: feed.filter == .needsYou ? "checkmark.circle" : "folder")
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
+                    ForEach(shown.full) { card in
+                        VStack(alignment: .leading, spacing: 0) {
+                            cardBody(card)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                            asks(card, inList: false)
+                        }
+                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .id(card.id)
+                    }
+                }
+                if !shown.quiet.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionTitle("Quiet", count: shown.quiet.count)
+                            .font(.footnote.weight(.semibold))
+                            .textCase(.uppercase)
+                            .padding(.horizontal, 4)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 10)], spacing: 10) {
+                            ForEach(shown.quiet) { card in
+                                quietButton(card)
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 56)
+                                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                        }
+                        Text(quietFooter).font(.footnote).foregroundStyle(Color.secondaryText).padding(.horizontal, 4)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func tile(@ViewBuilder _ content: () -> some View) -> some View {
+        VStack(alignment: .leading) { content() }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    // MARK: Pieces
+
+    private func header(_ shown: Shown) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(GlanceWords.summary(projects: shown.all.count, needs: feed.total(fleet.computers),
+                                     working: shown.all.reduce(0) { $0 + Int($1.row.botsWorking) },
+                                     offline: Set(shown.all.flatMap(\.staleNames)).count))
+                .font(.subheadline)
+                .foregroundStyle(Color.secondaryText)
+            if BoardGlance.showsFilters(projects: shown.all.count, filter: feed.filter) {
+                FilterChips(filter: filter, counts: shown.counts)
+            }
+        }
+    }
+
+    private struct Away: Identifiable {
+        let computer: Computer
+        let asOf: Date?
+        var id: String { computer.id }
+    }
+
+    /// Computers the phone can't reach whose projects it still shows.
+    private func away(_ shown: Shown) -> [Away] {
+        let showing = Set(shown.all.map(\.computerId))
+        return fleet.computers.compactMap { computer in
+            guard showing.contains(computer.id), computer.store.connectionTrouble, computer.store.status != .connected else { return nil }
+            let overview = feed.overviews[computer.id]
+            return Away(computer: computer, asOf: overview?.hasAsOf == true ? overview?.asOf.date : nil)
+        }
+    }
+
+    @ViewBuilder private var empty: some View {
+        if fleet.computers.contains(where: { $0.store.status == .connected }) {
+            VStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Tone.working.color)
+                    .accessibilityHidden(true)
+                Text("Start your first project").font(.title2.bold())
+                Text("A project is a board and the bots that work on it.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.secondaryText)
+                NewProjectButton(prominent: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+        } else {
+            EmptyNote(text: "Connecting…", systemImage: "folder")
+        }
+    }
+
+    private var emptyFilterText: String {
+        switch feed.filter {
+        case .needsYou: "Nothing is waiting on you."
+        case .working: "No bots are working right now."
+        case .quiet: "No quiet projects."
+        case .all: "No projects yet"
+        }
+    }
+
+    private var quietFooter: String { "Nothing to do for a day or more. Tap to open the board." }
+
+    private func quietButton(_ card: HomeCard) -> some View {
+        let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
+        return Button { openProject(link.showing(.board)) } label: { QuietRow(card: card, stacked: sizeClass == .regular) }
+            .buttonStyle(GlanceButtonStyle())
+            .hoverEffect(.highlight)
+            .contextMenu { cardMenu(card) }
+            .accessibilityLabel("\(card.row.name), quiet, \(GlanceWords.quietMeta(card.row))")
+            .accessibilityHint("Opens the board")
+    }
+
+    /// The top of a card: opens the project; long press for its actions.
+    private func cardBody(_ card: HomeCard) -> some View {
+        let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
+        let first = (feed.attention[card.id] ?? []).first
+        let destination = first.map { fleet.needsDestination($0, answeredBy: card.computerId) }
+        let action = first.flatMap { row in destination.map { AskAction.label(row, opens: $0) } }
+        let available = destination.map { fleet.unavailable($0) == nil } ?? false
+        let ask = first.map { row in [row.displayTitle, action, destination.flatMap(fleet.unavailable)].compactMap { $0 }.joined(separator: ", ") }
+            ?? (card.row.attention.count > 0 ? AttentionWords.summary(card.row.attention) : nil)
+        return Button { openProject(link) } label: {
+            ProjectCardBody(card: card, bots: fleet.glanceBots(card))
+        }
+        .buttonStyle(GlanceButtonStyle())
+        .hoverEffect(.highlight)
+        .contextMenu { cardMenu(card) }
+        .accessibilityLabel(ProjectCardBody.spoken(card, ask: ask))
+        .accessibilityHint("Opens the project")
+        .accessibilityActions {
+            if let action, let destination, available {
+                Button(action) { path.append(destination) }
+            }
+            Button("Open board") { openProject(link.showing(.board)) }
+        }
+        // Cached cards show before their computer connects: reload once it does.
+        .task(id: "\(card.id)/\(card.row.attention.count)/\(card.row.attention.score)/\(fleet.computer(id: card.computerId)?.store.status == .connected)") {
+            if let computer = fleet.computer(id: card.computerId) { await feed.loadAttention(card, on: computer) }
+        }
+    }
+
+    /// What a card needs from you: the most urgent ask with "N more", or the
+    /// whole list once opened (always, under the Needs you filter). Until the
+    /// rows load, the summary holds their place.
+    @ViewBuilder private func asks(_ card: HomeCard, inList: Bool) -> some View {
+        let rows = feed.attention[card.id] ?? []
+        let waiting = Int(card.row.attention.count)
+        let open = feed.filter == .needsYou || expanded.contains(card.id)
+        if !rows.isEmpty {
+            ForEach(open ? rows : Array(rows.prefix(1)), id: \.id) { row in
+                askButton(row, card: card, primary: row.id == rows.first?.id, inList: inList)
+            }
+            let more = max(rows.count, waiting) - 1
+            if more > 0, feed.filter != .needsYou {
+                separated(inList) {
+                    Button {
+                        withAnimation(.snappy) {
+                            if open { expanded.remove(card.id) } else { expanded.insert(card.id) }
+                        }
+                    } label: {
+                        Label(open ? "Show less" : "\(more) more", systemImage: open ? "chevron.up" : "chevron.down")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.secondaryText)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(GlanceButtonStyle())
+                    .accessibilityLabel(open ? "Show less" : "Show \(more) more for \(card.row.name)")
+                }
+            }
+        } else if waiting > 0 {
+            separated(inList) {
+                ItemRow(title: AttentionWords.summary(card.row.attention), titleTone: .needsYou) {
+                    Circle().fill(Tone.needsYou.color.opacity(0.18)).frame(width: 26, height: 26)
+                        .overlay { Text("!").font(.system(size: 13, weight: .heavy)).foregroundStyle(Tone.needsYou.text) }
+                        .accessibilityHidden(true)
+                }
+            }
+        } else if BoardGlance.state(card) == .setUp, let computer = fleet.computer(id: card.computerId),
+                  computer.store.status == .connected, computer.store.canControl {
+            separated(inList) {
+                Button { addingLead = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID) } label: {
+                    ItemRow(title: "Add a lead to start", subtitle: "No bots work on it yet") {
+                        Circle().fill(Color(.tertiarySystemFill)).frame(width: 26, height: 26)
+                            .overlay { Image(systemName: "plus").font(.system(size: 12, weight: .bold)) }
+                            .accessibilityHidden(true)
+                    } trailing: {
+                        AskButtonLabel(text: "Add lead", primary: true)
+                    }
+                }
+                .buttonStyle(GlanceButtonStyle())
+            }
+        }
+    }
+
+    /// In the list a row is its own; in a grid tile a line goes above it.
+    @ViewBuilder private func separated(_ inList: Bool, @ViewBuilder _ content: () -> some View) -> some View {
+        if inList {
+            content()
+        } else {
+            Divider().padding(.leading, 16)
+            content().padding(.horizontal, 16).padding(.vertical, 4)
+        }
+    }
+
+    private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+        let destination = fleet.needsDestination(row, answeredBy: card.computerId)
+        let reason = fleet.unavailable(destination)
+        let action = AskAction.label(row, opens: destination)
+        // Filled only for something to do here, not a note on where to do it.
+        let filled: Bool = {
+            if case .note = destination { return false }
+            return primary
+        }()
+        let button = Button { path.append(destination) } label: {
+            AskRow(row: row, action: action, primary: filled, unavailable: reason)
+        }
+        .buttonStyle(GlanceButtonStyle())
+        .disabled(reason != nil)
+        return separated(inList) {
+            if inList {
+                button.cardMenu(for: row.itemIdText).dismissible(row)
+            } else if Dismissal.allowed(row) {
+                // No swipe outside a list: Dismiss is in the long-press menu.
+                button.dismissible(row, swipe: false)
+            } else {
+                button.cardMenu(for: row.itemIdText)
+            }
+        }
+    }
+
+    /// Long press on a card (case 6): its board, its lead, the pin, its settings.
+    @ViewBuilder private func cardMenu(_ card: HomeCard) -> some View {
+        let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
+        Button("Open board", systemImage: "rectangle.split.3x1") { openProject(link.showing(.board)) }
+        if let lead = fleet.lead(of: card) {
+            Button("Chat with \(lead.name)", systemImage: "bubble.left") {
+                path.append(NeedsDestination.bot(computerId: card.computerId, botId: lead.id, chat: true))
+            }
+        }
+        pinButton(card)
+        Button("Project settings", systemImage: "gearshape") { openProject(link.showing(.settings)) }
     }
 
     @ViewBuilder private func pinButton(_ card: HomeCard) -> some View {
@@ -143,177 +520,9 @@ struct ProjectsHomeView: View {
     }
 }
 
-/// One project on the home: why it ranks, its release, what is running, the
-/// lead's latest word.
-struct ProjectCard: View {
-    let card: HomeCard
-
-    private var row: HomeRow { card.row }
-    private var waiting: Bool { row.attention.count > 0 }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                RankBadge(rank: card.rank)
-                Text(row.name).font(.headline).lineLimit(1)
-                if row.pinned {
-                    Image(systemName: "pin.fill").font(.caption).foregroundStyle(Color.secondaryText)
-                        .accessibilityLabel("Pinned")
-                }
-            }
-            Text(AttentionWords.summary(row.attention))
-                .font(.subheadline.weight(waiting ? .medium : .regular))
-                .foregroundStyle(waiting ? Color.warningText : Color.secondaryText)
-            if row.hasCurrentRelease {
-                let (text, tone) = ReleaseStatusWords.pill(row.currentRelease)
-                Pill(text: text, tone: tone)
-            }
-            Text(running).font(.subheadline).foregroundStyle(Color.secondaryText)
-            if row.hasLatestSummary, !row.latestSummary.text.isEmpty {
-                Text("“\(row.latestSummary.text)”").font(.subheadline).lineLimit(2)
-            }
-            if row.legacy {
-                Label("Update needed for full info", systemImage: "arrow.up.circle")
-                    .font(.footnote).foregroundStyle(Color.secondaryText)
-            } else if !card.staleNames.isEmpty {
-                Label(staleLine, systemImage: "wifi.slash").font(.footnote).foregroundStyle(Color.secondaryText)
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    /// "5 tasks running · 8 bots, 5 working, 1 waiting for you".
-    private var running: String {
-        var parts: [String] = []
-        if row.openTasks > 0 { parts.append("\(row.openTasks) task\(row.openTasks == 1 ? "" : "s") running") }
-        var bots = "\(row.bots) bot\(row.bots == 1 ? "" : "s")"
-        if row.botsWorking > 0 { bots += ", \(row.botsWorking) working" }
-        if row.botsWaiting > 0 { bots += ", \(row.botsWaiting) waiting for you" }
-        if row.bots > 0, row.botsWorking == 0, row.botsWaiting == 0 { bots += ", all idle" }
-        parts.append(bots)
-        return parts.joined(separator: " · ")
-    }
-
-    /// "imac is offline · last seen 10:42", as on desktop (UX-029).
-    private var staleLine: String {
-        let names = ListFormatter.localizedString(byJoining: card.staleNames)
-        let offline = "\(names) \(card.staleNames.count > 1 ? "are" : "is") offline"
-        guard let since = card.staleSince else { return offline }
-        return "\(offline) · last seen \(since.formatted(date: .omitted, time: .shortened))"
-    }
-}
-
-/// "#1": the project's place by how much it needs you; a dash when nothing does.
-struct RankBadge: View {
-    let rank: Int?
-    /// On a selected (accent-filled) sidebar row: white on a white outline (UX-029).
-    var selected = false
-
-    var body: some View {
-        Text(rank.map { "#\($0)" } ?? "—")
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 1)
-            .foregroundStyle(selected ? Color.white : rank == nil ? Color.secondaryText : Color.warningText)
-            .background(selected ? Color.white.opacity(0.2) : (rank == nil ? Tone.quiet : Tone.needsYou).color.opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 6))
-            .overlay { if selected { RoundedRectangle(cornerRadius: 6).strokeBorder(Color.white, lineWidth: 1) } }
-            .accessibilityLabel(rank.map { "Rank \($0)" } ?? "Nothing needs you")
-    }
-}
-
-// MARK: Needs you
-
-/// Where an outside route lands in Needs you: that screen on an empty stack.
+/// Where an outside route lands on Projects: that screen on an empty stack.
 enum NeedsRoute {
     static func path(to destination: NeedsDestination) -> NavigationPath { NavigationPath([destination]) }
-}
-
-struct NeedsYouView: View {
-    @Environment(Fleet.self) private var fleet
-    @State private var path = NavigationPath()
-    @State private var showingDecisions = false
-    /// Set from outside, e.g. a notification: opens that decision.
-    var openDecision: Binding<NeedsDestination?> = .constant(nil)
-
-    private var feed: HomeFeed { fleet.home }
-    private var waiting: [HomeCard] { feed.cards(fleet.computers).filter { $0.row.attention.count > 0 } }
-    private var hasTerminal: Bool { fleet.computers.contains { $0.store.permissions.contains(where: \.isTerminal) } }
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            ScrollViewReader { proxy in
-            List {
-                // A release waiting to be installed here (H-230).
-                ForEach(fleet.computers) { computer in InstallOfferBanner(store: computer.store) }
-                // Terminal commands acting as the owner sit above everything, read-only (H-108).
-                ForEach(fleet.computers) { computer in
-                    let terminal = computer.store.permissions.filter(\.isTerminal)
-                    if !terminal.isEmpty {
-                        Section {
-                            ForEach(terminal) { TerminalCommandCard(request: $0) }
-                        }
-                        .computerEnvironment(computer)
-                    }
-                }
-                if waiting.isEmpty, !hasTerminal {
-                    EmptyNote(text: "Nothing is waiting on you.", systemImage: "checkmark.circle")
-                }
-                ForEach(waiting) { card in
-                    Section {
-                        let rows = feed.attention[card.id] ?? []
-                        if rows.isEmpty {
-                            Text(AttentionWords.summary(card.row.attention, limit: 5))
-                                .font(.subheadline).foregroundStyle(Color.secondaryText)
-                        }
-                        ForEach(rows, id: \.id) { row in
-                            NavigationLink(value: fleet.needsDestination(row, answeredBy: card.computerId)) { NeedsRow(row: row) }
-                            .cardMenu(for: row.itemIdText)
-                            .dismissible(row)
-                        }
-                    } header: {
-                        SectionTitle(card.rank.map { "\(card.row.name) · #\($0)" } ?? card.row.name)
-                    }
-                    .id(card.id)
-                    // Cached cards show before their computer connects: reload once it does.
-                    .task(id: "\(card.id)/\(card.row.attention.count)/\(card.row.attention.score)/\(fleet.computer(id: card.computerId)?.store.status == .connected)") {
-                        if let computer = fleet.computer(id: card.computerId) { await feed.loadAttention(card, on: computer) }
-                    }
-                }
-            }
-            // "See all in Needs you" on a project's Overview: scroll to that project.
-            .onChange(of: feed.needsFocus, initial: true) { _, id in
-                guard let id else { return }
-                path = NavigationPath()
-                withAnimation { proxy.scrollTo(id, anchor: .top) }
-                feed.needsFocus = nil
-            }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Needs you")
-            .toolbar {
-                // Every decision, settled ones too (UX-024: Needs you → Decisions).
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Decisions") { showingDecisions = true }
-                }
-            }
-            .sheet(isPresented: $showingDecisions) { DecisionsView(openDecision: .constant(nil)) }
-            .refreshable { await feed.refreshAll(fleet.computers, force: true) }
-            .needsDestinations()
-            .onChange(of: openDecision.wrappedValue, initial: true) { _, destination in
-                guard let destination else { return }
-                openDecision.wrappedValue = nil
-                // On iPad a route switches the sidebar to Needs you and arrives as this
-                // column first shows; pushed in that same update it is lost, since the
-                // split view rebuilds the detail stack right after. Push on the next turn (H-230).
-                Task { @MainActor in path = NeedsRoute.path(to: destination) }
-            }
-        }
-        // Card ids anywhere in this stack open the card here (H-204).
-        .opensCardLinks { path.append($0) }
-    }
-
 }
 
 extension Fleet {
@@ -401,6 +610,24 @@ struct NeedsDestinations: ViewModifier {
 
 extension View {
     func needsDestinations() -> some View { modifier(NeedsDestinations()) }
+    func homeProjectDestinations() -> some View { modifier(HomeProjectDestinations()) }
+}
+
+/// A project from the home: its screen, on the page the link asks for.
+struct HomeProjectDestinations: ViewModifier {
+    @Environment(Fleet.self) private var fleet
+
+    func body(content: Content) -> some View {
+        content.navigationDestination(for: HomeProjectLink.self) { link in
+            if let computer = fleet.computer(id: link.computerId) {
+                switch link.page {
+                case .overview: ProjectScreen(projectId: link.projectId).computerEnvironment(computer)
+                case .board: ProjectScreen(projectId: link.projectId, segment: .board).computerEnvironment(computer)
+                case .settings: ProjectView(projectId: link.projectId).computerEnvironment(computer)
+                }
+            }
+        }
+    }
 }
 
 /// One thing waiting: what it is and how long it has waited.
@@ -464,41 +691,32 @@ extension HomeAttentionRow {
     }
 }
 
-struct NeedsRow: View {
-    let row: HomeAttentionRow
-
+extension HomeAttentionRow {
     /// A permission prompt in the glossary's words (UX-031), not the daemon's
     /// "Backend Dev asks: Bash: rm -rf build/".
-    private var prompt: PermissionWords? { row.kind == .permissionPrompt ? PermissionWords(row.title) : nil }
+    var permissionWords: PermissionWords? { kind == .permissionPrompt ? PermissionWords(title) : nil }
 
     /// A row about one card reads "H-293 · <title>" (UX-035 §2).
-    private var title: String {
-        if let prompt { return prompt.title }
-        if case .itemID(let id)? = row.target, !row.title.hasPrefix(id) { return "\(id) · \(row.title)" }
-        return row.title
+    var displayTitle: String {
+        if let prompt = permissionWords { return prompt.title }
+        if case .itemID(let id)? = target, !title.hasPrefix(id) { return "\(id) · \(title)" }
+        return title
     }
 
-    var body: some View {
-        // The command gets its own room, so "Permission request · 8m ago" stays whole.
-        ItemRow(title: title, subtitle: subtitle, titleLines: 2,
-                subtitleLines: prompt?.command == nil ? 1 : 2) {
-            IconTile(systemImage: symbol, tone: tone)
-        }
-    }
-
-    private var subtitle: String {
+    /// The command, if any, the kind, and how long it has waited.
+    var needsSubtitle: String {
         var parts = [kindWord]
-        if let command = prompt?.command { parts.insert(PermissionWords.middleTruncated(command), at: 0) }
-        if row.hasCreatedAt { parts.append(row.createdAt.date.relative) }
+        if let command = permissionWords?.command { parts.insert(PermissionWords.middleTruncated(command), at: 0) }
+        if hasCreatedAt { parts.append(createdAt.date.relative) }
         return parts.joined(separator: " · ")
     }
 
-    private var kindWord: String {
-        switch row.kind {
+    var kindWord: String {
+        switch kind {
         case .releaseAwaiting: "Release to test"
         case .ownerAction: "Run card"
         case .permissionPrompt: "Permission request"
-        case .decision: row.priority == "urgent" || row.priority == "P0" ? "Urgent decision" : "Decision"
+        case .decision: priority == "urgent" || priority == "P0" ? "Urgent decision" : "Decision"
         case .relayedRulings: "Rulings to confirm"
         case .p0Item: "P0 item"
         case .botWaiting: "Waiting for you"
@@ -510,8 +728,8 @@ struct NeedsRow: View {
         }
     }
 
-    private var symbol: String {
-        switch row.kind {
+    var symbol: String {
+        switch kind {
         case .releaseAwaiting: "shippingbox.fill"
         case .ownerAction: "terminal.fill"
         case .permissionPrompt: "hand.raised.fill"
@@ -527,13 +745,25 @@ struct NeedsRow: View {
         }
     }
 
-    private var tone: Tone {
-        switch row.kind {
+    var tone: Tone {
+        switch kind {
         case .p0Item, .servingOff: .failed
-        case .decision where row.priority == "urgent" || row.priority == "P0": .failed
+        case .decision where priority == "urgent" || priority == "P0": .failed
         case .relayedRulings, .offBoard: .quiet
         case .ownerQuestion, .draftUpdated: .working
         default: .needsYou
+        }
+    }
+}
+
+struct NeedsRow: View {
+    let row: HomeAttentionRow
+
+    var body: some View {
+        // The command gets its own room, so "Permission request · 8m ago" stays whole.
+        ItemRow(title: row.displayTitle, subtitle: row.needsSubtitle, titleLines: 2,
+                subtitleLines: row.permissionWords?.command == nil ? 1 : 2) {
+            IconTile(systemImage: row.symbol, tone: row.tone)
         }
     }
 }
@@ -557,25 +787,34 @@ struct NeedsNote: View {
 }
 
 /// Swipe a stale question away (H-210): `attention_dismiss` on the computer
-/// that holds it, then Needs you reloads.
+/// that holds it, then the home reloads. Outside a list, where rows don't
+/// swipe, it is in the row's long-press menu.
 private struct DismissRow: ViewModifier {
     @Environment(Fleet.self) private var fleet
     let row: HomeAttentionRow
+    var swipe = true
     @State private var failure: String?
 
     func body(content: Content) -> some View {
         if Dismissal.allowed(row) {
-            content
-                .swipeActions(edge: .trailing) {
-                    Button("Dismiss", systemImage: "xmark.circle") { dismiss() }
-                        .tint(.gray)
+            Group {
+                if swipe {
+                    content.swipeActions(edge: .trailing) {
+                        Button("Dismiss", systemImage: "xmark.circle") { dismiss() }
+                            .tint(.gray)
+                    }
+                } else {
+                    content.contextMenu {
+                        Button("Dismiss", systemImage: "xmark.circle") { dismiss() }
+                    }
                 }
-                .accessibilityAction(named: "Dismiss") { dismiss() }
-                .alert("Couldn’t dismiss this question", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(failure ?? "")
-                }
+            }
+            .accessibilityAction(named: "Dismiss") { dismiss() }
+            .alert("Couldn’t dismiss this question", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(failure ?? "")
+            }
         } else {
             content
         }
@@ -598,5 +837,5 @@ private struct DismissRow: ViewModifier {
 }
 
 extension View {
-    func dismissible(_ row: HomeAttentionRow) -> some View { modifier(DismissRow(row: row)) }
+    func dismissible(_ row: HomeAttentionRow, swipe: Bool = true) -> some View { modifier(DismissRow(row: row, swipe: swipe)) }
 }

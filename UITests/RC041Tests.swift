@@ -16,8 +16,8 @@ final class RC041Tests: XCTestCase {
         waitFor(app.tabBars.buttons["Projects"])
         try DemoControl.approval(bot: "Architect")
 
-        // Needs you: a row for the waiting bot, never the engine's words.
-        app.tab("Needs you")
+        // Needs you (the Projects filter): a row for the waiting bot, never the engine's words.
+        app.needsYou()
         let needs = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Architect'")).firstMatch
         sleep(2)
         app.scroll(to: needs)

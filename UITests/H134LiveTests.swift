@@ -55,7 +55,7 @@ final class H134LiveTests: XCTestCase {
         try seed("/runcard")
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         let row = waitFor(app.needsRow("Run: Clear the stale build cache"), 20)
         screenshot("QA-005-live-run-card-row")
         row.tap()
@@ -72,7 +72,7 @@ final class H134LiveTests: XCTestCase {
         // A granting ruling asks for Face ID first (9a356e0); the simulator has none.
         let app = try DemoApp.launch(["-ownerAuthStub", "pass"])
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Let DevOps install 0.17.1"), 20).tap()
         waitFor(app.navigationBars["Decision"])
         let grants = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Grants '")).firstMatch
@@ -107,7 +107,7 @@ final class H134LiveTests: XCTestCase {
         try seed("/grants")
         let app = try DemoApp.launch(["-ownerAuthStub", "fail"])
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Let DevOps install 0.17.1"), 20).tap()
         waitFor(app.navigationBars["Decision"])
         app.buttons.containing(NSPredicate(format: "label CONTAINS 'Grant both'")).firstMatch.tap()
@@ -127,14 +127,14 @@ final class H134LiveTests: XCTestCase {
         try seed("/terminal")
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         // One element for VoiceOver: "Terminal command wants to act as you: <command>. …"
         let card = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS 'wants to act as you'")).firstMatch
         let shown = card.waitForExistence(timeout: 20)
         sleep(1)
         screenshot("QA-005-live-terminal-card")
-        XCTAssertTrue(shown, "No terminal command card on Needs you")
+        XCTAssertTrue(shown, "No terminal command card on Projects")
         guard shown else { return }
         let text = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'wants to act as you'"))
             .allElementsBoundByIndex.map(\.label).joined(separator: " | ")
@@ -145,9 +145,9 @@ final class H134LiveTests: XCTestCase {
         }
         // Read-only: no answers here, and it sits above the project sections.
         XCTAssertFalse(app.buttons["Allow once"].exists, "The terminal card offers answers on the phone")
-        let firstSection = app.staticTexts.matching(NSPredicate(format: "label CONTAINS ' · #1'")).firstMatch
-        if firstSection.exists {
-            XCTAssertLessThan(card.frame.minY, firstSection.frame.minY, "The terminal card is not on top of Needs you")
+        let firstCard = app.buttons.matching(NSPredicate(format: "label CONTAINS ', Needs you'")).firstMatch
+        if firstCard.exists {
+            XCTAssertLessThan(card.frame.minY, firstCard.frame.minY, "The terminal card is not on top of Projects")
         }
         // Tapping it never opens a bot page for "terminal".
         card.tap()
@@ -156,13 +156,15 @@ final class H134LiveTests: XCTestCase {
         screenshot("QA-005-live-terminal-card-tapped")
     }
 
-    /// The home feed loads at the root (c656476): a cold launch straight into Needs you fills it.
+    /// The home feed loads at the root (c656476): a cold launch straight into Needs you
+    /// (Projects, filtered) fills it.
     func testLiveColdLaunchIntoNeedsYou() throws {
         try DemoControl.ensurePermissionPrompts()
         let app = try DemoApp.launch(["-openTab", "needs"])
         allowSystemAlerts()
-        XCTAssertTrue(app.tabBars.buttons["Needs you"].waitForExistence(timeout: 10) && app.tabBars.buttons["Needs you"].isSelected,
-                      "Did not open on Needs you")
+        XCTAssertTrue(app.tabBars.buttons["Projects"].waitForExistence(timeout: 10) && app.tabBars.buttons["Projects"].isSelected,
+                      "Did not open on Projects")
+        XCTAssertTrue(app.needsYouFilterIsOn, "Did not open with the Needs you filter on")
         waitFor(app.needsRow("Resolve conflicts automatically or always ask?"), 20)
         screenshot("QA-005-live-cold-needs-you")
     }

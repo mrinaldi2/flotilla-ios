@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The app's tabs (UX-024): Projects · Needs you · Chat · Settings.
+/// The app's tabs (UX-024, 0.20): Projects · Chat · Settings. What waits for
+/// you is the Needs you filter on Projects, and its count is on that tab.
 struct RootView: View {
     @Environment(Fleet.self) private var fleet
     @Environment(Computer.self) private var computer
@@ -8,12 +9,16 @@ struct RootView: View {
     @Environment(LensStore.self) private var lens
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var tab = Tab.projects
+    /// A screen a route opens on Projects (a decision, a release, a bot).
     @State private var openNeeds: NeedsDestination?
+    /// Bumped on each landing, so Projects pops to its list even when the
+    /// tab and the filter were already the ones asked for.
+    @State private var landings = 0
     @State private var openBot: BotLink?
     @State private var explaining = false
     private var router: NotificationRouter { .shared }
 
-    enum Tab { case projects, needs, chat, settings }
+    typealias Tab = AppTab
 
     /// Changes whenever a computer connects or drops, to refetch the home.
     /// Changes when a computer's projects change.
@@ -27,8 +32,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if sizeClass == .regular {
-                // iPad (UX-024): the sidebar holds Needs you, Chat and the ranked projects.
-                PadRootView(tab: $tab, openNeeds: $openNeeds, openBot: $openBot)
+                // iPad (UX-024): the sidebar holds Chat and the projects.
+                PadRootView(tab: $tab, openNeeds: $openNeeds, openBot: $openBot, landings: landings)
             } else {
                 tabs
             }
@@ -38,15 +43,15 @@ struct RootView: View {
         .overlay(alignment: .top) { openingBanner }
         // A release approval's Undo and outcome, wherever the owner is (UX-040).
         .overlay(alignment: .bottom) { RulingBar().padding(.bottom, 64) }
-        // iPad keyboard (UX-023 §2.7): ⌘⇧N opens Needs you.
+        // iPad keyboard (UX-023 §2.7): ⌘⇧N opens what needs you.
         .background {
-            Button("Needs you") { tab = .needs }
+            Button("Needs you") { land(HomeRoute.needsYou) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 .opacity(0)
                 .accessibilityHidden(true)
         }
-        // The home feed loads whichever screen opens first: a notification may
-        // open Needs you before Projects ever shows (QA-004).
+        // The home feed loads at the root, whichever screen opens first: a
+        // notification may open Chat before Projects ever shows (QA-004).
         .task(id: connections) {
             fleet.home.loadCache(fleet.computers)
             #if DEBUG
@@ -69,8 +74,8 @@ struct RootView: View {
                 Text(CardPreview.unseen(id, device: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"))
             }
         }
-        // "See all in Needs you" on a project's Overview.
-        .onChange(of: fleet.home.needsFocus) { _, id in if id != nil { tab = .needs } }
+        // "See all in Needs you" on a project's Overview: Projects, filtered.
+        .onChange(of: fleet.home.needsFocus) { _, id in if id != nil { land(HomeRoute.needsYou) } }
         .animation(.snappy, value: fleet.notice?.1)
         .animation(.snappy, value: fleet.openingCard)
         // Asked after pairing, with a word on why, before the system prompt.
@@ -88,10 +93,7 @@ struct RootView: View {
         }
         // QA captures (H-230): -releaseStub <get_release json> opens that release.
         .task {
-            if let id = InstallStubs.releaseId {
-                tab = .needs
-                openNeeds = .release(computerId: computer.id, releaseId: id)
-            }
+            if let id = InstallStubs.releaseId { land(HomeRoute.release(id, on: computer.id)) }
         }
         // As a link from outside: -openCard H-293, at launch like a cold-start link (H-216).
         .task {
@@ -101,14 +103,9 @@ struct RootView: View {
                 fleet.openCard = id
             }
         }
-        // Screenshots of a tab: -openTab needs|chat|settings.
+        // Screenshots of a tab: -openTab needs|chat|settings ("needs": Projects, filtered).
         .task {
-            switch UserDefaults.standard.string(forKey: "openTab") {
-            case "needs": tab = .needs
-            case "chat": tab = .chat
-            case "settings": tab = .settings
-            default: break
-            }
+            if let landing = HomeRoute.tab(named: UserDefaults.standard.string(forKey: "openTab")) { land(landing) }
         }
         #endif
         // A tapped notification: its computer, then what it is about.
@@ -124,13 +121,10 @@ struct RootView: View {
 
     private var tabs: some View {
         TabView(selection: $tab) {
-            ProjectsHomeView()
+            ProjectsHomeView(landings: landings, openNeeds: $openNeeds)
                 .tabItem { Label("Projects", systemImage: "square.grid.2x2") }
-                .tag(Tab.projects)
-            NeedsYouView(openDecision: $openNeeds)
-                .tabItem { Label("Needs you", systemImage: "exclamationmark.bubble") }
                 .badge(fleet.home.total(fleet.computers))
-                .tag(Tab.needs)
+                .tag(Tab.projects)
             MainChatView(openBot: $openBot)
                 .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
                 .badge(fleet.home.questions(fleet.computers))
@@ -145,18 +139,22 @@ struct RootView: View {
     private func open(_ destination: NotificationTarget.Destination, on source: Computer) {
         switch destination {
         case .decision(let id):
-            tab = .needs
-            openNeeds = .decision(computerId: source.id, decisionId: id)
+            land(HomeRoute.decision(id, on: source.id))
         case .permissionCard(let id):
-            tab = .needs
-            // A terminal command's card sits atop Needs you, read-only (H-108).
-            if let bot = source.store.permissions.first(where: { $0.id == id })?.botId, bot != "terminal" {
-                openNeeds = .bot(computerId: source.id, botId: bot, chat: false)
-            }
+            // A terminal command's card sits atop Projects, read-only (H-108).
+            land(HomeRoute.permissionCard(on: source.id, botId: source.store.permissions.first { $0.id == id }?.botId))
         case .bot(let id, let pane):
             tab = .chat
             openBot = BotLink(botId: id, pane: pane)
         }
+    }
+
+    /// What used to open the Needs you tab: Projects with the filter on, and its screen pushed.
+    private func land(_ landing: HomeLanding) {
+        if let filter = landing.filter { fleet.home.filter = filter }
+        if let push = landing.push { openNeeds = push }
+        tab = landing.tab
+        landings += 1
     }
 
     /// "Opening ZZ-404…" while a link from outside waits for the projects (UX-044).
@@ -178,10 +176,7 @@ struct RootView: View {
     @ViewBuilder private var noticeBanner: some View {
         if case let (source, notice)? = fleet.notice {
             Button {
-                if let id = notice.decisionId {
-                    tab = .needs
-                    openNeeds = .decision(computerId: source.id, decisionId: id)
-                }
+                if let id = notice.decisionId { land(HomeRoute.decision(id, on: source.id)) }
                 source.store.notice = nil
             } label: {
                 VStack(alignment: .leading, spacing: 2) {

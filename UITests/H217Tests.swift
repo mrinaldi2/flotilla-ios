@@ -74,7 +74,7 @@ final class H217Tests: XCTestCase {
     }
 
     func testTwoSecondDropIsRiddenOut() {
-        // On Decisions (it carries the banner), then on the project.
+        // On Decisions (it carries the banner; Projects, filtered, opens it), then on the project.
         let home = launch(["-openTab", "needs"])
         waitFor(home.navigationBars.buttons["Decisions"].firstMatch, 30).tap()
         sleep(4)
@@ -150,8 +150,8 @@ final class H217Tests: XCTestCase {
         XCTAssertTrue(app.navigationBars["The Hermes"].waitForExistence(timeout: 3), "Back from the bot page froze")
         app.navigationBars.buttons["BackButton"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 3), "Back to Projects froze")
-        app.tabBars.buttons["Needs you"].tap()
-        XCTAssertTrue(app.tabBars.buttons["Needs you"].isSelected, "Tab switch froze")
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Settings"].isSelected, "Tab switch froze")
         app.tabBars.buttons["Chat"].tap()
         XCTAssertTrue(app.tabBars.buttons["Chat"].waitForExistence(timeout: 3) && app.tabBars.buttons["Chat"].isSelected, "Tab switch froze")
         print("QA-008 H-217 navigation while down took \(String(format: "%.1f", Date().timeIntervalSince(t0))) s")

@@ -32,6 +32,40 @@ final class IsolationRenderTests: XCTestCase {
         render(RejectReleaseSheet(release: release) { _, _ in })
     }
 
+    /// Board glance (0.20): the Projects tab and a card's pieces, at the default
+    /// size and at an accessibility size, where the bar becomes rows (case 7).
+    func testTheProjectsTabAndItsCardsRenderOnTheirOwn() {
+        var row = HomeRow()
+        row.projectID = "p"
+        row.name = "PhD"
+        row.bots = 3
+        row.botsWorking = 1
+        row.attention.count = 2
+        row.columns = [("To do", "inbox", 9), ("Doing", "doing", 3), ("Review", "review", 0), ("Done", "done", 21)].map { name, category, count in
+            var column = HomeColumn()
+            column.name = name
+            column.category = category
+            column.count = UInt32(count)
+            return column
+        }
+        row.staleSources = ["d-imac"]
+        let card = HomeCard(row: row, computerId: "mac", staleNames: ["imac"], staleSince: Date(), offline: ["d-imac"])
+        var ask = HomeAttentionRow()
+        ask.kind = .ownerQuestion
+        ask.title = "Which split for the evaluation?"
+        let bots = [GlanceBot(id: "b", name: "ML Engineer", avatar: "", working: true)]
+        for size in [DynamicTypeSize.large, .accessibility3] {
+            render(ProjectCardBody(card: card, bots: bots).environment(\.dynamicTypeSize, size))
+            render(AskRow(row: ask, action: "Answer", primary: true).environment(\.dynamicTypeSize, size))
+            render(AskRow(row: ask, action: "Answer", unavailable: "Not connected to Mac").environment(\.dynamicTypeSize, size))
+        }
+        render(QuietRow(card: card))
+        render(MiniBoardRows(segments: MiniBoard.segments(row.columns)))
+        render(FilterChips(filter: .constant(.needsYou), counts: [.all: 7, .needsYou: 1]))
+        render(NewProjectButton(prominent: true).environment(Fleet()))
+        render(ProjectsHomeView().environment(Fleet()))
+    }
+
     func testTheBotPickerRendersWithTheFleetItDeclares() {
         render(BotPicker { _ in }.environment(Fleet()))
     }

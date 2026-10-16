@@ -1,0 +1,201 @@
+{
+  "as_of": "2026-10-16T10:42:00Z",
+  "rows": [
+    {
+      "project_id": "p-phd",
+      "name": "PhD",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-phd", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "open_tasks": 4,
+      "doing": [
+        { "item_id": "PHD-31", "title": "Maze benchmark", "assignee_name": "ML Engineer", "assignee_bot_id": "b-ml" },
+        { "item_id": "PHD-33", "title": "Dataset card", "assignee_name": "Automation Tester", "assignee_bot_id": "b-at" }
+      ],
+      "bots": 14,
+      "bots_working": 2,
+      "bots_waiting": 1,
+      "doing_total": 3,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 9 },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 3 },
+        { "key": "review", "name": "Review", "category": "review", "count": 2 },
+        { "key": "done", "name": "Done", "category": "done", "count": 21 }
+      ],
+      "attention": {
+        "count": 5,
+        "score": 11,
+        "by_kind": { "permission_prompt": 1, "owner_question": 1, "decision": 1, "release_awaiting": 1, "p0_item": 1 },
+        "oldest_at": "2026-10-16T08:10:00Z"
+      },
+      "last_activity_at": "2026-10-16T10:40:00Z"
+    },
+    {
+      "project_id": "p-recipes",
+      "name": "Recipe Box",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-recipes", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "doing": [{ "item_id": "RB-7", "title": "Shopping list", "assignee_name": "Recipe Lead", "assignee_bot_id": "b-rl" }],
+      "bots": 2,
+      "bots_working": 1,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 4 },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 2 },
+        { "key": "review", "name": "Review", "category": "review", "count": 1 },
+        { "key": "done", "name": "Done", "category": "done", "count": 6 }
+      ],
+      "attention": {
+        "count": 1,
+        "score": 2,
+        "by_kind": { "release_awaiting": 1 },
+        "oldest_at": "2026-10-16T10:27:00Z"
+      },
+      "last_activity_at": "2026-10-16T10:30:00Z"
+    },
+    {
+      "project_id": "p-maze",
+      "name": "Unity Maze",
+      "members": [{ "daemon_id": "d-imac", "project_id": "p-maze", "computer_name": "Studio iMac" }],
+      "board_home": "d-imac",
+      "bots": 5,
+      "bots_working": 2,
+      "columns": [
+        { "key": "inbox", "name": "Inbox", "category": "inbox", "count": 3 },
+        { "key": "ready", "name": "Ready", "category": "ready", "count": 2 },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 1 },
+        { "key": "review", "name": "Review", "category": "review", "count": 1 },
+        { "key": "release", "name": "Release", "category": "deploying", "count": 2 },
+        { "key": "done", "name": "Done", "category": "done", "count": 30 }
+      ],
+      "attention": {},
+      "stale_sources": ["d-imac"],
+      "last_activity_at": "2026-10-16T07:12:00Z"
+    },
+    {
+      "project_id": "p-portfolio",
+      "name": "Portfolio Site",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-portfolio", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "doing": [
+        { "item_id": "PS-4", "title": "Hero section", "assignee_name": "Frontend Dev", "assignee_bot_id": "b-fe" },
+        { "item_id": "PS-5", "title": "Type scale", "assignee_name": "Designer", "assignee_bot_id": "b-ds" }
+      ],
+      "bots": 3,
+      "bots_working": 2,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 3 },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 2 },
+        { "key": "review", "name": "Review", "category": "review", "count": 0 },
+        { "key": "done", "name": "Done", "category": "done", "count": 8 }
+      ],
+      "attention": {},
+      "last_activity_at": "2026-10-16T10:41:00Z"
+    },
+    {
+      "project_id": "p-thesis",
+      "name": "Thesis writing",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-thesis", "computer_name": "This Mac" }],
+      "attention": {},
+      "last_activity_at": "2026-10-16T10:38:00Z"
+    },
+    {
+      "project_id": "p-calm",
+      "name": "Calm",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-calm", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "bots": 2,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 1 },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 0 },
+        { "key": "done", "name": "Done", "category": "done", "count": 5 }
+      ],
+      "attention": {},
+      "last_activity_at": "2026-10-16T09:00:00Z"
+    },
+    {
+      "project_id": "p-books",
+      "name": "Books",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-books", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "bots": 1,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 4 },
+        { "key": "done", "name": "Done", "category": "done", "count": 12 }
+      ],
+      "attention": {},
+      "last_activity_at": "2026-10-13T09:00:00Z"
+    },
+    {
+      "project_id": "p-garden",
+      "name": "Garden Planner",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-garden", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "bots": 1,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 2 },
+        { "key": "done", "name": "Done", "category": "done", "count": 5 }
+      ],
+      "attention": {},
+      "last_activity_at": "2026-10-11T09:00:00Z"
+    },
+    {
+      "project_id": "p-tax",
+      "name": "Tax 2026",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-tax", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "bots": 1,
+      "columns": [{ "key": "todo", "name": "To do", "category": "inbox", "count": 4 }],
+      "attention": {},
+      "last_activity_at": "2026-10-02T09:00:00Z"
+    },
+    {
+      "project_id": "p-blog",
+      "name": "Old Blog",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-blog", "computer_name": "This Mac" }],
+      "board_home": "d-mac",
+      "bots": 1,
+      "columns": [{ "key": "done", "name": "Done", "category": "done", "count": 2 }],
+      "attention": {},
+      "last_activity_at": "2026-09-10T09:00:00Z"
+    }
+  ],
+  "sources": [
+    { "daemon_id": "d-imac", "name": "Studio iMac", "state": "OFFLINE", "as_of": "2026-10-16T07:12:00Z" }
+  ],
+  "total": {
+    "count": 6,
+    "score": 13,
+    "by_kind": { "permission_prompt": 1, "owner_question": 1, "decision": 1, "release_awaiting": 2, "p0_item": 1 }
+  },
+  "attention_rows": {
+    "p-phd": [
+      {
+        "id": "permission_prompt:d-mac:pr-1", "kind": "PERMISSION_PROMPT", "daemon_id": "d-mac", "project_id": "p-phd",
+        "title": "Automation Tester asks: Bash: make bench", "created_at": "2026-10-16T10:20:00Z", "weight": 3, "request_id": "pr-1"
+      },
+      {
+        "id": "owner_question:d-mac:b-lead", "kind": "OWNER_QUESTION", "daemon_id": "d-mac", "project_id": "p-phd",
+        "title": "PhD Game Lead: which split for the evaluation?", "created_at": "2026-10-16T08:40:00Z", "weight": 2,
+        "bot": { "daemon_id": "d-mac", "bot_id": "b-lead", "name": "PhD Game Lead" }
+      },
+      {
+        "id": "decision:d-mac:dec-1", "kind": "DECISION", "daemon_id": "d-mac", "project_id": "p-phd",
+        "title": "Keep the maze at 64 × 64 for the benchmark?", "created_at": "2026-10-16T09:10:00Z", "weight": 2,
+        "decision_id": "dec-1", "priority": "P1"
+      },
+      {
+        "id": "release_awaiting:d-mac:r-04", "kind": "RELEASE_AWAITING", "daemon_id": "d-mac", "project_id": "p-phd",
+        "title": "0.4.0 is ready for you to test", "created_at": "2026-10-16T10:00:00Z", "weight": 1, "release_id": "r-04"
+      },
+      {
+        "id": "p0_item:d-mac:PHD-12", "kind": "P0_ITEM", "daemon_id": "d-mac", "project_id": "p-phd",
+        "title": "Evaluation split is blocked", "created_at": "2026-10-16T08:10:00Z", "weight": 1, "item_id": "PHD-12"
+      }
+    ],
+    "p-recipes": [
+      {
+        "id": "release_awaiting:d-mac:r-12", "kind": "RELEASE_AWAITING", "daemon_id": "d-mac", "project_id": "p-recipes",
+        "title": "1.2.0 is ready for you to test", "created_at": "2026-10-16T10:27:00Z", "weight": 2, "release_id": "r-12"
+      }
+    ]
+  }
+}

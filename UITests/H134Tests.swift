@@ -1,6 +1,6 @@
 import XCTest
 
-/// H-134 (UX-024) on iPhone: Projects home and Needs you (I1), the project screen and
+/// H-134 (UX-024) on iPhone: Projects home and its Needs you filter (I1, 0.20), the project screen and
 /// the bot page Reports-first (I2), the main chat (I3). Against the demo world, whose
 /// daemon may predate 0.17: those checks take the legacy path the app shows it, and the
 /// 0.17 paths (projects_overview cards) come from the golden fixture via -homeFixture.
@@ -27,16 +27,16 @@ final class H134Tests: XCTestCase {
         let app = try DemoApp.launch(["-homeFixture", fixture])
         allowSystemAlerts()
         waitFor(app.navigationBars["Projects"])
+        // Board glance (BG-Rules §6): name, state, board, fleet, the computer away, the ask.
         let gravity = waitFor(app.projectCard("gravity"))
-        label(gravity, contains: ["Rank 1", "1 Run card · 1 permission request · 1 bot waiting",
-                                  "0.17.0 ready for you to test",
-                                  "5 tasks running · 6 bots, 2 working, 1 waiting for you",
-                                  "“Stand-up: H-130 in review.”", "imac is offline · last seen"])
+        label(gravity, contains: ["Needs you, 3 things", "2 Inbox, 4 Doing, 1 Review, 3 Verify, 1 Awaiting owner",
+                                  "2 bots working, 1 waiting, 3 idle.", "imac is offline, Last seen",
+                                  "1 Run card · 1 permission request · 1 bot waiting"])
         let calm = waitFor(app.projectCard("calm"))
-        XCTAssertTrue(calm.label.hasPrefix("Nothing needs you, calm"), "calm: \(calm.label)")
-        XCTAssertLessThan(gravity.frame.minY, calm.frame.minY, "Ranked #1 is not first")
-        // The tab badge is the merged attention count (fixture total: 3).
-        XCTAssertEqual(app.tabBars.buttons["Needs you"].value as? String, "3 items")
+        XCTAssertTrue(calm.label.hasPrefix("calm, Set up"), "calm: \(calm.label)")
+        XCTAssertLessThan(gravity.frame.minY, calm.frame.minY, "What needs you is not first")
+        // The Projects tab carries the merged attention count (fixture total: 3).
+        XCTAssertEqual(app.tabBars.buttons["Projects"].value as? String, "3 items")
         screenshot("QA-004-i1-projects-fixture")
 
         // Pinning (long press → Pin to top) needs project_pin, a 0.17 daemon: H134LiveTests.
@@ -52,23 +52,23 @@ final class H134Tests: XCTestCase {
         if !aurora.label.contains("Update needed for full info") {
             throw XCTSkip("This daemon has projects_overview: H134LiveTests covers it")
         }
-        label(aurora, contains: ["Rank 1", "decisions", "permission requests", "Update needed for full info"])
-        label(website, contains: ["Rank 2", "Update needed for full info"])
+        label(aurora, contains: ["Needs you", "decisions", "permission requests", "Update needed for full info"])
+        label(website, contains: ["Update needed for full info"])
         XCTAssertLessThan(aurora.frame.minY, website.frame.minY)
         screenshot("QA-004-i1-projects-legacy")
     }
 
-    // MARK: I1 Needs you
+    // MARK: I1 Needs you (a filter on Projects since 0.20)
 
     func testNeedsYouRowsOpenTheRightScreen() throws {
         try DemoControl.ensurePermissionPrompts()
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        app.tab("Needs you")
-        // Grouped by project, in rank order.
+        app.needsYou()
+        // A card per project, in rank order.
         // Ranks depend on what else is waiting (the live tests add Flotilla Lab): order only.
-        let first = waitFor(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Aurora Notes · #'")).firstMatch)
-        let second = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Website · #'")).firstMatch
+        let first = waitFor(app.projectCard("Aurora Notes"))
+        let second = app.projectCard("Website")
         app.scroll(to: second)
         waitFor(second)
         app.scroll(to: first)
@@ -81,7 +81,7 @@ final class H134Tests: XCTestCase {
         decision.tap()
         waitFor(app.navigationBars["Decision"])
         waitFor(app.staticTexts["Resolve conflicts automatically or always ask?"])
-        app.tab("Needs you")
+        app.needsYou()
 
         // A permission request opens the bot, its card on top.
         let permission = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Backend Dev' AND label CONTAINS 'Bash'")).firstMatch
@@ -93,9 +93,9 @@ final class H134Tests: XCTestCase {
         waitFor(app.staticTexts["Bash: rm -rf build/ && npm ci"])
         waitFor(app.buttons["Allow once"].firstMatch)
         screenshot("QA-004-i1-needs-permission-bot")
-        app.tab("Needs you")
+        app.needsYou()
 
-        // The full list: Needs you → Decisions.
+        // The full list: Projects → Decisions.
         app.openDecisions()
         waitFor(app.staticTexts["Permission requests"])
         screenshot("QA-004-i1-decisions")
@@ -214,10 +214,12 @@ final class H134PadTests: XCTestCase {
         let app = try DemoApp.launch()
         allowSystemAlerts()
         waitFor(app.navigationBars["Flotilla"], 20)
-        for item in ["Needs you", "Chat", "All projects", "Settings"] {
+        for item in ["Chat", "All projects", "Settings"] {
             XCTAssertTrue(waitFor(sidebarItem(app, item), 5).exists, item)
         }
-        // Ranked projects, each with its rank and attention count.
+        // Needs you is the Projects filter now, not a sidebar row (0.20).
+        XCTAssertFalse(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Needs you'")).firstMatch.exists)
+        // Projects, the ones that need you first, each with its attention count.
         let aurora = waitFor(sidebarItem(app, "Aurora Notes"))
         let website = waitFor(sidebarItem(app, "Website"))
         XCTAssertLessThan(aurora.frame.minY, website.frame.minY, "Sidebar projects not in rank order")

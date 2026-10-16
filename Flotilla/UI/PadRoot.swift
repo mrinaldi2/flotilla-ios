@@ -1,13 +1,16 @@
 import SwiftUI
 
-/// The iPad shell (UX-024): a sidebar with Needs you and Chat, then the
-/// projects ranked by how much they need the owner. The main chat also
+/// The iPad shell (UX-024, 0.20): a sidebar with Chat, then the projects in
+/// the order Projects shows them, the ones that need the owner first; what
+/// needs you is the Needs you filter on All projects. The main chat also
 /// slides over any screen (✉ or ⌘J) without leaving it.
 struct PadRootView: View {
     @Environment(Fleet.self) private var fleet
     @Binding var tab: RootView.Tab
     @Binding var openNeeds: NeedsDestination?
     @Binding var openBot: BotLink?
+    /// RootView's landings: each one shows All projects, where its screen opens.
+    var landings = 0
     @State private var selection: Item? = .projects
     @State private var chatPanel = false
     /// ✎ on iPad: who to message, then their thread in the slide-over chat.
@@ -15,33 +18,34 @@ struct PadRootView: View {
     @State private var openThread: ThreadLink?
     /// The project column's stack, so card links push there (H-204).
     @State private var projectPath = NavigationPath()
-    /// A card to show once its project is selected.
-    @State private var pendingCard: NeedsDestination?
+    /// What to show once a project is selected: a linked card, or its settings.
+    @State private var pendingPath: NavigationPath?
+    /// The segment a project opens on: Board from a card's Open board.
+    @State private var pendingSegment: ProjectScreen.Segment?
+    @State private var projectSegment = ProjectScreen.Segment.overview
 
     enum Item: Hashable {
-        case needs, chat, projects, settings
+        case chat, projects, settings
         case project(HomeProjectLink)
     }
 
-    private var cards: [HomeCard] { fleet.home.cards(fleet.computers) }
+    private var cards: [HomeCard] { BoardGlance.ordered(fleet.home.cards(fleet.computers)) }
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                Label("Needs you", systemImage: "exclamationmark.bubble")
-                    .badge(fleet.home.total(fleet.computers))
-                    .tag(Item.needs)
                 Label("Chat", systemImage: "bubble.left.and.bubble.right")
                     .badge(fleet.home.questions(fleet.computers))
                     .tag(Item.chat)
                 Section("Projects") {
                     Label("All projects", systemImage: "square.grid.2x2")
+                        .badge(fleet.home.total(fleet.computers))
                         .tag(Item.projects)
                     ForEach(cards) { card in
                         let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
                         let selected = selection == .project(link)
                         HStack(spacing: 8) {
-                            if card.rank != nil { RankBadge(rank: card.rank, selected: selected) }
+                            ProjectGlyph(name: card.row.name, seed: card.glyphSeed, size: 24)
                             Text(card.row.name).lineLimit(1)
                             Spacer(minLength: 4)
                             if card.row.attention.count > 0 {
@@ -60,6 +64,9 @@ struct PadRootView: View {
                     .tag(Item.settings)
             }
             .navigationTitle("Flotilla")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { NewProjectButton() }
+            }
         } detail: {
             detail
                 .toolbar {
@@ -95,20 +102,22 @@ struct PadRootView: View {
         .onChange(of: tab, initial: true) { _, tab in
             switch tab {
             case .projects: if case .project = selection {} else { selection = .projects }
-            case .needs: selection = .needs
             case .chat: selection = .chat
             case .settings: selection = .settings
             }
         }
+        // A route that used to open Needs you: All projects, filtered, its screen on top.
+        .onChange(of: landings) { if landings > 0, tab == .projects { selection = .projects } }
         // On a cold start the link arrives before the projects: try again as they load (H-216).
         .onChange(of: fleet.openCard, initial: true) { openLinkedCard() }
         .onChange(of: fleet.cards.homes) { openLinkedCard() }
         .onChange(of: fleet.cards.settled) { openLinkedCard() }
         .onChange(of: selection) { _, item in
-            projectPath = pendingCard.map { NavigationPath([$0]) } ?? NavigationPath()
-            pendingCard = nil
+            projectPath = pendingPath ?? NavigationPath()
+            projectSegment = pendingSegment ?? .overview
+            pendingPath = nil
+            pendingSegment = nil
             switch item {
-            case .needs: tab = .needs
             case .chat: tab = .chat; chatPanel = false
             case .settings: tab = .settings
             default: tab = .projects
@@ -124,15 +133,13 @@ struct PadRootView: View {
         if selection == project {
             projectPath = NavigationPath([card])
         } else {
-            pendingCard = card
+            pendingPath = NavigationPath([card])
             selection = project
         }
     }
 
     @ViewBuilder private var detail: some View {
         switch selection {
-        case .needs:
-            NeedsYouView(openDecision: $openNeeds)
         case .chat:
             MainChatView(openBot: $openBot)
         case .settings:
@@ -140,15 +147,21 @@ struct PadRootView: View {
         case .project(let link):
             if let computer = fleet.computer(id: link.computerId) {
                 NavigationStack(path: $projectPath) {
-                    ProjectScreen(projectId: link.projectId)
+                    ProjectScreen(projectId: link.projectId, segment: projectSegment)
                         .computerEnvironment(computer)
                         .needsDestinations()
+                        .homeProjectDestinations()
                 }
                 .opensCardLinks(projectIds: [link.projectId]) { projectPath.append($0) }
                 .id(link)
             }
         case .projects, nil:
-            ProjectsHomeView(open: { selection = .project($0) })
+            ProjectsHomeView(landings: landings, openNeeds: $openNeeds) { link in
+                // The sidebar row is the project itself; the page it asks for opens inside.
+                pendingSegment = link.page == .board ? .board : nil
+                if link.page == .settings { pendingPath = NavigationPath([link]) }
+                selection = .project(HomeProjectLink(computerId: link.computerId, projectId: link.projectId))
+            }
         }
     }
 }

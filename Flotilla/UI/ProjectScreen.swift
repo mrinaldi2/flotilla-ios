@@ -9,8 +9,14 @@ struct ProjectScreen: View {
     @Environment(AppStore.self) private var store
     @Environment(\.horizontalSizeClass) private var sizeClass
     let projectId: String
-    @State private var segment = Segment.overview
+    @State private var segment: Segment
     @State private var showingArtifacts = false
+
+    /// `segment`: where it opens; a card's Open board asks for the Board.
+    init(projectId: String, segment: Segment = .overview) {
+        self.projectId = projectId
+        _segment = State(initialValue: segment)
+    }
 
     enum Segment: String, CaseIterable {
         case overview = "Overview", board = "Board", team = "Team", releases = "Releases", meetings = "Meetings"

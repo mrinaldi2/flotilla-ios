@@ -174,7 +174,8 @@ final class QA014WaitingTests: XCTestCase {
         if link.exists, now.exists { XCTAssertLessThan(now.frame.minY, link.frame.minY, "The row isn't under 'Now:'") }
         shot("7-older-service")
         link.tap()
-        XCTAssertTrue(app.navigationBars["Needs you"].waitForExistence(timeout: 10), "The row did not open Needs you")
+        XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 10) && app.needsYouFilterIsOn,
+                      "The row did not open Projects with the Needs you filter on")
         shot("7b-needs-you")
     }
 

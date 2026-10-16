@@ -2,7 +2,7 @@ import XCTest
 
 /// The main flows against the demo world: launch, what needs you, a bot's chat,
 /// answering a decision, and the link sheet. Each test starts the app fresh.
-/// Navigation follows H-134: Projects · Needs you · Chat · Settings.
+/// Navigation follows 0.20: Projects (Needs you is its filter) · Chat · Settings.
 final class SmokeTests: XCTestCase {
     var app: XCUIApplication!
 
@@ -14,16 +14,16 @@ final class SmokeTests: XCTestCase {
 
     func testLaunchShowsProjects() {
         waitFor(app.navigationBars["Projects"])
-        for tab in ["Projects", "Needs you", "Chat", "Settings"] {
+        for tab in ["Projects", "Chat", "Settings"] {
             XCTAssertTrue(app.tabBars.buttons[tab].exists, "Tab \(tab)")
         }
-        XCTAssertEqual(app.tabBars.buttons.count, 4, "Only the four H-134 tabs")
+        XCTAssertEqual(app.tabBars.buttons.count, 3, "Only the three 0.20 tabs: Needs you is a filter on Projects")
         waitFor(app.projectCard("Aurora Notes"))
     }
 
     func testNeedsYouShowsWhatNeedsYou() throws {
         try DemoControl.ensurePermissionPrompts()
-        app.tab("Needs you")
+        app.needsYou()
         // The demo's three permission prompts, as rows here and as cards in Decisions.
         // Titled by the app ("… wants to run Bash") or, on 0.17, by the daemon ("… asks: Bash: …").
         for (bot, tool) in [("Backend Dev", "Bash"), ("iOS Dev", "Write"), ("Web Dev", "WebFetch")] {
@@ -66,7 +66,7 @@ final class SmokeTests: XCTestCase {
     }
 
     func testAnswerDecision() throws {
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Launch the site with the offline headline?")).tap()
         waitFor(app.navigationBars["Decision"])
         // hermesd 0.17.4 keeps approve from the demo's owner token: no answer form (H-234).

@@ -106,14 +106,14 @@ extension XCUIApplication {
     func tab(_ name: String) {
         var tries = 0
         while !(tabBars.buttons[name].exists && tabBars.buttons[name].isHittable), tries < 4 {
-            // Only a real back button: the first bar button can be an action (Needs you's Decisions).
+            // Only a real back button: the first bar button can be an action (Projects' Decisions).
             let back = navigationBars.buttons["BackButton"].firstMatch
             if back.exists && back.isHittable {
                 // The edge swipe goes back too, and can't fail on a button that just went away.
                 coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
                     .press(forDuration: 0.05, thenDragTo: coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)))
             } else {
-                // A sheet (Needs you's Decisions) covers the bar: swipe it away first.
+                // A sheet (Projects' Decisions) covers the bar: swipe it away first.
                 swipeDown(velocity: .fast)
             }
             tries += 1
@@ -121,11 +121,35 @@ extension XCUIApplication {
         tabBars.buttons[name].tap()
     }
 
-    // MARK: H-134 navigation: Projects · Needs you · Chat · Settings
+    // MARK: 0.20 navigation: Projects (with its Needs you filter) · Chat · Settings
 
-    /// A card on Projects: "Rank 1, Aurora Notes, …" or "Nothing needs you, calm, …".
+    /// A card on Projects: "Aurora Notes, Needs you, 3 things, …" (BG-Rules §6).
     func projectCard(_ name: String) -> XCUIElement {
-        buttons.matching(NSPredicate(format: "label CONTAINS %@", ", \(name), ")).firstMatch
+        buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "\(name), ")).firstMatch
+    }
+
+    /// What used to be the Needs you tab: Projects with its Needs you filter on.
+    /// With fewer than five projects there are no chips; the cards that need you
+    /// lead anyway, and each one's whole list is opened instead.
+    func needsYou() {
+        tab("Projects")
+        let chip = buttons.matching(NSPredicate(format: "label BEGINSWITH 'Needs you, '")).firstMatch
+        if chip.waitForExistence(timeout: 3), chip.isHittable {
+            chip.tap()
+            return
+        }
+        let more = NSPredicate(format: "label BEGINSWITH 'Show ' AND label CONTAINS ' more for '")
+        for _ in 0..<6 {
+            let button = buttons.matching(more).firstMatch
+            guard button.exists else { break }
+            if !button.isHittable { swipeUp() }
+            if button.isHittable { button.tap() }
+        }
+    }
+
+    /// Whether the Needs you filter is on: its chip is selected.
+    var needsYouFilterIsOn: Bool {
+        buttons.matching(NSPredicate(format: "label BEGINSWITH 'Needs you, ' AND selected == true")).firstMatch.waitForExistence(timeout: 5)
     }
 
     /// The project's screen, from its card on Projects.
@@ -160,15 +184,15 @@ extension XCUIApplication {
         _ = pane("Reports").waitForExistence(timeout: 10)
     }
 
-    /// Needs you → Decisions: decisions and the permission cards.
+    /// Projects → Decisions: decisions and the permission cards.
     func openDecisions() {
-        tab("Needs you")
+        tab("Projects")
         let decisions = navigationBars.buttons["Decisions"]
         _ = decisions.waitForExistence(timeout: 10)
         decisions.tap()
     }
 
-    /// A row on Needs you, by the start of its title.
+    /// An ask on a project's card (under the Needs you filter), by the start of its title.
     func needsRow(_ title: String) -> XCUIElement {
         let row = buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
         scroll(to: row)
