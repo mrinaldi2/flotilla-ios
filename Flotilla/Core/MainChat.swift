@@ -20,7 +20,7 @@ struct ThreadCard: Identifiable, Equatable {
 
     var id: String { origin }
 
-    init(_ thread: Hermes_Home_V1_OwnerThread, computerId: String) {
+    init(_ thread: Flotilla_Home_V1_OwnerThread, computerId: String) {
         self.computerId = computerId
         botId = thread.bot.botID
         botName = thread.bot.name
@@ -100,7 +100,7 @@ enum ThreadMerge {
     /// One card per bot with a conversation (UX-031: ✎ reaches the rest). A
     /// linked bot's thread is listed by every computer that shows it; the one
     /// read on the bot's own computer wins (BotRef). Newest first.
-    static func merge(_ lists: [(computerId: String, daemonId: String?, threads: [Hermes_Home_V1_OwnerThread])]) -> [ThreadCard] {
+    static func merge(_ lists: [(computerId: String, daemonId: String?, threads: [Flotilla_Home_V1_OwnerThread])]) -> [ThreadCard] {
         var byOrigin: [String: (card: ThreadCard, own: Bool)] = [:]
         for list in lists {
             for thread in list.threads where thread.hasLast && (thread.last.num > 0 || !thread.last.text.isEmpty) {
@@ -118,9 +118,9 @@ enum ThreadMerge {
 }
 
 extension AppStore {
-    func ownerThreads() async throws -> [Hermes_Home_V1_OwnerThread] {
+    func ownerThreads() async throws -> [Flotilla_Home_V1_OwnerThread] {
         let reply = try await client.request("owner_threads")
-        return try HomeJSON.decode(Hermes_Home_V1_OwnerThreads.self, reply["owner_threads"]).threads
+        return try HomeJSON.decode(Flotilla_Home_V1_OwnerThreads.self, reply["owner_threads"]).threads
     }
 
     /// Marks the thread read up to `num`, so its unread count clears everywhere.

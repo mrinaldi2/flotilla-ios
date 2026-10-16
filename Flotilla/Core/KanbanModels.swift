@@ -182,7 +182,7 @@ final class MoveModel {
     func move(columns: [BoardColumnRow]) async {
         guard let chosen, canMove else { return }
         phase = .sending
-        var move = Hermes_Board_V1_ItemMove()
+        var move = Flotilla_Board_V1_ItemMove()
         move.id = card.id
         move.to = chosen.key
         move.expectedVersion = card.version
@@ -235,7 +235,7 @@ final class QuickAddModel {
 
     let projectId: String
     var title = ""
-    var type = Hermes_Board_V1_ItemType.feature
+    var type = Flotilla_Board_V1_ItemType.feature
     var boardId: String
     var description = ""
     /// Labels picked from the board's groups (`platform:ios`); never platforms.
@@ -280,7 +280,7 @@ final class QuickAddModel {
         failure = nil
         progress = "Saving the draft…"
         defer { progress = nil }
-        var create = Hermes_Board_V1_ItemCreate()
+        var create = Flotilla_Board_V1_ItemCreate()
         create.projectID = projectId
         create.type = type
         create.title = title.trimmed
@@ -316,7 +316,7 @@ final class QuickAddModel {
             }
         }
         for link in links.map(\.trimmed) where !link.isEmpty {
-            var attach = Hermes_Board_V1_ItemAttach()
+            var attach = Flotilla_Board_V1_ItemAttach()
             attach.id = itemId
             attach.url = link
             do { _ = try await service.attach(attach) } catch { missing.append("\(link): \(error.localizedDescription)") }
@@ -327,7 +327,7 @@ final class QuickAddModel {
     private func upload(_ file: File, to itemId: String) async throws {
         let uploadId = AttachmentRules.uploadId()
         for chunk in AttachmentRules.chunks(file.data) {
-            var upload = Hermes_Board_V1_AttachmentUpload()
+            var upload = Flotilla_Board_V1_AttachmentUpload()
             upload.itemID = itemId
             upload.uploadID = uploadId
             upload.offset = UInt64(chunk.offset)
@@ -336,7 +336,7 @@ final class QuickAddModel {
             upload.name = file.name
             _ = try await service.upload(upload)
         }
-        var attach = Hermes_Board_V1_ItemAttach()
+        var attach = Flotilla_Board_V1_ItemAttach()
         attach.id = itemId
         attach.uploadID = uploadId
         attach.name = file.name
@@ -383,7 +383,7 @@ final class DraftModel {
         do { take(try await service.draftChanges(itemId: itemId, markSeen: true)) } catch { failure = error.localizedDescription }
     }
 
-    private func take(_ changes: Hermes_Board_V1_DraftChanges) {
+    private func take(_ changes: Flotilla_Board_V1_DraftChanges) {
         // Asked from the first revision, so the reply is the whole list.
         revisions = changes.revisions.sorted { $0.id < $1.id }
         seen = changes.seen

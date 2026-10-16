@@ -7,7 +7,7 @@
 // adds reads as text on an older client rather than failing to decode.
 syntax = "proto3";
 
-package hermes.board.v1;
+package flotilla.board.v1;
 
 // The project's release packages, newest first.
 message ReleaseList {
@@ -198,7 +198,7 @@ message InstallRelease {
 // project here first and reap what holds the home (start), read the pause
 // (status), or end it if the install can't go ahead (resume). This computer
 // only. Needs the owner-granted quiesce extra and the same gate as
-// install_release. `hermesd release install` calls it for you.
+// install_release. `flotillad release install` calls it for you.
 message InstallQuiesce {
   string release_id = 1;
   // start, status, extend (push the deadline on during an install),

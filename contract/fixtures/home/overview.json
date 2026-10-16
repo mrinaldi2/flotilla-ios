@@ -5,8 +5,14 @@
       "project_id": "p-gravity",
       "name": "gravity",
       "members": [
-        { "daemon_id": "d-mac", "project_id": "p-gravity", "computer_name": "mac" },
-        { "daemon_id": "d-imac", "project_id": "p-gravity-imac", "computer_name": "imac" }
+        { "daemon_id": "d-mac", "project_id": "p-gravity", "computer_name": "mac", "online": true },
+        {
+          "daemon_id": "d-imac",
+          "project_id": "p-gravity-imac",
+          "computer_name": "imac",
+          "online": false,
+          "last_seen_at": "2026-10-06T10:30:00Z"
+        }
       ],
       "board_home": "d-mac",
       "current_release": {
@@ -20,45 +26,167 @@
       },
       "open_tasks": 5,
       "doing": [
-        { "item_id": "H-130", "title": "Projects home daemon", "assignee_name": "Desktop Dev", "assignee_bot_id": "b-dev" }
+        { "item_id": "H-130", "title": "Projects home daemon", "assignee_name": "Daemon Dev", "assignee_bot_id": "b-daemon" }
       ],
       "bots": 6,
-      "bots_working": 2,
+      "bots_working": 3,
       "bots_waiting": 1,
       "doing_total": 4,
       "columns": [
-        { "key": "inbox", "name": "Inbox", "category": "inbox", "count": 2 },
-        { "key": "doing", "name": "Doing", "category": "doing", "count": 4 },
-        { "key": "review", "name": "Review", "category": "review", "count": 1 },
-        { "key": "verify", "name": "Verify", "category": "verify", "count": 3 },
-        { "key": "awaiting", "name": "Awaiting owner", "category": "approval", "count": 1 }
+        { "key": "inbox", "name": "Inbox", "category": "inbox", "count": 2, "kind": "open" },
+        { "key": "ready", "name": "Ready", "category": "ready", "count": 1, "kind": "open" },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 4, "kind": "active" },
+        { "key": "review", "name": "Review", "category": "review", "count": 1, "kind": "active" },
+        { "key": "verify", "name": "Verify", "category": "verify", "count": 3, "kind": "active" },
+        { "key": "approval", "name": "Awaiting owner", "category": "approval", "count": 1, "kind": "active" },
+        { "key": "deploying", "name": "Deploying", "category": "deploying", "kind": "active" },
+        { "key": "done", "name": "Done", "category": "done", "count": 12, "kind": "done" },
+        { "key": "cancelled", "name": "Cancelled", "category": "cancelled", "count": 3, "kind": "cancelled", "hidden": true }
       ],
       "attention": {
-        "count": 3,
-        "score": 7,
-        "by_kind": { "owner_action": 1, "permission_prompt": 1, "bot_waiting": 1 },
-        "oldest_at": "2026-10-06T09:00:00Z"
+        "count": 2,
+        "score": 3,
+        "by_kind": { "bot_stopped": 1, "bot_waiting": 1 },
+        "oldest_at": "2026-10-06T09:30:00Z"
       },
       "partial": true,
       "stale_sources": ["d-imac"],
       "last_activity_at": "2026-10-06T10:40:00Z",
-      "latest_summary": { "meeting_id": "m-1", "text": "Stand-up: H-130 in review.", "at": "2026-10-06T09:30:00Z" }
+      "latest_summary": { "meeting_id": "m-1", "text": "Stand-up: H-130 in review.", "at": "2026-10-06T09:30:00Z" },
+      "bot_list": [
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-lead",
+          "name": "Lead",
+          "avatar": "icon:orbit",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_WORKING",
+          "state": "working",
+          "computer_name": "mac",
+          "lead": true,
+          "since": "2026-10-06T10:38:00Z"
+        },
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-dev",
+          "name": "Desktop Dev",
+          "avatar": "icon:pixel",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_WAITING",
+          "state": "waiting_for_user",
+          "state_reason": "Asked you: ship the glance behind a flag?",
+          "computer_name": "mac",
+          "since": "2026-10-06T09:30:00Z"
+        },
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-daemon",
+          "name": "Daemon Dev",
+          "avatar": "icon:volt",
+          "runtime": "codex_cli",
+          "status": "BOT_STATUS_WORKING",
+          "state": "working",
+          "computer_name": "mac",
+          "since": "2026-10-06T10:20:00Z"
+        },
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-review",
+          "name": "Reviewer",
+          "avatar": "icon:echo",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_STOPPED",
+          "state": "stopped",
+          "computer_name": "mac",
+          "since": "2026-10-06T08:15:00Z"
+        },
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-tester",
+          "name": "Tester",
+          "avatar": "icon:ember",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_FAILED",
+          "state": "crashed",
+          "state_reason": "Claude Code exited with status 1",
+          "computer_name": "mac",
+          "since": "2026-10-06T10:05:00Z"
+        },
+        {
+          "daemon_id": "d-imac",
+          "bot_id": "b-ios",
+          "name": "iOS Dev",
+          "avatar": "icon:tide",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_OFFLINE",
+          "state": "working",
+          "computer_name": "imac",
+          "since": "2026-10-06T10:30:00Z"
+        }
+      ],
+      "top_attention": {
+        "id": "bot_stopped:d-mac:b-tester",
+        "kind": "BOT_STOPPED",
+        "daemon_id": "d-mac",
+        "project_id": "p-gravity",
+        "title": "Tester stopped: Claude Code exited with status 1",
+        "created_at": "2026-10-06T10:05:00Z",
+        "weight": 2,
+        "bot": { "daemon_id": "d-mac", "bot_id": "b-tester", "name": "Tester" },
+        "bot_state": "crashed"
+      }
+    },
+    {
+      "project_id": "p-site",
+      "name": "site",
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-site", "computer_name": "mac", "online": true }],
+      "board_home": "d-mac",
+      "open_tasks": 3,
+      "doing": [
+        { "item_id": "S-4", "title": "Pricing page copy", "assignee_name": "Writer", "assignee_bot_id": "b-writer" }
+      ],
+      "bots": 1,
+      "doing_total": 1,
+      "columns": [
+        { "key": "todo", "name": "To do", "category": "inbox", "count": 2, "kind": "open" },
+        { "key": "doing", "name": "Doing", "category": "doing", "count": 1, "kind": "active" },
+        { "key": "review", "name": "Review", "category": "doing", "kind": "active" },
+        { "key": "done", "name": "Done", "category": "done", "count": 5, "kind": "done" },
+        { "key": "cancelled", "name": "Cancelled", "category": "cancelled", "kind": "cancelled", "hidden": true }
+      ],
+      "attention": {},
+      "last_activity_at": "2026-10-06T08:00:00Z",
+      "rank": 1,
+      "bot_list": [
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-writer",
+          "name": "Writer",
+          "avatar": "color:#3a7bd5",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_IDLE",
+          "state": "ready",
+          "computer_name": "mac",
+          "lead": true,
+          "since": "2026-10-06T08:00:00Z"
+        }
+      ]
     },
     {
       "project_id": "p-calm",
       "name": "calm",
-      "members": [{ "daemon_id": "d-mac", "project_id": "p-calm", "computer_name": "mac" }],
+      "members": [{ "daemon_id": "d-mac", "project_id": "p-calm", "computer_name": "mac", "online": true }],
       "attention": {},
-      "rank": 1
+      "rank": 2
     }
   ],
   "sources": [
     { "daemon_id": "d-imac", "name": "imac", "state": "OFFLINE", "as_of": "2026-10-06T10:30:00Z" }
   ],
   "total": {
-    "count": 3,
-    "score": 7,
-    "by_kind": { "owner_action": 1, "permission_prompt": 1, "bot_waiting": 1 },
-    "oldest_at": "2026-10-06T09:00:00Z"
+    "count": 2,
+    "score": 3,
+    "by_kind": { "bot_stopped": 1, "bot_waiting": 1 },
+    "oldest_at": "2026-10-06T09:30:00Z"
   }
 }

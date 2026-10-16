@@ -6,8 +6,8 @@ import XCTest
 /// with a retry; replies sit under their comment; older services that send no
 /// comment text still show that a comment is there.
 final class ItemCommentsTests: XCTestCase {
-    private func comment(_ id: String, _ author: String, _ body: String, replyTo: String? = nil, at: Int64 = 1) -> Hermes_Board_V1_ItemComment {
-        var c = Hermes_Board_V1_ItemComment()
+    private func comment(_ id: String, _ author: String, _ body: String, replyTo: String? = nil, at: Int64 = 1) -> Flotilla_Board_V1_ItemComment {
+        var c = Flotilla_Board_V1_ItemComment()
         c.id = id
         c.author = author
         c.body = body
@@ -112,12 +112,12 @@ final class ItemCommentsTests: XCTestCase {
     }
 
     func testAnOlderServiceWithoutCommentsShowsTheCommentedEvents() {
-        var event = Hermes_Board_V1_ItemEvent()
+        var event = Flotilla_Board_V1_ItemEvent()
         event.id = 7
         event.kind = .commented
         event.actor = "bot:dev"
         event.to = "c9"
-        var moved = Hermes_Board_V1_ItemEvent()
+        var moved = Flotilla_Board_V1_ItemEvent()
         moved.kind = .moved
         let rows = CommentThread.rows(comments: [], history: [event, moved], pending: [])
         XCTAssertEqual(rows.map(\.id), ["c9"])

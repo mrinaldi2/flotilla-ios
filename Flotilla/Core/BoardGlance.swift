@@ -5,7 +5,7 @@ import Foundation
 // on that tab, not a tab of its own (BG-Rules §3). The rules live here, apart
 // from the views, so the tests hold them.
 
-typealias HomeColumn = Hermes_Home_V1_ColumnCount
+typealias HomeColumn = Flotilla_Home_V1_ColumnCount
 
 /// The app's tabs (BG-Rules, decided 16 Oct): Projects · Chat · Settings.
 enum AppTab: Hashable {

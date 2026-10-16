@@ -1,0 +1,19 @@
+{
+  "reqId": "19",
+  "boardRequest": {
+    "boardEnable": {
+      "projectId": "p1",
+      "preset": "release_gated",
+      "columns": [
+        { "key": "inbox", "name": "Ideas" },
+        { "key": "ready", "name": "Ready" },
+        { "key": "doing", "name": "Building" },
+        { "key": "review", "name": "Code review" },
+        { "key": "verify", "name": "QA" },
+        { "key": "approval", "name": "Awaiting owner" },
+        { "key": "deploying", "name": "Shipping" },
+        { "key": "done", "name": "Live" }
+      ]
+    }
+  }
+}

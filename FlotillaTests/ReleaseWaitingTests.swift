@@ -134,7 +134,7 @@ final class ReleaseWaitingTests: XCTestCase {
     }
 
     func testTheProjectsCardPillSaysItWaitsForYou() {
-        var brief = Hermes_Home_V1_ReleaseBrief()
+        var brief = Flotilla_Home_V1_ReleaseBrief()
         brief.version = "0.17.5"
         brief.state = "approved"
         XCTAssertEqual(ReleaseStatusWords.pill(brief).0, "0.17.5 approved", "nothing waits: its state")

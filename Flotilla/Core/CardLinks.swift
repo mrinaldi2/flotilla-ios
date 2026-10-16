@@ -179,7 +179,7 @@ struct CardPreview: Equatable {
     var accessibilityName: String { title.map { "\(id): \($0)" } ?? "\(id), card" }
 
     /// The card screen's facts, from the item itself (UX-037 follow-up).
-    static func of(_ item: Hermes_Board_V1_Item, botName: (String) -> String?) -> CardPreview {
+    static func of(_ item: Flotilla_Board_V1_Item, botName: (String) -> String?) -> CardPreview {
         var preview = CardPreview(id: item.id, state: .found)
         preview.title = item.title
         preview.type = words(item.type)
@@ -196,7 +196,7 @@ struct CardPreview: Equatable {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    static func words(_ type: Hermes_Board_V1_ItemType) -> String? {
+    static func words(_ type: Flotilla_Board_V1_ItemType) -> String? {
         switch type {
         case .epic: "Epic"
         case .feature: "Feature"
@@ -207,7 +207,7 @@ struct CardPreview: Equatable {
         }
     }
 
-    static func words(_ priority: Hermes_Board_V1_Priority) -> String? {
+    static func words(_ priority: Flotilla_Board_V1_Priority) -> String? {
         switch priority {
         case .p0: "P0"
         case .p1: "P1"
@@ -358,7 +358,7 @@ final class CardDirectory {
         }
     }
 
-    nonisolated static func fill(_ base: CardPreview, card: Hermes_Board_V1_ItemCard, column: String?,
+    nonisolated static func fill(_ base: CardPreview, card: Flotilla_Board_V1_ItemCard, column: String?,
                      botName: (String) -> String?) -> CardPreview {
         var preview = base
         preview.title = card.title
@@ -385,7 +385,7 @@ struct ItemCardAnswer {
     let id: String
     let projectName: String?
     let computer: String?
-    let card: Hermes_Board_V1_ItemCard?
+    let card: Flotilla_Board_V1_ItemCard?
     let columnName: String?
     let release: String?
     let missing: Bool
@@ -395,7 +395,7 @@ struct ItemCardAnswer {
         id = d.str("id")
         projectName = d.optStr("project_name")
         computer = d.optStr("computer")
-        card = d.dict("card").flatMap { try? HomeJSON.decode(Hermes_Board_V1_ItemCard.self, $0) }
+        card = d.dict("card").flatMap { try? HomeJSON.decode(Flotilla_Board_V1_ItemCard.self, $0) }
         columnName = d.optStr("column_name")
         release = d.optStr("release")
         missing = d.bool("missing")

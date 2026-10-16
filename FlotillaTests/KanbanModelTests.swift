@@ -10,20 +10,20 @@ final class FakeKanban: BoardService, DraftService {
     var watchError: Error?
     private(set) var watches = 0
     private(set) var handlers: [UUID: (BoardEvent) -> Void] = [:]
-    var check = Hermes_Board_V1_MoveCheck()
-    var moveResult = Hermes_Board_V1_MoveResult()
-    private(set) var moves: [Hermes_Board_V1_ItemMove] = []
-    var createResult = Hermes_Board_V1_EditResult()
-    private(set) var creates: [Hermes_Board_V1_ItemCreate] = []
-    private(set) var uploads: [Hermes_Board_V1_AttachmentUpload] = []
-    private(set) var attaches: [Hermes_Board_V1_ItemAttach] = []
+    var check = Flotilla_Board_V1_MoveCheck()
+    var moveResult = Flotilla_Board_V1_MoveResult()
+    private(set) var moves: [Flotilla_Board_V1_ItemMove] = []
+    var createResult = Flotilla_Board_V1_EditResult()
+    private(set) var creates: [Flotilla_Board_V1_ItemCreate] = []
+    private(set) var uploads: [Flotilla_Board_V1_AttachmentUpload] = []
+    private(set) var attaches: [Flotilla_Board_V1_ItemAttach] = []
     var attachError: Error?
-    var changes = Hermes_Board_V1_DraftChanges()
+    var changes = Flotilla_Board_V1_DraftChanges()
     private(set) var changeCalls: [Bool] = []
-    var finalizeResult = Hermes_Board_V1_MoveResult()
+    var finalizeResult = Flotilla_Board_V1_MoveResult()
     private(set) var finalized: [(String, String?)] = []
-    var discardResult = Hermes_Board_V1_EditResult()
-    var undoResult = Hermes_Board_V1_EditResult()
+    var discardResult = Flotilla_Board_V1_EditResult()
+    var undoResult = Flotilla_Board_V1_EditResult()
     private(set) var undos: [(version: UInt64, revision: Int64)] = []
     /// Called during `watchBoard`, before it answers: pushes that overtake the reply.
     var duringWatch: (() -> Void)?
@@ -45,30 +45,30 @@ final class FakeKanban: BoardService, DraftService {
     func stopListening(projectId: String, _ token: UUID) { handlers[token] = nil }
     func push(_ event: BoardEvent) { for handler in handlers.values { handler(event) } }
 
-    func moveCheck(itemId: String) async throws -> Hermes_Board_V1_MoveCheck { check }
+    func moveCheck(itemId: String) async throws -> Flotilla_Board_V1_MoveCheck { check }
 
-    func move(_ move: Hermes_Board_V1_ItemMove) async throws -> Hermes_Board_V1_MoveResult {
+    func move(_ move: Flotilla_Board_V1_ItemMove) async throws -> Flotilla_Board_V1_MoveResult {
         moves.append(move)
         return moveResult
     }
 
-    func createItem(_ create: Hermes_Board_V1_ItemCreate) async throws -> Hermes_Board_V1_EditResult {
+    func createItem(_ create: Flotilla_Board_V1_ItemCreate) async throws -> Flotilla_Board_V1_EditResult {
         creates.append(create)
         return createResult
     }
 
-    func upload(_ chunk: Hermes_Board_V1_AttachmentUpload) async throws -> UInt64 {
+    func upload(_ chunk: Flotilla_Board_V1_AttachmentUpload) async throws -> UInt64 {
         uploads.append(chunk)
         return chunk.offset + UInt64(chunk.data.count)
     }
 
-    func attach(_ attach: Hermes_Board_V1_ItemAttach) async throws -> BoardItemDetail {
+    func attach(_ attach: Flotilla_Board_V1_ItemAttach) async throws -> BoardItemDetail {
         attaches.append(attach)
         if let attachError { throw attachError }
         return BoardItemDetail()
     }
 
-    func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges {
+    func draftChanges(itemId: String, markSeen: Bool) async throws -> Flotilla_Board_V1_DraftChanges {
         changeCalls.append(markSeen)
         var answer = changes
         if markSeen { answer.seen = changes.revisions.last?.id ?? changes.seen; changes.seen = answer.seen }
@@ -96,14 +96,14 @@ final class FakeKanban: BoardService, DraftService {
         return itemReply
     }
 
-    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult {
+    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Flotilla_Board_V1_MoveResult {
         finalized.append((itemId, column))
         return finalizeResult
     }
 
-    func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult { discardResult }
+    func discard(itemId: String, version: UInt64, reason: String) async throws -> Flotilla_Board_V1_EditResult { discardResult }
 
-    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult {
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Flotilla_Board_V1_EditResult {
         undos.append((version, revision))
         return undoResult
     }
@@ -124,7 +124,7 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertTrue(condition(), what)
     }
 
-    private func event(_ seq: UInt64, _ kind: Hermes_Board_V1_BoardEventKind, card id: String? = nil, column: String = "todo") -> BoardEvent {
+    private func event(_ seq: UInt64, _ kind: Flotilla_Board_V1_BoardEventKind, card id: String? = nil, column: String = "todo") -> BoardEvent {
         var event = BoardEvent()
         event.projectID = "p1"
         event.seq = seq
@@ -226,10 +226,10 @@ final class KanbanModelTests: XCTestCase {
 
     func testAMoveAsksForAReasonOnlyWhenARuleDoesAndSaysARefusal() async throws {
         let fake = FakeKanban()
-        var todo = Hermes_Board_V1_ColumnCheck()
+        var todo = Flotilla_Board_V1_ColumnCheck()
         todo.columnKey = "todo"
         todo.unmet = [unmet("reason.required", "Give a reason.")]
-        var done = Hermes_Board_V1_ColumnCheck()
+        var done = Flotilla_Board_V1_ColumnCheck()
         done.columnKey = "done"
         fake.check.columns = [todo, done]
         var card = BoardCard()
@@ -245,7 +245,7 @@ final class KanbanModelTests: XCTestCase {
         model.reason = "  Back to the queue "
         XCTAssertTrue(model.canMove)
 
-        var refused = Hermes_Board_V1_MoveRefused()
+        var refused = Flotilla_Board_V1_MoveRefused()
         refused.unmet = [unmet("rule.link", "Done needs a PR.", fix: "Link the PR first.")]
         fake.moveResult.outcome = .refused(refused)
         await model.move(columns: try columns())
@@ -255,7 +255,7 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertEqual(fake.moves.last?.expectedVersion, 3)
         XCTAssertFalse(fake.moves.last?.hasOverrideReason ?? true)
 
-        fake.moveResult.outcome = .done(Hermes_Board_V1_Item())
+        fake.moveResult.outcome = .done(Flotilla_Board_V1_Item())
         await model.move(columns: try columns())
         XCTAssertEqual(model.phase, .moved(to: "To do"))
     }
@@ -264,7 +264,7 @@ final class KanbanModelTests: XCTestCase {
 
     func testQuickAddSavesADraftThenUploadsAndAttachesEachFile() async {
         let fake = FakeKanban()
-        var item = Hermes_Board_V1_Item()
+        var item = Flotilla_Board_V1_Item()
         item.id = "RB-21"
         fake.createResult.outcome = .done(item)
         let model = QuickAddModel(projectId: "p1", boardId: "b-research", service: fake)
@@ -294,7 +294,7 @@ final class KanbanModelTests: XCTestCase {
 
     func testAFileTheHomeWontTakeBlocksSavingAndAFailedAttachIsNamed() async {
         let fake = FakeKanban()
-        var item = Hermes_Board_V1_Item()
+        var item = Flotilla_Board_V1_Item()
         item.id = "RB-22"
         fake.createResult.outcome = .done(item)
         let model = QuickAddModel(projectId: "p1", boardId: "", service: fake)
@@ -313,7 +313,7 @@ final class KanbanModelTests: XCTestCase {
 
     func testQuickAddSendsTheLabelsPickedFromTheBoardsGroupsAndNoPlatforms() async {
         let fake = FakeKanban()
-        var item = Hermes_Board_V1_Item()
+        var item = Flotilla_Board_V1_Item()
         item.id = "RB-23"
         fake.createResult.outcome = .done(item)
         let model = QuickAddModel(projectId: "p1", boardId: "b-main", service: fake)
@@ -349,7 +349,7 @@ final class KanbanModelTests: XCTestCase {
 
     func testARefusedDraftSaysWhy() async {
         let fake = FakeKanban()
-        var refused = Hermes_Board_V1_MoveRefused()
+        var refused = Flotilla_Board_V1_MoveRefused()
         refused.unmet = [unmet("new.title", "It needs a title.")]
         fake.createResult.outcome = .refused(refused)
         let model = QuickAddModel(projectId: "p1", boardId: "", service: fake)
@@ -382,7 +382,7 @@ final class KanbanModelTests: XCTestCase {
         XCTAssertFalse(model.isNew(model.revisions[0]), "the owner's own change isn't news")
         XCTAssertEqual(fake.changeCalls, [false])
 
-        fake.finalizeResult.outcome = .done(Hermes_Board_V1_Item())
+        fake.finalizeResult.outcome = .done(Flotilla_Board_V1_Item())
         let outcome = await model.finalize(version: 6, column: "todo")
         XCTAssertEqual(outcome, .done)
         XCTAssertEqual(fake.changeCalls, [false, true], "finalize marks the changes seen")
@@ -399,14 +399,14 @@ final class KanbanModelTests: XCTestCase {
         fake.changes.revisions = [revision(1, by: "bot:b-lead"), revision(2, by: "bot:b-lead"), revision(3, by: "device:d1")]
         let model = DraftModel(itemId: "RB-9", service: fake)
         await model.load()
-        fake.undoResult.outcome = .done(Hermes_Board_V1_Item())
+        fake.undoResult.outcome = .done(Flotilla_Board_V1_Item())
         try await model.undo(model.revisions[0], version: 4)
         XCTAssertEqual(fake.undos.first?.version, 4)
         XCTAssertEqual(fake.undos.first?.revision, 1, "an earlier change too, not only a field's latest")
         XCTAssertEqual(model.undone, [1])
         XCTAssertEqual(fake.changeCalls, [false, false], "the changes are read again")
 
-        var refused = Hermes_Board_V1_MoveRefused()
+        var refused = Flotilla_Board_V1_MoveRefused()
         refused.unmet = [unmet("draft.live", "RB-9 is not a draft any more; edit it instead.")]
         fake.undoResult.outcome = .refused(refused)
         do {
@@ -415,7 +415,7 @@ final class KanbanModelTests: XCTestCase {
         } catch {
             XCTAssertEqual(error.localizedDescription, "RB-9 is not a draft any more; edit it instead.")
         }
-        fake.undoResult.outcome = .conflict(Hermes_Board_V1_Item())
+        fake.undoResult.outcome = .conflict(Flotilla_Board_V1_Item())
         do {
             try await model.undo(model.revisions[1], version: 5)
             XCTFail("conflict")
@@ -424,7 +424,7 @@ final class KanbanModelTests: XCTestCase {
         }
         XCTAssertEqual(model.undone, [1], "only what was taken back")
 
-        fake.discardResult.outcome = .conflict(Hermes_Board_V1_Item())
+        fake.discardResult.outcome = .conflict(Flotilla_Board_V1_Item())
         let discarded = await model.discard(version: 4, reason: "dup")
         XCTAssertFalse(discarded)
         XCTAssertEqual(model.failure, "RB-9 changed meanwhile. Look again, then discard.")

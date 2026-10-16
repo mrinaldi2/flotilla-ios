@@ -35,7 +35,7 @@
             {
               "severity": "SEVERITY_NIT",
               "text": "Name the 5 s tick.",
-              "path": "crates/hermesd/src/board/release/blockers_watch.rs",
+              "path": "crates/flotillad/src/board/release/blockers_watch.rs",
               "line": 12
             }
           ],
@@ -73,7 +73,7 @@
             {
               "severity": "SEVERITY_MUST",
               "text": "MCP release tools return owner_blockers.",
-              "path": "crates/hermesd/src/mcp/releases.rs",
+              "path": "crates/flotillad/src/mcp/releases.rs",
               "line": 88
             }
           ],
@@ -94,7 +94,7 @@
             "bot_id": "w-check-1",
             "name": "check-rust-1"
           },
-          "log_url": "hermes-artifact://checks/rust-9a1b2c3.log",
+          "log_url": "flotilla-artifact://checks/rust-9a1b2c3.log",
           "started_at": "2026-10-09T10:30:00Z",
           "finished_at": "2026-10-09T10:44:00Z",
           "tool_versions": {
@@ -131,7 +131,7 @@
             "bot_id": "w-check-3",
             "name": "check-windows-1"
           },
-          "log_url": "hermes-artifact://checks/windows-9a1b2c3.log",
+          "log_url": "flotilla-artifact://checks/windows-9a1b2c3.log",
           "started_at": "2026-10-09T10:31:00Z",
           "finished_at": "2026-10-09T10:52:00Z",
           "tool_versions": {

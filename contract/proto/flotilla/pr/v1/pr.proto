@@ -3,17 +3,17 @@
 // commit they approved, checks run per commit, and main moves only by a
 // merge of a PR that is approved with green checks.
 //
-// Requests travel in WS binary frames inside `hermes.wire.v1.Envelope`
+// Requests travel in WS binary frames inside `flotilla.wire.v1.Envelope`
 // (`PrRequest`/`PrResponse`/`PrPush`) and as proto3 JSON on the JSON WS,
 // `{type, req_id, ...}`, with the proto field names. Bots use the tools in
 // tools.proto over MCP; the owner's review and settings never go through a
 // bot. Capabilities `pull_requests` and `checks`.
 //
 // Fields may be added; none renamed or renumbered (ADR-001): a breaking
-// change is hermes.pr.v2.
+// change is flotilla.pr.v2.
 syntax = "proto3";
 
-package hermes.pr.v1;
+package flotilla.pr.v1;
 
 import "google/protobuf/timestamp.proto";
 
@@ -180,7 +180,7 @@ message RoleWaiver {
 }
 
 message CheckRun {
-  string name = 1;                          // from .hermes/checks.toml
+  string name = 1;                          // from .flotilla/checks.toml (or .hermes/)
   string sha = 2;                           // the commit it ran on
   CheckResult result = 3;
   string ran_on = 4;                        // the computer

@@ -7,7 +7,7 @@ import Foundation
 // for <board>: <summary>", its body ending "Proposal <id>.", so the phone
 // falls back to reading those words.
 
-typealias LeadProposal = Hermes_Board_V1_BoardProposal
+typealias LeadProposal = Flotilla_Board_V1_BoardProposal
 
 /// A proposal as the decision screen shows it: what it changes, on which
 /// board, and the board's columns as they are now.
@@ -88,12 +88,12 @@ struct ProposalCard: Equatable {
     private static func change(fromSummary summary: String) -> LeadProposal.OneOf_Change? {
         let add = "add column “"
         if summary.hasPrefix(add), let end = summary.dropFirst(add.count).firstIndex(of: "”") {
-            var column = Hermes_Board_V1_ColumnAdd()
+            var column = Flotilla_Board_V1_ColumnAdd()
             column.name = String(summary[summary.index(summary.startIndex, offsetBy: add.count)..<end])
             return .columnAdd(column)
         }
         if summary.hasPrefix("remove column ") {
-            var column = Hermes_Board_V1_ColumnRemove()
+            var column = Flotilla_Board_V1_ColumnRemove()
             column.key = String(summary.dropFirst("remove column ".count))
             return .columnRemove(column)
         }

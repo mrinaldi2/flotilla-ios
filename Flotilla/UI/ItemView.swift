@@ -148,7 +148,7 @@ struct ItemView: View {
     }
 
     /// The card's board, then the Move sheet on it.
-    private func openMove(_ item: Hermes_Board_V1_Item) {
+    private func openMove(_ item: Flotilla_Board_V1_Item) {
         guard let project else { return }
         Task {
             do {

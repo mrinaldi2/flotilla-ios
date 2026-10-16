@@ -5,7 +5,7 @@
       "project_id": "p-gravity",
       "number": 42,
       "from_sha": "8f35e95a1b2c3d4e5f60718293a4b5c6d7e8f901",
-      "path": "crates/hermesd/src/mcp/releases.rs"
+      "path": "crates/flotillad/src/mcp/releases.rs"
     }
   }
 }

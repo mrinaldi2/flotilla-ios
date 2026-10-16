@@ -8,10 +8,10 @@ import SwiftProtobuf
 // computers it talks to and keeps the last answer on disk, so the home
 // shows at once and refreshes behind it.
 
-typealias HomeOverview = Hermes_Home_V1_ProjectsOverview
-typealias HomeRow = Hermes_Home_V1_ProjectRow
-typealias HomeAttentionRow = Hermes_Home_V1_AttentionRow
-typealias HomeAttentionKind = Hermes_Home_V1_AttentionKind
+typealias HomeOverview = Flotilla_Home_V1_ProjectsOverview
+typealias HomeRow = Flotilla_Home_V1_ProjectRow
+typealias HomeAttentionRow = Flotilla_Home_V1_AttentionRow
+typealias HomeAttentionKind = Flotilla_Home_V1_AttentionKind
 
 /// Proto3 JSON as the daemon sends it on the JSON WS: the proto field names,
 /// enum names, RFC 3339 times. Unknown fields from a newer daemon are kept out.
@@ -42,7 +42,7 @@ extension AppStore {
 
     func attentionRows(projectId: String) async throws -> [HomeAttentionRow] {
         let reply = try await client.request("attention_rows", ["project_id": projectId])
-        return try HomeJSON.decode(Hermes_Home_V1_AttentionRows.self, reply["attention_rows"]).rows
+        return try HomeJSON.decode(Flotilla_Home_V1_AttentionRows.self, reply["attention_rows"]).rows
     }
 
     func pinProject(_ projectId: String, pinned: Bool) async throws {
@@ -61,7 +61,7 @@ extension AppStore {
             var row = HomeRow()
             row.projectID = project.id
             row.name = project.name
-            var member = Hermes_Home_V1_Member()
+            var member = Flotilla_Home_V1_Member()
             member.daemonID = daemonId ?? ""
             member.projectID = project.id
             member.computerName = computerName
@@ -120,7 +120,7 @@ extension AppStore {
             // "Backend Dev wants to run Bash", never the engine's detail.
             let name = bot(botId)?.name ?? "A bot"
             row.title = line.hasPrefix("Wants") ? "\(name) w\(line.dropFirst())" : "\(name) needs approval"
-            var ref = Hermes_Home_V1_BotRef()
+            var ref = Flotilla_Home_V1_BotRef()
             ref.daemonID = daemon
             ref.botID = botId
             ref.name = name
@@ -227,7 +227,7 @@ final class HomeFeed {
 
     func cards(_ computers: [Computer]) -> [HomeCard] {
         var inputs: [(computerId: String, daemonId: String?, row: HomeRow)] = []
-        var sources: [String: [Hermes_Home_V1_Source]] = [:]
+        var sources: [String: [Flotilla_Home_V1_Source]] = [:]
         for computer in computers {
             if let overview = overviews[computer.id] {
                 sources[computer.id] = overview.sources
@@ -288,7 +288,7 @@ final class HomeFeed {
         overviews[first.id] = overview
         fixtureComputer = first.id
         for (projectId, rows) in (json as? [String: Any])?["attention_rows"] as? [String: Any] ?? [:] {
-            if let rows = try? HomeJSON.decode(Hermes_Home_V1_AttentionRows.self, ["rows": rows]).rows {
+            if let rows = try? HomeJSON.decode(Flotilla_Home_V1_AttentionRows.self, ["rows": rows]).rows {
                 attention["\(first.id):\(projectId)"] = rows
             }
         }
@@ -385,7 +385,7 @@ enum AttentionWords {
         ("serving_off", "computer not serving", "computers not serving"),
     ]
 
-    static func summary(_ attention: Hermes_Home_V1_AttentionSummary, limit: Int = 3) -> String {
+    static func summary(_ attention: Flotilla_Home_V1_AttentionSummary, limit: Int = 3) -> String {
         guard attention.count > 0 else { return "Nothing needs you" }
         let parts = order.compactMap { key, one, many -> String? in
             guard let n = attention.byKind[key], n > 0 else { return nil }

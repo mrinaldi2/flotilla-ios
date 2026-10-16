@@ -6,7 +6,7 @@
 // Requests, responses and pushes are in requests.proto.
 syntax = "proto3";
 
-package hermes.board.v1;
+package flotilla.board.v1;
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
@@ -345,6 +345,24 @@ message ItemCard {
   // A draft's invited bots, by id, so the owner's tray and drawer follow an
   // invitation or its removal live. Empty on a live card.
   repeated string invited = 19;
+  // Why the card can't move on (0.19.0): its last move was refused, or the
+  // next column's rules stop it. Absent when nothing does, and from a home
+  // older than 0.19.0's card-flow fix.
+  optional MoveBlock move_block = 20;
+}
+
+// What stops a card, for its "can't move" line. Computed when the card is
+// read; nothing is stored.
+message MoveBlock {
+  // The column it can't move to.
+  string to_column = 1;
+  // The first unmet rule's text.
+  string reason = 2;
+  // How many other rules are unmet.
+  uint32 more = 3;
+  // A move was tried and refused (true), or the next column's rules would
+  // refuse it (false).
+  bool refused = 4;
 }
 
 message ItemLink {

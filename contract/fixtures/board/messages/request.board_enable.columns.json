@@ -1,0 +1,35 @@
+{
+  "reqId": "19",
+  "boardRequest": {
+    "boardEnable": {
+      "projectId": "p1",
+      "preset": "simple_review",
+      "columns": [
+        {
+          "key": "todo",
+          "name": "Backlog",
+          "kind": "COLUMN_KIND_OPEN"
+        },
+        {
+          "key": "doing",
+          "name": "In progress",
+          "kind": "COLUMN_KIND_ACTIVE"
+        },
+        {
+          "key": "review",
+          "name": "Review",
+          "kind": "COLUMN_KIND_ACTIVE"
+        },
+        {
+          "name": "Waiting on QA",
+          "kind": "COLUMN_KIND_ACTIVE"
+        },
+        {
+          "key": "done",
+          "name": "Shipped",
+          "kind": "COLUMN_KIND_DONE"
+        }
+      ]
+    }
+  }
+}

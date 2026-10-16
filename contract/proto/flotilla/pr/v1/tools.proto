@@ -1,12 +1,12 @@
 // What bots send about pull requests and checks as MCP tools (H-261 §9),
 // tool name in brackets. The owner's review, the Owner review setting and
 // `pr_flag` never travel through a bot (§4.3). Merging is DevOps'
-// `hermesd pr merge`, not a tool.
+// `flotillad pr merge`, not a tool.
 syntax = "proto3";
 
-package hermes.pr.v1;
+package flotilla.pr.v1;
 
-import "hermes/pr/v1/pr.proto";
+import "flotilla/pr/v1/pr.proto";
 
 // [pr_open] The card's assignee opens a PR for its branch; the card moves
 // Doing → Review. One open PR per card.

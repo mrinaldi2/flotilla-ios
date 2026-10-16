@@ -187,7 +187,7 @@ final class CardLinksTests: XCTestCase {
     }
 
     func testTheCardScreenSaysWhereTheCardStands() {
-        var item = Hermes_Board_V1_Item()
+        var item = Flotilla_Board_V1_Item()
         item.id = "HL-004"
         item.title = "Board chips on iPad"
         item.type = .bug

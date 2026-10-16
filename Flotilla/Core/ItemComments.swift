@@ -101,7 +101,7 @@ enum CommentThread {
     /// comments: each "commented" event becomes a comment without its text.
     /// A pending comment the board now holds (ours, same text) is shown by the
     /// board's row, marked "Posted" while the pending one is kept.
-    static func rows(comments: [Hermes_Board_V1_ItemComment], history: [Hermes_Board_V1_ItemEvent],
+    static func rows(comments: [Flotilla_Board_V1_ItemComment], history: [Flotilla_Board_V1_ItemEvent],
                      pending: [PendingComment]) -> [CommentRow] {
         var rows: [CommentRow] = comments.map { comment in
             CommentRow(id: comment.id, author: comment.author,
@@ -151,7 +151,7 @@ enum CommentThread {
     /// A "Couldn't post" can come after the board took the comment (a slow
     /// answer): ours, same text and parent, made since the first try. Clocks
     /// differ between phone and computer, hence the slack (H-225).
-    static func landed(_ comment: PendingComment, in comments: [Hermes_Board_V1_ItemComment],
+    static func landed(_ comment: PendingComment, in comments: [Flotilla_Board_V1_ItemComment],
                        slack: TimeInterval = 120) -> Bool {
         comments.contains { board in
             isOwner(board.author) && board.body == comment.body
@@ -169,7 +169,7 @@ enum CommentThread {
     /// Retry re-reads the card first and posts only when the comment isn't
     /// there, so a late failure never posts it twice (desktop H-201 S4).
     static func retry(_ comment: PendingComment,
-                      reread: () async throws -> [Hermes_Board_V1_ItemComment],
+                      reread: () async throws -> [Flotilla_Board_V1_ItemComment],
                       post: () async throws -> Void) async throws -> RetryResult {
         if landed(comment, in: try await reread()) { return .alreadyPosted }
         try await post()
@@ -182,7 +182,7 @@ enum CommentThread {
     /// Pending comments still worth keeping after a reload: sending, failed,
     /// sent ones the board hasn't echoed with their text, and echoed ones
     /// within `postedFor` of being sent, so "Posted" stays visible.
-    static func stillPending(_ pending: [PendingComment], comments: [Hermes_Board_V1_ItemComment],
+    static func stillPending(_ pending: [PendingComment], comments: [Flotilla_Board_V1_ItemComment],
                              now: Date = Date()) -> [PendingComment] {
         let echoed = Set(comments.filter { isOwner($0.author) && !$0.body.isEmpty }.map(\.body))
         return pending.filter { comment in
@@ -196,11 +196,11 @@ extension AppStore {
     /// Posts a comment on a card (the owner's, `control` grant). Throws with the
     /// board's own reason when it refuses.
     func postComment(on id: String, _ body: String, replyTo: String?) async throws {
-        var comment = Hermes_Board_V1_ItemAddComment()
+        var comment = Flotilla_Board_V1_ItemAddComment()
         comment.id = id
         comment.body = body
         if let replyTo { comment.replyTo = replyTo }
-        var request = Hermes_Board_V1_BoardRequest()
+        var request = Flotilla_Board_V1_BoardRequest()
         request.request = .itemComment(comment)
         let envelope = try await client.request(.boardRequest(request), name: "item_comment")
         guard case .boardResponse(let response)? = envelope.body, case .edited(let result)? = response.response else { return }

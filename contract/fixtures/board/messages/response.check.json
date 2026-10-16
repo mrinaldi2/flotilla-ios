@@ -12,7 +12,7 @@
         "bot_id": "w-check-3",
         "name": "check-windows-1"
       },
-      "log_url": "hermes-artifact://checks/windows-9a1b2c3.log",
+      "log_url": "flotilla-artifact://checks/windows-9a1b2c3.log",
       "started_at": "2026-10-09T10:31:00Z",
       "finished_at": "2026-10-09T10:52:00Z",
       "tool_versions": {

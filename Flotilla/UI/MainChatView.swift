@@ -118,9 +118,9 @@ struct MainChatView: View {
     }
 
     private func load() async {
-        var lists: [(computerId: String, daemonId: String?, threads: [Hermes_Home_V1_OwnerThread])] = []
+        var lists: [(computerId: String, daemonId: String?, threads: [Flotilla_Home_V1_OwnerThread])] = []
         var failed: [String] = []
-        await withTaskGroup(of: (Computer, [Hermes_Home_V1_OwnerThread]?).self) { group in
+        await withTaskGroup(of: (Computer, [Flotilla_Home_V1_OwnerThread]?).self) { group in
             for computer in connected where computer.store.hasOwnerThreads {
                 group.addTask { (computer, try? await computer.store.ownerThreads()) }
             }

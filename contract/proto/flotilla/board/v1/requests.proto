@@ -1,5 +1,5 @@
 // The board's requests, responses and pushes, contract version 1 (H-020
-// §1.5, ADR-001 §1). They travel inside `hermes.wire.v1.Envelope` in WS
+// §1.5, ADR-001 §1). They travel inside `flotilla.wire.v1.Envelope` in WS
 // binary frames: a request under the client's `req_id`, its response under
 // the same id, and pushes under `req_id` 0. A refusal that is not a guard
 // (no grant, unknown item, bad arguments) is the envelope's `Error` instead.
@@ -16,10 +16,10 @@
 // drops `project_id`.
 syntax = "proto3";
 
-package hermes.board.v1;
+package flotilla.board.v1;
 
 import "google/protobuf/timestamp.proto";
-import "hermes/board/v1/board.proto";
+import "flotilla/board/v1/board.proto";
 
 message BoardRequest {
   oneof request {
@@ -132,7 +132,8 @@ message BoardList {
   string project_id = 1;
 }
 
-// A new board from a preset: "simple", "software" or "release_gated".
+// A new board from a preset: "simple", "simple_review", "software" or
+// "release_gated".
 message BoardCreate {
   string project_id = 1;
   string name = 2;
@@ -223,9 +224,50 @@ message BoardProposalRule {
 
 // "Start the board on this computer": enables the project's board here as
 // its home, linked or not, and answers with the snapshot. Needs `approve`
-// (the owner). A board that already exists is returned unchanged.
+// (the owner). A board that already exists is returned unchanged, whatever
+// `preset` and `columns` say.
+//
+// `preset` and `columns` are additions (0.20.0, capability `board_presets`):
+// send them only to a daemon that advertises it. An older one decodes a
+// binary frame without them and starts Simple + Review, and refuses them in
+// proto3 JSON as unknown fields.
 message BoardEnable {
   string project_id = 1;
+  // "simple", "simple_review", "software" or "release_gated", as
+  // `BoardCreate.preset`. Left out: "simple_review", a project's first
+  // board. Any other name is `invalid_request`.
+  optional string preset = 2;
+  // The complete, ordered list of the board's visible columns, in place of
+  // the preset's; empty keeps the preset's. Every board also keeps the
+  // preset's hidden Cancelled column (key `cancelled`, last), which is never
+  // listed here.
+  //
+  // simple, simple_review, software (custom boards): kinds OPEN, ACTIVE or
+  // DONE, at least one OPEN and one DONE; names non-empty and unique,
+  // ignoring case. A column whose key is one of the preset's takes that
+  // column's WIP limit, movers, rules and `allowed_from` (those naming a
+  // column left out are dropped), and keeps its automations; any other
+  // column has none of them. The new items' inbox is the first OPEN column.
+  //
+  // release_gated: its guards key on the columns, so only names may change.
+  // The list is exactly its eight visible columns in order (inbox, ready,
+  // doing, review, verify, approval, deploying, done), each entry's `key`
+  // left out or that column's, its `kind` UNSPECIFIED or that column's.
+  //
+  // Anything else is `invalid_request`, and no board is started.
+  repeated ColumnSpec columns = 3;
+}
+
+// One column of a board being started (0.20.0).
+message ColumnSpec {
+  // A column key: lowercase ASCII letters and digits in words joined by
+  // "-" (`to-do`, `qa2`), at most 32 characters, unique in the list and not
+  // `cancelled`. Left out, it is made from the name the way `column_add`
+  // makes one ("Waiting on QA" is `waiting-on-qa`).
+  optional string key = 1;
+  // As the board shows it; trimmed, it must not be empty.
+  string name = 2;
+  ColumnKind kind = 3;
 }
 
 // One item in full, for the drawer.
@@ -677,6 +719,9 @@ message ColumnCheck {
   string column_key = 1;
   // Empty when the move is allowed as it stands.
   repeated Unmet unmet = 2;
+  // On a release-gated board, a move none of its rules lists: only the owner
+  // makes it, with a reason, as an override of the usual path (0.19.0).
+  bool owner_override = 3;
 }
 
 message MoveResult {
@@ -746,4 +791,12 @@ message BoardEvent {
   // the daemon could not read it back: refetch the item.
   optional ItemCard card = 5;
   optional string from_column = 6;
+  // Who made the change (0.19.0): `user` (the owner on the owner token),
+  // `device:<id>` (the owner through a paired device), `bot:<id>`, or
+  // `daemon` (a fact or a system move). Unset when the daemon can't say, and
+  // from older daemons.
+  optional string actor = 7;
+  // The note the change was recorded with: a move's reason, or the fact
+  // that moved it ("PR merged").
+  optional string note = 8;
 }

@@ -6,7 +6,7 @@
 // status a newer daemon adds reads as text on an older client.
 syntax = "proto3";
 
-package hermes.board.v1;
+package flotilla.board.v1;
 
 // Lead: create a meeting series, or change one (with `series_id`). Its
 // routine starts the facilitator's session on the cron with "run meeting".

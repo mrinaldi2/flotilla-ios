@@ -33,7 +33,7 @@ final class UX031Tests: XCTestCase {
     }
 
     func testAThreadWithAnOpenQuestionPreviewsIt() {
-        var thread = Hermes_Home_V1_OwnerThread()
+        var thread = Flotilla_Home_V1_OwnerThread()
         thread.bot.botID = "dev"
         thread.bot.name = "Desktop Dev"
         thread.last.text = "Done: **sync-conflicts.md** is in the artifacts."
@@ -49,7 +49,7 @@ final class UX031Tests: XCTestCase {
     }
 
     func testWithoutAnOpenQuestionTheNewestMessageStays() {
-        var thread = Hermes_Home_V1_OwnerThread()
+        var thread = Flotilla_Home_V1_OwnerThread()
         thread.last.text = "Done."
         var card = ThreadCard(thread, computerId: "mac")
         card.preview(question: ThreadEntry(id: "1", fromOwner: false, text: "Old?", at: nil, asks: true, open: true))

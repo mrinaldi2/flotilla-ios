@@ -72,15 +72,15 @@ final class ProjectTests: XCTestCase {
     }
 
     func testABoardRequestRoundTripsAsAnEnvelope() throws {
-        var get = Hermes_Board_V1_BoardGet()
+        var get = Flotilla_Board_V1_BoardGet()
         get.projectID = "p1"
-        var request = Hermes_Board_V1_BoardRequest()
+        var request = Flotilla_Board_V1_BoardRequest()
         request.request = .boardGet(get)
-        var envelope = Hermes_Wire_V1_Envelope()
+        var envelope = Flotilla_Wire_V1_Envelope()
         envelope.reqID = 7
         envelope.body = .boardRequest(request)
         let data: Data = try envelope.serializedData()
-        let back = try Hermes_Wire_V1_Envelope(serializedBytes: data)
+        let back = try Flotilla_Wire_V1_Envelope(serializedBytes: data)
         XCTAssertEqual(back.reqID, 7)
         guard case .boardRequest(let decoded)? = back.body, case .boardGet(let decodedGet)? = decoded.request else {
             return XCTFail("not a board_get")

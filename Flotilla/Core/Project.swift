@@ -6,9 +6,9 @@ import Foundation
 // the board's home; bots and their threads on each bot's own computer
 // (H-128 R2.1 routing).
 
-typealias BoardSnapshot = Hermes_Board_V1_BoardSnapshot
-typealias BoardCard = Hermes_Board_V1_ItemCard
-typealias BoardItemDetail = Hermes_Board_V1_ItemDetail
+typealias BoardSnapshot = Flotilla_Board_V1_BoardSnapshot
+typealias BoardCard = Flotilla_Board_V1_ItemCard
+typealias BoardItemDetail = Flotilla_Board_V1_ItemDetail
 
 /// What the project's Overview shows (`dashboard_get`).
 struct Dashboard {
@@ -267,7 +267,7 @@ struct Release: Identifiable {
 
     /// The glossary's words for its state, and a tone (§5).
     var statusWords: (String, Tone) {
-        var brief = Hermes_Home_V1_ReleaseBrief()
+        var brief = Flotilla_Home_V1_ReleaseBrief()
         brief.version = version
         brief.state = status
         return ReleaseStatusWords.pill(brief)
@@ -297,9 +297,9 @@ extension AppStore {
     }
 
     func board(projectId: String) async throws -> BoardSnapshot {
-        var get = Hermes_Board_V1_BoardGet()
+        var get = Flotilla_Board_V1_BoardGet()
         get.projectID = projectId
-        var request = Hermes_Board_V1_BoardRequest()
+        var request = Flotilla_Board_V1_BoardRequest()
         request.request = .boardGet(get)
         let envelope = try await client.request(.boardRequest(request), name: "board_get")
         guard case .boardResponse(let response)? = envelope.body, case .board(let board)? = response.response else {
@@ -309,9 +309,9 @@ extension AppStore {
     }
 
     func item(_ id: String) async throws -> BoardItemDetail {
-        var get = Hermes_Board_V1_ItemGet()
+        var get = Flotilla_Board_V1_ItemGet()
         get.id = id
-        var request = Hermes_Board_V1_BoardRequest()
+        var request = Flotilla_Board_V1_BoardRequest()
         request.request = .itemGet(get)
         let envelope = try await client.request(.boardRequest(request), name: "item_get")
         guard case .boardResponse(let response)? = envelope.body, case .item(let item)? = response.response else {
@@ -336,7 +336,7 @@ extension AppStore {
 
     func ownerThread(botId: String) async throws -> [ThreadEntry] {
         let reply = try await client.request("owner_thread_get", ["bot_id": botId, "limit": 30])
-        let page = try HomeJSON.decode(Hermes_Home_V1_OwnerThreadPage.self, reply["owner_thread"])
+        let page = try HomeJSON.decode(Flotilla_Home_V1_OwnerThreadPage.self, reply["owner_thread"])
         return page.messages.map {
             ThreadEntry(id: $0.id.isEmpty ? String($0.num) : $0.id, fromOwner: $0.fromOwner, text: $0.text,
                         at: $0.hasAt ? $0.at.date : nil, asks: $0.asks, open: $0.open, num: $0.num)
