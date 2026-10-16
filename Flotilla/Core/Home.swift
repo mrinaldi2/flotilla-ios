@@ -204,6 +204,13 @@ final class HomeFeed {
     private(set) var overviews: [String: HomeOverview] = [:]
     /// Needs-you rows by card id.
     private(set) var attention: [String: [HomeAttentionRow]] = [:]
+
+    /// A card's asks: its loaded rows, or until they load the one row the
+    /// row says comes first (`top_attention`, 0.20).
+    func asks(for card: HomeCard) -> [HomeAttentionRow] {
+        if let rows = attention[card.id] { return rows }
+        return card.row.hasTopAttention ? [card.row.topAttention] : []
+    }
     private(set) var failures: [String: String] = [:]
     /// A card id the Needs you filter should show, its list open: set by
     /// "See all in Needs you"; empty for the filter alone.
@@ -358,7 +365,7 @@ final class HomeFeed {
             return
         }
         if let rows = try? await store.attentionRows(projectId: card.row.projectID) {
-            attention[card.id] = rows
+            attention[card.id] = StoppedBot.first(rows)
         }
     }
 

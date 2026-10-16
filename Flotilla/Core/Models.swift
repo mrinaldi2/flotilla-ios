@@ -162,6 +162,10 @@ struct Bot: Identifiable, Equatable {
     var userChrome: Bool
     /// A worker: created for one task, archived once that task closes.
     var temporary: Bool
+    /// Where it really runs: its own computer's daemon id and bot id (a
+    /// stand-in's are its peer's). Nil from older daemons.
+    var originDaemonId: String?
+    var originBotId: String?
 
     var isLinked: Bool { peerName != nil }
     var engine: BotEngine? { runtime.flatMap(BotEngine.init(rawValue:)) }
@@ -174,6 +178,8 @@ struct Bot: Identifiable, Equatable {
         peerOnline = peer?.bool("online") ?? false
         userChrome = d.bool("user_chrome")
         temporary = d.bool("temporary")
+        originDaemonId = d.dict("origin")?.optStr("daemon_id")
+        originBotId = d.dict("origin")?.optStr("bot_id")
         projectId = d.str("project_id")
         name = d.str("name")
         description = d.str("description")

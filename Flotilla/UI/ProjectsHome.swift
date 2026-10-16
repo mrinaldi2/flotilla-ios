@@ -73,6 +73,9 @@ struct ProjectsHomeView: View {
     @State private var expanded: Set<String> = []
     @State private var showingDecisions = false
     @State private var addingLead: HomeProjectLink?
+    /// `bot_stopped` rows whose Restart is on its way.
+    @State private var restarting: Set<String> = []
+    @State private var restartFailed: String?
     /// Bumped by every route that lands here (RootView): back to the list,
     /// then the screen in `openNeeds`, if any.
     var landings = 0
@@ -137,6 +140,11 @@ struct ProjectsHomeView: View {
                     }
                     .computerEnvironment(computer)
                 }
+            }
+            .alert("Couldn't restart", isPresented: Binding(get: { restartFailed != nil }, set: { if !$0 { restartFailed = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(restartFailed ?? "")
             }
             .refreshable { await feed.refreshAll(fleet.computers, force: true) }
             #if DEBUG
@@ -380,7 +388,7 @@ struct ProjectsHomeView: View {
     /// The top of a card: opens the project; long press for its actions.
     private func cardBody(_ card: HomeCard) -> some View {
         let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
-        let first = (feed.attention[card.id] ?? []).first
+        let first = feed.asks(for: card).first
         let destination = first.map { fleet.needsDestination($0, answeredBy: card.computerId) }
         let action = first.flatMap { row in destination.map { AskAction.label(row, opens: $0) } }
         let available = destination.map { fleet.unavailable($0) == nil } ?? false
@@ -395,7 +403,9 @@ struct ProjectsHomeView: View {
         .accessibilityLabel(ProjectCardBody.spoken(card, ask: ask))
         .accessibilityHint("Opens the project")
         .accessibilityActions {
-            if let action, let destination, available {
+            if let first, StoppedBot.restarts(first), fleet.restartUnavailable(first, answeredBy: card.computerId) == nil {
+                Button("Restart") { restart(first, card: card) }
+            } else if let action, let destination, available {
                 Button(action) { path.append(destination) }
             }
             Button("Open board") { openProject(link.showing(.board)) }
@@ -410,7 +420,7 @@ struct ProjectsHomeView: View {
     /// whole list once opened (always, under the Needs you filter). Until the
     /// rows load, the summary holds their place.
     @ViewBuilder private func asks(_ card: HomeCard, inList: Bool) -> some View {
-        let rows = feed.attention[card.id] ?? []
+        let rows = feed.asks(for: card)
         let waiting = Int(card.row.attention.count)
         let open = feed.filter == .needsYou || expanded.contains(card.id)
         if !rows.isEmpty {
@@ -469,7 +479,47 @@ struct ProjectsHomeView: View {
         }
     }
 
-    private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+    @ViewBuilder private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+        if StoppedBot.restarts(row) {
+            restartButton(row, card: card, primary: primary, inList: inList)
+        } else {
+            openButton(row, card: card, primary: primary, inList: inList)
+        }
+    }
+
+    /// A crashed or stopped bot (BG-Rules §2): Restart, right on the card.
+    private func restartButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+        let busy = restarting.contains(row.id)
+        let reason = busy ? "Restarting…" : fleet.restartUnavailable(row, answeredBy: card.computerId)
+        return separated(inList) {
+            Button { restart(row, card: card) } label: {
+                AskRow(row: row, action: busy ? "Restarting" : "Restart", primary: primary, unavailable: reason)
+            }
+            .buttonStyle(GlanceButtonStyle())
+            .disabled(reason != nil)
+            .contextMenu {
+                if case .bot(let ref)? = row.target, let on = fleet.computer(daemonId: ref.daemonID) ?? fleet.computer(id: card.computerId) {
+                    Button("Open \(ref.name)", systemImage: "person.crop.circle") {
+                        path.append(NeedsDestination.bot(computerId: on.id, botId: ref.botID, chat: false))
+                    }
+                }
+            }
+        }
+    }
+
+    private func restart(_ row: HomeAttentionRow, card: HomeCard) {
+        restarting.insert(row.id)
+        Task {
+            do {
+                try await fleet.restart(row, answeredBy: card.computerId)
+            } catch {
+                restartFailed = error.localizedDescription
+            }
+            restarting.remove(row.id)
+        }
+    }
+
+    private func openButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
         let destination = fleet.needsDestination(row, answeredBy: card.computerId)
         let reason = fleet.unavailable(destination)
         let action = AskAction.label(row, opens: destination)
@@ -538,6 +588,8 @@ extension Fleet {
     func needsDestination(_ row: HomeAttentionRow, answeredBy computerId: String) -> NeedsDestination {
         let on = computer(daemonId: row.daemonID) ?? computer(id: computerId)
         let place = on?.name ?? "that computer"
+        // A bot that can't sign in or hit its limit: what to do, not its chat.
+        if let advice = StoppedBot.advice(row, on: place) { return .note(title: row.title, text: advice) }
         switch row.target {
         case .decisionID(let id)?:
             if let on { return .decision(computerId: on.id, decisionId: id) }
@@ -566,6 +618,8 @@ extension Fleet {
         switch row.kind {
         case .relayedRulings:
             return .note(title: row.title, text: "Confirm them under Decisions on \(place).")
+        case .botStopped:
+            return .note(title: row.title, text: "Restart it from its page on \(place).")
         case .servingOff:
             return .note(title: row.title, text: "\(place) isn't serving the phone securely. Check it in Settings → Computers.")
         default:

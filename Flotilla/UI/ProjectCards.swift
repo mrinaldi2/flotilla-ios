@@ -169,6 +169,12 @@ extension Fleet {
     /// computers this phone talks to, then other working bots of the computer
     /// that answered; at most four.
     func glanceBots(_ card: HomeCard) -> [GlanceBot] {
+        // From 0.20 the row lists its bots across computers (`overview_bots`).
+        if !card.row.botList.isEmpty {
+            return GlanceFleet.shown(card.row.botList).map { bot in
+                GlanceBot(id: "\(bot.daemonID)/\(bot.botID)", name: bot.name, avatar: bot.avatar, working: bot.status == .working)
+            }
+        }
         var seen = Set<String>()
         var bots: [GlanceBot] = []
         func known(_ id: String) -> Bot? {
