@@ -1,6 +1,7 @@
 import XCTest
 
-/// H-160 AC6 on iPad (UX-023 §2.7): ⌘1–5 pick a project segment, ⌘⇧N opens Needs you.
+/// H-160 AC6 on iPad (UX-023 §2.7): ⌘1–5 pick a project segment, ⌘⇧N opens Needs you
+/// (All projects with its Needs you filter on, since 0.20).
 /// Pointer hover (H-207 AC1, the rows' hover effects) can't be driven by XCUITest on iOS.
 /// Run on an iPad simulator: `SIMULATOR=Gravity-iOSQA-iPad scripts/ui-tests.sh -only-testing:UITests/QA011PadTests`.
 final class QA011PadTests: XCTestCase {
@@ -32,9 +33,8 @@ final class QA011PadTests: XCTestCase {
         }
 
         app.typeKey("n", modifierFlags: [.command, .shift])
-        let needs = app.navigationBars["Needs you"].firstMatch
-        let shown = needs.waitForExistence(timeout: 5) || item(app, "Needs you").isSelected
-        XCTAssertTrue(shown, "⌘⇧N did not open Needs you")
+        let shown = app.navigationBars["Projects"].firstMatch.waitForExistence(timeout: 5) && app.needsYouFilterIsOn
+        XCTAssertTrue(shown, "⌘⇧N did not open Projects with the Needs you filter on")
         screenshot("QA-011-cmd-shift-n-needs-you")
         XCTAssertEqual(app.state, .runningForeground)
     }

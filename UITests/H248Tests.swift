@@ -38,8 +38,9 @@ final class H248Tests: XCTestCase {
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '▲ Waiting for you'")).firstMatch.exists)
         screenshot("H-248-older-service")
         link.tap()
-        // The stub opened the release inside Needs you: the link goes back to its list.
+        // The stub opened the release on Projects: the link goes back to its list, filtered.
         XCTAssertTrue(app.navigationBars["0.17.5"].waitForNonExistence(timeout: 5), "The link did not open Needs you")
-        XCTAssertTrue(app.tabBars.buttons["Needs you"].isSelected)
+        XCTAssertTrue(app.tabBars.buttons["Projects"].isSelected)
+        XCTAssertTrue(app.needsYouFilterIsOn, "The link did not turn the Needs you filter on")
     }
 }

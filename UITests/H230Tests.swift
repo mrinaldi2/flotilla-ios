@@ -1,6 +1,6 @@
 import XCTest
 
-/// H-230 on iPad: a route that switches the sidebar to Needs you opens its screen in
+/// H-230 on iPad: a route that switches the sidebar to All projects (Needs you filter) opens its screen in
 /// the detail column (it was lost when pushed as the column first showed). No daemon:
 /// the release comes from the Debug -releaseStub, and a decision route needs none.
 final class H230Tests: XCTestCase {
@@ -28,7 +28,7 @@ final class H230Tests: XCTestCase {
     }
 
     func testADecisionRouteOpensOnIPad() {
-        // The product path: a tapped decision notification switches to Needs you and pushes the decision.
+        // The product path: a tapped decision notification switches to Projects, filtered, and pushes the decision.
         let app = launch(["-route", "decision/dec-qa"])
         XCTAssertTrue(app.navigationBars["Decision"].waitForExistence(timeout: 20), "The decision did not open in the detail column")
     }

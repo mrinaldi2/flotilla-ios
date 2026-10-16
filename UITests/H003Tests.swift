@@ -58,7 +58,7 @@ final class H003Tests: XCTestCase {
     private func decisionDetail(dark: Bool) throws {
         let app = try DemoApp.launch(dark: dark)
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Resolve conflicts automatically or always ask?")).tap()
         waitFor(app.navigationBars["Decision"])
         sleep(1)

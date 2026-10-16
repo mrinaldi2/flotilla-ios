@@ -12,7 +12,8 @@ final class RoutingTests: XCTestCase {
         allowSystemAlerts()
         waitFor(app.navigationBars["Decision"])
         waitFor(app.staticTexts["Which accent colour for the App Store screenshots?"])
-        XCTAssertTrue(app.tabBars.buttons["Needs you"].isSelected)
+        // On Projects, with the Needs you filter under it (0.20).
+        XCTAssertTrue(app.tabBars.buttons["Projects"].isSelected)
         screenshot("QA-004-route-decision")
     }
 

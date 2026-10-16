@@ -29,14 +29,14 @@ final class QA013InstallTests: XCTestCase {
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// UX-047 #7 (STUBBED offer): the banner on Needs you and on the project's Releases;
+    /// UX-047 #7 (STUBBED offer): the banner atop Projects and on the project's Releases;
     /// Install from it with the site unreachable says so and opens nothing (#4); Not now hides it.
     func testOfferBannerOnNeedsYouAndReleases() throws {
         let app = try DemoApp.launch(["-installOfferStub", try offerStub().asArgumentString])
         allowSystemAlerts()
-        app.tab("Needs you")
+        app.needsYou()
         let banner = any(app, "Flotilla 0.6.2 is ready to install")
-        XCTAssertTrue(banner.waitForExistence(timeout: 40), "No offer banner on Needs you")
+        XCTAssertTrue(banner.waitForExistence(timeout: 40), "No offer banner on Projects")
         screenshot("QA-013-07-STUB-offer-banner-needs-you")
 
         app.openProject("Aurora Notes")

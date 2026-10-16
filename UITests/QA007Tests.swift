@@ -165,9 +165,8 @@ final class QA007PadTests: XCTestCase {
             screenshot("QA-007-h160-ac6-cmd-\(key)-\(name)")
         }
         app.typeKey("n", modifierFlags: [.command, .shift])
-        let needs = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Needs you' AND selected == true")).firstMatch
-        let title = app.navigationBars["Needs you"]
-        XCTAssertTrue(needs.waitForExistence(timeout: 5) || title.waitForExistence(timeout: 2), "⌘⇧N did not open Needs you")
+        // Projects, with the Needs you filter on (0.20).
+        XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5) && app.needsYouFilterIsOn, "⌘⇧N did not open Needs you")
         screenshot("QA-007-h160-ac6-cmd-shift-n")
     }
 

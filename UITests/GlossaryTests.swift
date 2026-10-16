@@ -81,13 +81,13 @@ final class GlossaryTests: XCTestCase {
         look("computer-service")
 
         // Needs you and Decisions last: the Decisions sheet is the end of the walk.
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Resolve conflicts automatically or always ask?"))
         look("needs-you")
         app.openDecisions()
         waitFor(app.staticTexts["Permission requests"])
         look("decisions")
-        app.tab("Needs you")
+        app.needsYou()
         waitFor(app.needsRow("Resolve conflicts automatically or always ask?")).tap()
         waitFor(app.navigationBars["Decision"])
         app.scroll(to: app.buttons["Put on hold"])
