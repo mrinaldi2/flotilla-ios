@@ -141,6 +141,9 @@ struct HomeCard: Identifiable {
     let staleNames: [String]
     /// The oldest `as_of` among them, for "imac away · as of 10:42".
     let staleSince: Date?
+    /// The stale daemon ids that are away (offline, timed out or never
+    /// answered), not merely too old to say everything.
+    var offline: Set<String> = []
     /// "#1, #2…" across every computer, after the merge; nil when nothing
     /// needs you here. (`row.rank` is one computer's own order.)
     var rank: Int?
@@ -202,8 +205,12 @@ final class HomeFeed {
     /// Needs-you rows by card id.
     private(set) var attention: [String: [HomeAttentionRow]] = [:]
     private(set) var failures: [String: String] = [:]
-    /// A card id the Needs you tab should show: set by "See all in Needs you".
+    /// A card id the Needs you filter should show, its list open: set by
+    /// "See all in Needs you"; empty for the filter alone.
     var needsFocus: String?
+    /// The Projects tab's filter (0.20): Needs you is a filter there, not a
+    /// tab, and what used to open that tab turns it on.
+    var filter: HomeFilter = .all
     @ObservationIgnored private var lastFetch: [String: Date] = [:]
     @ObservationIgnored private var pending: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private let cacheDirectory: URL?
@@ -233,7 +240,10 @@ final class HomeFeed {
         return HomeMerge.ranked(HomeMerge.merge(inputs)).map { item in
             let stale = (sources[item.computerId] ?? []).filter { item.row.staleSources.contains($0.daemonID) }
             let since = stale.compactMap { $0.hasAsOf ? $0.asOf.date : nil }.min()
-            var card = HomeCard(row: item.row, computerId: item.computerId, staleNames: stale.map(\.name), staleSince: since)
+            let known = Dictionary((sources[item.computerId] ?? []).map { ($0.daemonID, $0.state) }) { a, _ in a }
+            let away = item.row.staleSources.filter { known[$0] != .oldVersion }
+            var card = HomeCard(row: item.row, computerId: item.computerId, staleNames: stale.map(\.name), staleSince: since,
+                                offline: Set(away))
             if item.row.attention.count > 0 {
                 card.rank = next
                 next += 1
@@ -267,7 +277,9 @@ final class HomeFeed {
 
     #if DEBUG
     /// Screenshots without a 0.17 daemon: `-homeFixture <path to overview.json>`
-    /// stands in for the first computer's answer.
+    /// stands in for the first computer's answer. An `attention_rows` object
+    /// beside the overview's fields, project id to rows, stands in for its
+    /// `attention_rows` answers.
     func loadFixture(_ computers: [Computer]) {
         guard let path = UserDefaults.standard.string(forKey: "homeFixture"), let first = computers.first,
               let data = FileManager.default.contents(atPath: path),
@@ -275,6 +287,11 @@ final class HomeFeed {
               let overview = try? HomeJSON.decode(HomeOverview.self, json) else { return }
         overviews[first.id] = overview
         fixtureComputer = first.id
+        for (projectId, rows) in (json as? [String: Any])?["attention_rows"] as? [String: Any] ?? [:] {
+            if let rows = try? HomeJSON.decode(Hermes_Home_V1_AttentionRows.self, ["rows": rows]).rows {
+                attention["\(first.id):\(projectId)"] = rows
+            }
+        }
     }
 
     @ObservationIgnored private var fixtureComputer: String?
@@ -329,6 +346,9 @@ final class HomeFeed {
     /// The Needs-you rows for one card, from the computer that answered for it.
     func loadAttention(_ card: HomeCard, on computer: Computer) async {
         let store = computer.store
+        #if DEBUG
+        if fixtureComputer == computer.id { return }
+        #endif
         if card.row.legacy || !store.hasHome {
             attention[card.id] = store.legacyAttention(projectId: card.row.projectID)
             return

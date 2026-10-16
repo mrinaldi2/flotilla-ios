@@ -9,6 +9,8 @@ import SwiftUI
 /// What a colour means, wherever it appears.
 enum Tone {
     case ready, working, needsYou, failed, quiet, worker
+    /// A computer that is away: what it shows is as of when it was last seen.
+    case away
 
     var color: Color {
         switch self {
@@ -18,6 +20,7 @@ enum Tone {
         case .failed: .red
         case .quiet: .secondary
         case .worker: .teal
+        case .away: .yellow
         }
     }
 
@@ -32,6 +35,7 @@ enum Tone {
         case .failed: .errorText
         case .quiet: .secondaryText
         case .worker: .workerText
+        case .away: .awayText
         }
     }
 }
@@ -52,6 +56,17 @@ extension Color {
     /// system's secondary and placeholder greys are 3.4:1 and 1.7:1 on white;
     /// this stays above 4.5:1 on every list, fill and card background.
     static let secondaryText = Color(light: 0x636366, dark: 0xAEAEB2)
+    /// Words for a computer that is away, in amber: system yellow is far under
+    /// 4.5:1 as text on white.
+    static let awayText = Color(light: 0x8A5A00, dark: 0xF2C063)
+    /// The one filled button on a card's ask (Answer, Review…) and its words.
+    static let askButton = Color(light: 0xC93400, dark: 0xFF9F0A)
+    static let onAskButton = Color(light: 0xFFFFFF, dark: 0x1A0B00)
+
+    /// A project's tile on Projects: deep enough that its white monogram
+    /// stays above 4.5:1, the same in both modes.
+    static let projectGlyphs: [UInt32] = [0x0C3062, 0x6A4C93, 0x0E6E66, 0xB8392F, 0x4D7A26, 0x7A5C2E,
+                                          0x1F4E79, 0x8A3B12, 0x2E6B4F, 0x4F6D8A, 0x555B66]
 
     /// A colour that follows light and dark mode.
     init(light: UInt32, dark: UInt32) {
@@ -61,6 +76,27 @@ extension Color {
                            blue: CGFloat(rgb & 0xFF) / 255, alpha: 1)
         })
     }
+}
+
+extension BoardSegment.Shade {
+    /// A mini board's columns (BG-Rules §4) step in lightness, not only hue:
+    /// To do lightest and Done darkest in light mode, the other way round in
+    /// dark, Review in the needs-you family because it is the owner's column.
+    var color: Color {
+        switch self {
+        case .todo: Color(light: 0xD9D2C3, dark: 0x3A414E)
+        case .ready: Color(light: 0xB5AB98, dark: 0x4E5666)
+        case .doing: Color(light: 0x2A9D8F, dark: 0x2E9C8F)
+        case .review: Color(light: 0xC8352A, dark: 0xFF7A6E)
+        case .verify: Color(light: 0x9C2A20, dark: 0xFFA397)
+        case .done: Color(light: 0x0C3062, dark: 0xC3D3FF)
+        case .cancelled: Color(light: 0x8E8676, dark: 0x59606C)
+        case .more: Color(light: 0xA79F8F, dark: 0x59606C)
+        }
+    }
+
+    /// Board order, lightest to darkest in light mode.
+    static let ramp: [Self] = [.todo, .ready, .doing, .review, .verify, .done]
 }
 
 extension BotState {

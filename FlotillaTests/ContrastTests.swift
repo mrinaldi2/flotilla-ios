@@ -28,7 +28,7 @@ final class ContrastTests: XCTestCase {
         (tint.0 * alpha + base.0 * (1 - alpha), tint.1 * alpha + base.1 * (1 - alpha), tint.2 * alpha + base.2 * (1 - alpha))
     }
 
-    private let tones: [Tone] = [.ready, .working, .needsYou, .failed, .quiet, .worker]
+    private let tones: [Tone] = [.ready, .working, .needsYou, .failed, .quiet, .worker, .away]
 
     func testToneWordsMeetAAOnListBackgrounds() {
         let backgrounds: [(UITraitCollection, [UIColor])] = [
@@ -93,6 +93,44 @@ final class ContrastTests: XCTestCase {
             let mode = traits.userInterfaceStyle == .dark ? "dark" : "light"
             for (name, background) in backgrounds {
                 XCTAssertGreaterThanOrEqual(ratio(text, background), 4.5, "secondary text on \(name), \(mode)")
+            }
+        }
+    }
+
+    /// Board glance (0.20): the filled ask button (Answer, Review…) holds AA.
+    func testAskButtonWordsMeetAA() {
+        for traits in [light, dark] {
+            let value = ratio(rgb(UIColor(Color.onAskButton), traits), rgb(UIColor(Color.askButton), traits))
+            XCTAssertGreaterThanOrEqual(value, 4.5, "ask button, \(traits.userInterfaceStyle == .dark ? "dark" : "light"): \(value)")
+        }
+    }
+
+    /// A project's tile keeps its white monogram at AA, whichever colour it draws.
+    func testProjectTileMonogramsMeetAA() {
+        for hex in Color.projectGlyphs {
+            let tile = (Double(hex >> 16 & 0xFF) / 255, Double(hex >> 8 & 0xFF) / 255, Double(hex & 0xFF) / 255)
+            XCTAssertGreaterThanOrEqual(ratio((1, 1, 1), tile), 4.5, String(hex, radix: 16))
+        }
+    }
+
+    /// The mini board's columns step in lightness, not only hue (BG-Rules §4):
+    /// lighter to darker in board order in light mode, darker to lighter in
+    /// dark, each a visible step from the one before.
+    func testBoardColumnsDifferInLightness() {
+        for traits in [light, dark] {
+            let mode = traits.userInterfaceStyle == .dark ? "dark" : "light"
+            let steps = BoardSegment.Shade.ramp.map { luminance(rgb(UIColor($0.color), traits)) }
+            for (a, b) in zip(steps, steps.dropFirst()) {
+                if traits.userInterfaceStyle == .dark {
+                    XCTAssertGreaterThanOrEqual((b + 0.05) / (a + 0.05), 1.25, "dark ramp \(steps)")
+                } else {
+                    XCTAssertGreaterThanOrEqual((a + 0.05) / (b + 0.05), 1.25, "light ramp \(steps)")
+                }
+            }
+            // Every column stands off the card it is drawn on.
+            let card = rgb(.secondarySystemGroupedBackground, traits)
+            for shade in BoardSegment.Shade.ramp where shade != .todo {
+                XCTAssertGreaterThanOrEqual(ratio(rgb(UIColor(shade.color), traits), card), 1.5, "\(shade) on the card, \(mode)")
             }
         }
     }
