@@ -1,0 +1,9 @@
+{
+  "reqId": "32",
+  "boardRequest": {
+    "itemDetach": {
+      "id": "RB-020",
+      "attachmentId": "a1"
+    }
+  }
+}

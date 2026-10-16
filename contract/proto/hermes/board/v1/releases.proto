@@ -26,7 +26,7 @@ message ReleaseCreate {
   string name = 2;
   // The version the owner sees, e.g. "0.16.0".
   optional string display_version = 3;
-  // Item ids, e.g. "H-017"; each must be in Verify and in no other open package.
+  // Item ids, e.g. "RB-12"; each must be in Verify and in no other open package.
   repeated string items = 4;
   // Markdown, compiled from the items' change notes.
   optional string changelog = 5;
@@ -46,10 +46,10 @@ message ReleasePlan {
   string name = 2;
   // The version the owner sees, e.g. "0.17.0".
   optional string display_version = 3;
-  // Item ids, e.g. "H-137"; each open and in no other open package.
+  // Item ids, e.g. "RB-12"; each open and in no other open package.
   repeated string items = 4;
   optional string changelog = 5;
-  // The release's REL work card, e.g. "H-244": the owner Run cards,
+  // The release's REL work card, e.g. "RB-30": the owner Run cards,
   // decisions and questions on it show on the release (H-247).
   optional string work_item = 6;
 }
@@ -252,4 +252,18 @@ message MachineNameSet {
 message ReleaseDeployedVia {
   string release_id = 1;
   string via_release_id = 2;
+}
+
+// DevOps cuts a release from main (H-272; H-261 §6.1): at `commit` (default
+// main's tip, which it must be on), holding the cards of the PRs merged
+// since the last tagged release. From a planned package (`release_id`), its
+// planned cards not merged yet show as `not_merged`, and merged cards nobody
+// planned as `also_included`. Builds must come from that commit.
+message ReleaseCut {
+  // e.g. "0.18.0"; the release's name and its tag desktop-v<version>.
+  string version = 1;
+  optional string commit = 2;
+  optional string release_id = 3;
+  // "owner/name": the project's repo unless named (one the owner added).
+  optional string repo = 4;
 }

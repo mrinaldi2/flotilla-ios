@@ -1,0 +1,27 @@
+{
+  "reqId": "27",
+  "boardRequest": {
+    "columnUpdate": {
+      "boardId": "b1",
+      "version": "4",
+      "key": "qa",
+      "name": "Test",
+      "kind": "COLUMN_KIND_ACTIVE",
+      "wipLimit": 3,
+      "clearWipLimit": false,
+      "wipScope": "WIP_SCOPE_PER_ASSIGNEE",
+      "visible": true,
+      "after": "rs-doing",
+      "setPolicy": true,
+      "movers": [
+        "lead",
+        "assignee"
+      ],
+      "rules": [
+        "link:pr",
+        "reason"
+      ],
+      "allowedFrom": []
+    }
+  }
+}

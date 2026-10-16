@@ -1,0 +1,23 @@
+{
+  "reqId": "26",
+  "boardRequest": {
+    "columnAdd": {
+      "boardId": "b1",
+      "version": "3",
+      "name": "QA",
+      "kind": "COLUMN_KIND_ACTIVE",
+      "after": "rs-review",
+      "wipLimit": 2,
+      "wipScope": "WIP_SCOPE_COLUMN",
+      "movers": [
+        "roles:tester"
+      ],
+      "rules": [
+        "ac_all_checked"
+      ],
+      "allowedFrom": [
+        "rs-review"
+      ]
+    }
+  }
+}

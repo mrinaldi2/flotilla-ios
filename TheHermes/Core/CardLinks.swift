@@ -254,15 +254,27 @@ final class CardDirectory {
             let store = computer.store
             for project in store.projects where project.deletedAt == nil {
                 var prefix = project.itemPrefix
+                var others: [String] = []
                 if prefix == nil, store.speaksProto, let snapshot = try? await snapshot(computer, projectId: project.id) {
                     prefix = snapshot.settings.key.isEmpty ? nil : snapshot.settings.key
+                    others = snapshot.boards.map(\.key)
                 }
                 guard let prefix else { continue }
-                found[prefix, default: []].append(Home(computerId: computer.id, projectId: project.id, projectName: project.name))
+                let home = Home(computerId: computer.id, projectId: project.id, projectName: project.name)
+                for key in Set([prefix] + others) where !key.isEmpty { found[key, default: []].append(home) }
             }
         }
         homes = found
         settled = complete
+    }
+
+    /// A project's other boards' prefixes (0.19), learned when its board is
+    /// read, so their card ids link and open there too.
+    func learn(prefixes: [String], home: Home) {
+        for prefix in prefixes where !prefix.isEmpty {
+            if homes[prefix]?.contains(home) == true { continue }
+            homes[prefix, default: []].append(home)
+        }
     }
 
     /// Where a link from outside goes: its project, nowhere, or not yet.

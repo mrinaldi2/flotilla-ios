@@ -103,6 +103,8 @@ final class AppStore {
     @ObservationIgnored var onChatTurns: ((String, [JSONDict]) -> Void)?
 
     @ObservationIgnored let client = DaemonClient()
+    /// Screens following a project's board, by project: its `board_event` pushes go to them (K7).
+    @ObservationIgnored var boardListeners: [String: [UUID: (BoardEvent) -> Void]] = [:]
     @ObservationIgnored private let defaults: ComputerDefaults
     @ObservationIgnored private var sinks: [String: TerminalSink] = [:]
     @ObservationIgnored private var troubleTask: Task<Void, Never>?
@@ -150,6 +152,7 @@ final class AppStore {
         client.onLatency = { [weak self] latency in self?.latency = latency }
         client.onHello = { [weak self] hello in self?.helloReceived(hello) }
         client.onPush = { [weak self] type, frame in self?.pushReceived(type, frame) }
+        client.onEnvelopePush = { [weak self] envelope in self?.envelopePushed(envelope) }
         if let seen = UserDefaults.standard.dictionary(forKey: defaults.key("lastSeen")) as? [String: Double] {
             lastSeen = seen.mapValues(Date.init(timeIntervalSince1970:))
         }
@@ -493,7 +496,7 @@ final class AppStore {
         decisions[index].comments.append(comment)
     }
 
-    private func append(_ message: BusMessage) {
+    func append(_ message: BusMessage) {
         guard var thread = messages[message.conversationId],
               !thread.contains(where: { $0.id == message.id }) else { return }
         thread.append(message)

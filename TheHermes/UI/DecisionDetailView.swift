@@ -10,6 +10,8 @@ struct DecisionDetailView: View {
     @State private var comment = ""
     @State private var busy = false
     @State private var error: String?
+    /// A lead's proposal behind this decision, from its project's board.
+    @State private var proposal: ProposalCard?
 
     private var decision: Decision? { store.decisions.first { $0.id == decisionId } }
 
@@ -18,7 +20,15 @@ struct DecisionDetailView: View {
             if let decision {
                 header(decision)
                 if let ruling = decision.ruling { rulingSection(decision, ruling) }
-                if decision.state == "open" { answerSection(decision) }
+                if decision.state == "open" {
+                    // A lead's board change (K7): Approve or Decline, not a written ruling.
+                    // The snapshot's proposal once read (K5), its decision's words until then.
+                    if let proposal = proposal ?? ProposalCard(decision) {
+                        ProposalSection(decision: decision, proposal: proposal)
+                    } else {
+                        answerSection(decision)
+                    }
+                }
                 stateActions(decision)
                 commentsSection(decision)
             } else {
@@ -30,8 +40,19 @@ struct DecisionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .disabled(busy)
-        .task(id: store.status) { await store.loadDecision(decisionId) }
+        .task(id: store.status) {
+            await store.loadDecision(decisionId)
+            await findProposal()
+        }
         .errorAlert("Couldn’t answer the decision.", $error)
+    }
+
+    /// The board is read only for a decision that may be a proposal's, since
+    /// `board_get` starts a board where there is none.
+    private func findProposal() async {
+        guard let decision, ProposalCard.mayBe(decision), !decision.projectId.isEmpty, store.speaksProto else { return }
+        let snapshot = try? await store.board(projectId: decision.projectId)
+        proposal = ProposalCard.find(decision: decision, in: snapshot)
     }
 
     // MARK: Sections

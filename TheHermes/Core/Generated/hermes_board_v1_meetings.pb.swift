@@ -8,7 +8,7 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
-/// Meetings and action items, contract version 1 (H-017 §1.5, H-020 §4).
+/// Meetings and action items, contract version 1.
 ///
 /// What bots send as MCP tools; their schemas are generated from these
 /// messages (see requests.proto for the rules). The owner sends the same
@@ -238,7 +238,7 @@ nonisolated struct Hermes_Board_V1_MeetingContribute: Sendable {
   /// Markdown.
   var body: String = String()
 
-  /// Item ids the contribution is about, e.g. "H-017".
+  /// Item ids the contribution is about, e.g. "RB-12".
   var itemRefs: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()

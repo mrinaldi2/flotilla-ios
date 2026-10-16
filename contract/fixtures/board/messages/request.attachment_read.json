@@ -1,0 +1,10 @@
+{
+  "reqId": "34",
+  "boardRequest": {
+    "attachmentRead": {
+      "attachmentId": "a1",
+      "offset": "0",
+      "limit": 524288
+    }
+  }
+}

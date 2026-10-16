@@ -30,7 +30,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>The Hermes asks for Face ID before it publishes or confirms a ruling that gives a bot more permissions.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>The Hermes scans the pairing code your computer shows, to connect to it.</string>
+	<string>The Hermes scans the pairing code your computer shows, to connect to it, and takes photos you attach to a new board item.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>The Hermes connects to the Hermes service on your computer, over your own network or tailnet.</string>
 </dict>

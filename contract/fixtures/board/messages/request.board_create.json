@@ -1,0 +1,12 @@
+{
+  "reqId": "24",
+  "boardRequest": {
+    "boardCreate": {
+      "projectId": "p1",
+      "name": "Research",
+      "key": "RS",
+      "preset": "software",
+      "description": "Spikes and reading"
+    }
+  }
+}

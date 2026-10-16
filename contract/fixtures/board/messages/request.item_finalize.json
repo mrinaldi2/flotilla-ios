@@ -1,0 +1,10 @@
+{
+  "reqId": "36",
+  "boardRequest": {
+    "itemFinalize": {
+      "id": "RB-020",
+      "expectedVersion": "4",
+      "column": "todo"
+    }
+  }
+}

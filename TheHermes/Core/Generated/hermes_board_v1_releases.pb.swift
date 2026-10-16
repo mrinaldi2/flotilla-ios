@@ -75,7 +75,7 @@ nonisolated struct Hermes_Board_V1_ReleaseCreate: Sendable {
   /// Clears the value of `displayVersion`. Subsequent reads from it will return its default value.
   mutating func clearDisplayVersion() {self._displayVersion = nil}
 
-  /// Item ids, e.g. "H-017"; each must be in Verify and in no other open package.
+  /// Item ids, e.g. "RB-12"; each must be in Verify and in no other open package.
   var items: [String] = []
 
   /// Markdown, compiled from the items' change notes.
@@ -133,7 +133,7 @@ nonisolated struct Hermes_Board_V1_ReleasePlan: Sendable {
   /// Clears the value of `displayVersion`. Subsequent reads from it will return its default value.
   mutating func clearDisplayVersion() {self._displayVersion = nil}
 
-  /// Item ids, e.g. "H-137"; each open and in no other open package.
+  /// Item ids, e.g. "RB-12"; each open and in no other open package.
   var items: [String] = []
 
   var changelog: String {
@@ -145,7 +145,7 @@ nonisolated struct Hermes_Board_V1_ReleasePlan: Sendable {
   /// Clears the value of `changelog`. Subsequent reads from it will return its default value.
   mutating func clearChangelog() {self._changelog = nil}
 
-  /// The release's REL work card, e.g. "H-244": the owner Run cards,
+  /// The release's REL work card, e.g. "RB-30": the owner Run cards,
   /// decisions and questions on it show on the release (H-247).
   var workItem: String {
     get {_workItem ?? String()}
@@ -749,6 +749,56 @@ nonisolated struct Hermes_Board_V1_ReleaseDeployedVia: Sendable {
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+}
+
+/// DevOps cuts a release from main (H-272; H-261 §6.1): at `commit` (default
+/// main's tip, which it must be on), holding the cards of the PRs merged
+/// since the last tagged release. From a planned package (`release_id`), its
+/// planned cards not merged yet show as `not_merged`, and merged cards nobody
+/// planned as `also_included`. Builds must come from that commit.
+nonisolated struct Hermes_Board_V1_ReleaseCut: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// e.g. "0.18.0"; the release's name and its tag desktop-v<version>.
+  var version: String = String()
+
+  var commit: String {
+    get {_commit ?? String()}
+    set {_commit = newValue}
+  }
+  /// Returns true if `commit` has been explicitly set.
+  var hasCommit: Bool {self._commit != nil}
+  /// Clears the value of `commit`. Subsequent reads from it will return its default value.
+  mutating func clearCommit() {self._commit = nil}
+
+  var releaseID: String {
+    get {_releaseID ?? String()}
+    set {_releaseID = newValue}
+  }
+  /// Returns true if `releaseID` has been explicitly set.
+  var hasReleaseID: Bool {self._releaseID != nil}
+  /// Clears the value of `releaseID`. Subsequent reads from it will return its default value.
+  mutating func clearReleaseID() {self._releaseID = nil}
+
+  /// "owner/name": the project's repo unless named (one the owner added).
+  var repo: String {
+    get {_repo ?? String()}
+    set {_repo = newValue}
+  }
+  /// Returns true if `repo` has been explicitly set.
+  var hasRepo: Bool {self._repo != nil}
+  /// Clears the value of `repo`. Subsequent reads from it will return its default value.
+  mutating func clearRepo() {self._repo = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _commit: String? = nil
+  fileprivate var _releaseID: String? = nil
+  fileprivate var _repo: String? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -1799,6 +1849,55 @@ nonisolated extension Hermes_Board_V1_ReleaseDeployedVia: SwiftProtobuf.Message,
   static func ==(lhs: Hermes_Board_V1_ReleaseDeployedVia, rhs: Hermes_Board_V1_ReleaseDeployedVia) -> Bool {
     if lhs.releaseID != rhs.releaseID {return false}
     if lhs.viaReleaseID != rhs.viaReleaseID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Hermes_Board_V1_ReleaseCut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ReleaseCut"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}commit\0\u{3}release_id\0\u{1}repo\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.version) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._commit) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._releaseID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self._repo) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.version.isEmpty {
+      try visitor.visitSingularStringField(value: self.version, fieldNumber: 1)
+    }
+    try { if let v = self._commit {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._releaseID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
+    try { if let v = self._repo {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Hermes_Board_V1_ReleaseCut, rhs: Hermes_Board_V1_ReleaseCut) -> Bool {
+    if lhs.version != rhs.version {return false}
+    if lhs._commit != rhs._commit {return false}
+    if lhs._releaseID != rhs._releaseID {return false}
+    if lhs._repo != rhs._repo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

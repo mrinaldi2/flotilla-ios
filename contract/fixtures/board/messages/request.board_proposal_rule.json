@@ -1,0 +1,10 @@
+{
+  "reqId": "30",
+  "boardRequest": {
+    "boardProposalRule": {
+      "proposalId": "bp1",
+      "approve": true,
+      "note": "Fine"
+    }
+  }
+}

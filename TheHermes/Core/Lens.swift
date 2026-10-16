@@ -344,11 +344,14 @@ final class LensStore {
     enum ImageSource: Hashable {
         case bot(String, LensImageRef)
         case report(project: String, name: String, src: String)
+        /// A card's attachment, read from the board's home (`attachment_read`, K7).
+        case attachment(id: String, name: String)
 
         var title: String {
             switch self {
             case .bot(_, let ref): ref.name
             case .report(_, _, let src): (src as NSString).lastPathComponent
+            case .attachment(_, let name): name
             }
         }
     }
@@ -357,6 +360,7 @@ final class LensStore {
         let key: String
         let path: String
         var query = ["size": thumb ? "thumb" : "full"]
+        if case .attachment(let id, _) = source { return try await attachmentImage(id, thumb: thumb) }
         switch source {
         case .bot(let bot, let ref):
             key = "\(bot)/\(ref.id)"
@@ -365,6 +369,8 @@ final class LensStore {
             key = "\(project)/\(name)/\(src)"
             path = "/v1/artifacts/\(encode(project))/\(encode(name))/image"
             query["src"] = src
+        case .attachment:
+            throw DaemonError(code: "image", message: "Not an image.")
         }
         let cacheKey = "\(key)#\(thumb)" as NSString
         if let cached = imageCache.object(forKey: cacheKey) { return cached }
@@ -540,9 +546,23 @@ final class LensStore {
             file = DaemonFile(reply.dict("file") ?? [:])
         case .report(let project, let name, let src):
             file = try await readFile(["project_id": project, "path": Self.resolve(src, besideFile: name)])
+        case .attachment(let id, _):
+            return try await app.attachmentData(id)
         }
         guard let data = file.data else { throw DaemonError(code: "image", message: "Not an image.") }
         return data
+    }
+
+    /// An attachment's image, whole from the daemon; the thumbnail is made here.
+    private func attachmentImage(_ id: String, thumb: Bool) async throws -> UIImage {
+        let cacheKey = "attachment/\(id)#\(thumb)" as NSString
+        if let cached = imageCache.object(forKey: cacheKey) { return cached }
+        guard var image = UIImage(data: try await app.attachmentData(id)) else {
+            throw DaemonError(code: "image", message: "Not an image the phone can show.")
+        }
+        if thumb, let small = await image.byPreparingThumbnail(ofSize: Self.thumbSize(image.size)) { image = small }
+        imageCache.setObject(image, forKey: cacheKey)
+        return image
     }
 
     /// A report's image path, relative to the report, as a path inside the artifacts folder.

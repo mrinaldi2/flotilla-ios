@@ -372,7 +372,10 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
     POST /grants               Team Lead raises a decision whose first option grants extras
     POST /runcard              Desktop Dev proposes a Run card (owner action)
     POST /question             Desktop Dev asks the owner a question (owner thread)
-    POST /items                Desktop Dev files 3 board items (the board must exist: open it first)
+    POST /items                Desktop Dev files 3 board items labelled platform:… and area:… (the
+                               board must exist: open it first)
+    POST /proposal             0.19: Team Lead proposes a new board; {"decision_id", "board"} of the
+                               decision it raises (the board must exist: open it first)
     POST /terminal             a terminal command asks to act as the owner (H-108), from
                                inside Desktop Dev's workspace; held until answered or timed out
     POST /pins                 {"pinned": [project names]} from projects_overview
@@ -407,6 +410,12 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
             if all(os.path.exists(os.path.join(home, "secrets", f"bot-{b['id']}.token")) for b in lab_bots.values()):
                 break
             time.sleep(0.2)
+        # 0.19 gives no board role by a bot's name: a new board gives the project's lead the lead
+        # role. Named before any board starts; a daemon without the request keeps its own rules.
+        try:
+            ws.request("set_project_lead", project_id=project["id"], bot_id=lab_bots["Team Lead"]["id"])
+        except (Exception, SystemExit):
+            pass
         lab.update(project_id=project["id"], bots=lab_bots, caps=list(caps))
         return lab
 
@@ -473,6 +482,15 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                 elif url.path == "/lab":
                     info = ensure_lab()
                     reply = {"project_id": info["project_id"], "caps": info["caps"]}
+                elif url.path == "/proposal":
+                    info = ensure_lab()
+                    name = f"Research {int(time.time()) % 100000}"
+                    made = bot_call(port, home, info["bots"]["Team Lead"]["id"], "board_create", name=name, preset="simple")
+                    if not made.get("ok"):
+                        raise RuntimeError(f"board_create: {made}")
+                    raised = [d for d in owner().request("list_decisions")["decisions"]
+                              if d["title"].startswith("Board change proposed") and name in d["title"]]
+                    reply = {"decision_id": raised[0]["id"] if raised else None, "board": name}
                 elif url.path in ("/grants", "/runcard", "/question", "/items", "/terminal"):
                     info = ensure_lab()
                     lead, dev = info["bots"]["Team Lead"], info["bots"]["Desktop Dev"]
@@ -493,10 +511,16 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                         reply = bot_call(port, home, dev["id"], "message_owner", asks=True,
                                          body="Should the release notes mention the new board?")
                     elif url.path == "/items":
+                        # 0.19: the lead gives Desktop Dev its role, which no name gives any more (a
+                        # 0.18 daemon gave it by name and may refuse this).
+                        bot_call(port, home, lead["id"], "role_set", bot="Desktop Dev", role="dev")
                         made = []
-                        for title in ["Board chips on iPad", "Owner threads read marks", "Terminal card copy"]:
+                        # Labels, never platforms (0.19 K8); a 0.18 daemon keeps them as free labels.
+                        for title, labels in [("Board chips on iPad", ["platform:ios", "area:board"]),
+                                              ("Owner threads read marks", ["platform:desktop", "area:threads"]),
+                                              ("Terminal card copy", ["platform:ios", "area:terminal"])]:
                             made.append(bot_call(port, home, dev["id"], "item_create", type="chore", title=title,
-                                                 description="QA seed item.", platforms=["ios"]))
+                                                 description="QA seed item.", labels=labels))
                         reply = {"ok": all(m["ok"] for m in made), "items": made}
                     else:
                         terminal_request(dev["workspace"])

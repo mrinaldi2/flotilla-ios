@@ -10,6 +10,8 @@ enum OwnerAuth {
         case publish, confirm
         /// Ruling on a release (UX-023 decision 2: Approve and Reject ask for Face ID).
         case approve, reject
+        /// Approving a lead's board-structure proposal (K7, as release rulings).
+        case approveBoardChange
 
         var question: String {
             switch self {
@@ -17,6 +19,7 @@ enum OwnerAuth {
             case .confirm: "Confirm this ruling?"
             case .approve: "Approve this release?"
             case .reject: "Reject this release?"
+            case .approveBoardChange: "Approve this board change?"
             }
         }
 
@@ -26,6 +29,7 @@ enum OwnerAuth {
             case .confirm: "Not confirmed. Nothing was sent."
             case .approve: "Not approved. Nothing was sent."
             case .reject: "Not rejected. Nothing was sent."
+            case .approveBoardChange: "Not approved. Nothing was sent."
             }
         }
     }

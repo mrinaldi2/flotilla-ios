@@ -1,0 +1,117 @@
+{
+  "reqId": "2",
+  "boardResponse": {
+    "item": {
+      "item": {
+        "id": "H-017",
+        "seq": 17,
+        "type": "ITEM_TYPE_FEATURE",
+        "title": "Board and dashboard",
+        "description": "## Problem\nWork is tracked in a markdown file.",
+        "platforms": [
+          "PLATFORM_DAEMON",
+          "PLATFORM_DESKTOP"
+        ],
+        "size": "SIZE_M",
+        "priority": "PRIORITY_P1",
+        "rank": "a0V",
+        "columnKey": "doing",
+        "category": "COLUMN_CATEGORY_DOING",
+        "blocked": {
+          "by": "H-016",
+          "reason": "Needs the contract scaffold",
+          "since": "2026-10-04T09:12:33Z"
+        },
+        "assignee": "b-desktop-dev",
+        "labels": [
+          "dashboard"
+        ],
+        "acceptanceCriteria": [
+          {
+            "idx": 0,
+            "text": "Cards move between columns",
+            "checked": true,
+            "checkedBy": "b-tester",
+            "checkedAt": "2026-10-04T09:12:33Z",
+            "machine": "mac"
+          },
+          {
+            "idx": 1,
+            "text": "A refused move says why",
+            "checked": false
+          }
+        ],
+        "people": [
+          {
+            "botId": "b-architect",
+            "role": "PERSON_ROLE_REVIEWER"
+          },
+          {
+            "botId": "b-tester",
+            "role": "PERSON_ROLE_VERIFIER"
+          }
+        ],
+        "verifications": [
+          {
+            "machine": "mac",
+            "result": "VERIFICATION_RESULT_PASS",
+            "by": "b-tester",
+            "at": "2026-10-04T09:12:33Z"
+          }
+        ],
+        "createdBy": "user",
+        "createdAt": "2026-10-04T09:12:33Z",
+        "updatedAt": "2026-10-04T09:12:33Z",
+        "stateEnteredAt": "2026-10-04T09:12:33Z",
+        "version": "7",
+        "state": "live"
+      },
+      "links": [
+        {
+          "itemId": "H-017",
+          "kind": "LINK_KIND_ITEM_BLOCKS",
+          "ref": "H-018",
+          "label": "UI waits on this",
+          "createdBy": "bot:b-team-lead",
+          "at": "2026-10-04T09:12:33Z"
+        }
+      ],
+      "comments": [
+        {
+          "id": "c1",
+          "itemId": "H-017",
+          "author": "user",
+          "body": "Ship the read-only board first.",
+          "at": "2026-10-04T09:12:33Z"
+        }
+      ],
+      "history": [
+        {
+          "id": "41",
+          "itemId": "H-017",
+          "at": "2026-10-04T09:12:33Z",
+          "actor": "bot:b-team-lead",
+          "kind": "ITEM_EVENT_KIND_MOVED",
+          "from": "ready",
+          "to": "doing"
+        }
+      ],
+      "historyNext": "41",
+      "attachments": [
+        {
+          "id": "a1",
+          "itemId": "RB-020",
+          "kind": "image",
+          "name": "import-error.png",
+          "mime": "image/png",
+          "bytes": "48213",
+          "sha256": "3f2a9c0d1e4b5a6978c1d2e3f4a5b6c7d8e9f00112233445566778899aabbccd",
+          "path": "/home/ana/.gravity/projects/recipe-box/artifacts/items/RB-020/3f2a9c0d1e4b-import-error.png",
+          "caption": "The import fails on this site",
+          "addedBy": "user",
+          "at": "2026-10-13T09:12:33Z"
+        }
+      ]
+    }
+  }
+}

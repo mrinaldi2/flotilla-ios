@@ -1,0 +1,12 @@
+{
+  "reqId": "34",
+  "boardResponse": {
+    "attachment": {
+      "attachmentId": "a1",
+      "offset": "0",
+      "data": "iVBORw0KGgo=",
+      "total": "48213",
+      "mime": "image/png"
+    }
+  }
+}
