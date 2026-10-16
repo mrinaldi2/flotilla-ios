@@ -119,6 +119,14 @@ struct ProjectsHomeView: View {
                 Group {
                     if sizeClass == .regular { grid(shown) } else { list(shown) }
                 }
+                // Done (F7): the new card, in view.
+                .onChange(of: fleet.creations.highlighted?.projectId) { _, projectId in
+                    guard let projectId, let card = shown.all.first(where: { $0.row.projectID == projectId }) else { return }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        withAnimation { proxy.scrollTo(card.id, anchor: .top) }
+                    }
+                }
                 // "See all in Needs you" on a project's Overview: its list, open, in view.
                 .onChange(of: feed.needsFocus, initial: true) { _, id in
                     guard let id else { return }
@@ -209,6 +217,10 @@ struct ProjectsHomeView: View {
     }
 
     private func openProject(_ link: HomeProjectLink) {
+        // Opening the new project is what its New mark asked for.
+        if fleet.creations.highlighted.map({ $0.computerId == link.computerId && $0.projectId == link.projectId }) ?? false {
+            fleet.creations.highlighted = nil
+        }
         if let open { open(link) } else { path.append(link) }
     }
 
@@ -419,9 +431,9 @@ struct ProjectsHomeView: View {
             ?? (card.row.attention.count > 0 ? AttentionWords.summary(card.row.attention) : nil)
         let columns = MiniBoard.segments(card.row.columns).filter { $0.key != nil }
         // Not a Button: the columns under its bar are buttons of their own.
-        return ProjectCardBody(card: card, bots: fleet.glanceBots(card)) { segment in
+        return ProjectCardBody(card: card, bots: fleet.glanceBots(card), openColumn: { segment in
             column = segment.key.flatMap { ColumnSheetLink.of(card, key: $0, fleet: fleet) }
-        }
+        }, isNew: fleet.creations.isHighlighted(card))
         .contentShape(Rectangle())
         .onTapGesture { openProject(link) }
         .hoverEffect(.highlight)
@@ -486,6 +498,36 @@ struct ProjectsHomeView: View {
                         .accessibilityHidden(true)
                 }
             }
+        } else if let creation = fleet.creations.creation(computerId: card.computerId, projectId: card.row.projectID),
+                  let failed = creation.failedStep, let computer = fleet.computer(id: card.computerId) {
+            // Made from the phone, and something after the board didn't work (§7).
+            separated(inList) {
+                Button { fleet.creations.retry(creation, step: failed, on: computer.store) } label: {
+                    ItemRow(title: failed == .lead || failed == .reading ? "Retry the lead" : "Retry: \(creation.label(failed))",
+                            subtitle: creation.detail(failed, computerName: computer.name), titleTone: .needsYou) {
+                        AskGlyphSymbol(symbol: "arrow.clockwise")
+                    } trailing: {
+                        AskButtonLabel(text: "Retry", primary: true, enabled: computer.store.status == .connected)
+                    }
+                }
+                .buttonStyle(GlanceButtonStyle())
+                .disabled(computer.store.status != .connected)
+                .contextMenu { Button("Dismiss", systemImage: "xmark") { fleet.creations.dismiss(creation) } }
+            }
+        } else if fleet.creations.isHighlighted(card), card.row.columns.allSatisfy({ $0.count == 0 }) {
+            // Done (F7): one next step.
+            separated(inList) {
+                Button {
+                    openProject(HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID).showing(.newCard))
+                } label: {
+                    ItemRow(title: "Add the first card", subtitle: firstCardSubtitle(card)) {
+                        AskGlyphSymbol(symbol: "plus")
+                    } trailing: {
+                        AskButtonLabel(text: "Add card", primary: true)
+                    }
+                }
+                .buttonStyle(GlanceButtonStyle())
+            }
         } else if BoardGlance.state(card) == .setUp, let computer = fleet.computer(id: card.computerId),
                   computer.store.status == .connected, computer.store.canControl {
             separated(inList) {
@@ -501,6 +543,15 @@ struct ProjectsHomeView: View {
                 .buttonStyle(GlanceButtonStyle())
             }
         }
+    }
+
+    /// "Thesis Lead is reading the project…" while its first turn runs, else what a card is for.
+    private func firstCardSubtitle(_ card: HomeCard) -> String {
+        if let creation = fleet.creations.creation(computerId: card.computerId, projectId: card.row.projectID),
+           creation.states[.reading] == .running {
+            return "\(creation.plan.leadName.trimmed) is reading the project…"
+        }
+        return "Say what you want; the lead turns it into a plan."
     }
 
     /// In the list a row is its own; in a grid tile a line goes above it.

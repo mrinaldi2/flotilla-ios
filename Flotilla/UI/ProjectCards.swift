@@ -260,6 +260,8 @@ struct ProjectCardBody: View {
     var bots: [GlanceBot] = []
     /// Opens a column of the board as a sheet (case 5); nil when it can't.
     var openColumn: ((BoardSegment) -> Void)?
+    /// Just made from the phone (F7): marked New until it is opened.
+    var isNew = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var row: HomeRow { card.row }
@@ -301,14 +303,14 @@ struct ProjectCardBody: View {
                     ProjectGlyph(name: row.name, seed: card.glyphSeed, size: 34)
                     name
                 }
-                StatePill(state: state)
+                if isNew { Pill(text: "New", tone: .needsYou) } else { StatePill(state: state) }
             }
         } else {
             HStack(spacing: 10) {
                 ProjectGlyph(name: row.name, seed: card.glyphSeed)
                 name
                 Spacer(minLength: 6)
-                StatePill(state: state)
+                if isNew { Pill(text: "New", tone: .needsYou) } else { StatePill(state: state) }
             }
         }
     }
@@ -543,19 +545,23 @@ struct NotConnectedBanner: View {
     }
 }
 
-/// + on Projects and in the iPad sidebar: the New project sheet on the
-/// computer on screen, then its first bot. (Phase 2 brings the guided flow.)
+/// + on Projects and in the iPad sidebar: on the computer on screen, the
+/// guided flow (0.20), or on an older daemon the New project sheet and then
+/// its first bot.
 struct NewProjectButton: View {
     @Environment(Fleet.self) private var fleet
     var prominent = false
     @State private var creating: Creating?
 
     private enum Creating: Identifiable {
+        /// The guided flow (0.20), on a daemon that starts boards from presets.
+        case flow(computerId: String)
         case project(computerId: String)
         case bot(computerId: String, projectId: String)
 
         var id: String {
             switch self {
+            case .flow(let computer): "flow/\(computer)"
             case .project(let computer): "project/\(computer)"
             case .bot(let computer, let project): "bot/\(computer)/\(project)"
             }
@@ -590,6 +596,12 @@ struct NewProjectButton: View {
         .accessibilityHint(computer == nil ? "Available when a computer is connected" : "")
         .sheet(item: $creating) { item in
             switch item {
+            case .flow(let id):
+                if let computer = fleet.computer(id: id) {
+                    NewProjectFlow(computer: computer)
+                        .computerEnvironment(computer)
+                        .onDisappear { Task { await fleet.home.refresh(computer, force: true) } }
+                }
             case .project(let id):
                 if let computer = fleet.computer(id: id) {
                     NewProjectSheet { project, addBot in
@@ -618,6 +630,18 @@ struct NewProjectButton: View {
     }
 
     private func start() {
-        if let computer { creating = .project(computerId: computer.id) }
+        guard let computer else { return }
+        creating = computer.store.hasGuidedSetup ? .flow(computerId: computer.id) : .project(computerId: computer.id)
+    }
+}
+
+/// A round icon for a card's own suggestions (Retry, Add the first card).
+struct AskGlyphSymbol: View {
+    let symbol: String
+
+    var body: some View {
+        Circle().fill(Tone.needsYou.color.opacity(0.18)).frame(width: 26, height: 26)
+            .overlay { Image(systemName: symbol).font(.system(size: 12, weight: .bold)).foregroundStyle(Tone.needsYou.text) }
+            .accessibilityHidden(true)
     }
 }

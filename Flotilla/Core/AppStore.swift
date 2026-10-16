@@ -47,6 +47,10 @@ final class AppStore {
     @ObservationIgnored var botOnScreen: String?
     /// Daemons this one is paired with; loaded by the network screen.
     var peers: [Peer] = []
+    /// How each project's repository clone went (`repo_clone`, 0.20).
+    var repoClones: [String: RepoClone] = [:]
+    /// Who waits for a project's clone to end.
+    @ObservationIgnored var cloneWaiters: [String: [CheckedContinuation<RepoClone, Never>]] = [:]
 
     var projects: [Project] = []
     /// A release waiting to be installed on this device (H-230): the banner.
@@ -195,6 +199,7 @@ final class AppStore {
     private func statusChanged(_ status: ConnectionStatus) {
         self.status = status
         if status != .connected { latency = nil }
+        if case .disconnected = status { cloneConnectionLost() }
         noteTrouble(status)
         guard status == .connected else { return }
         reconnects += 1
@@ -348,6 +353,8 @@ final class AppStore {
             resolvePermission(frame.str("request_id"))
         case "workers_updated":
             workersRevision[frame.str("project_id"), default: 0] += 1
+        case "repo_clone":
+            cloneUpdated(RepoClone(frame))
         case "browser_tabs":
             let tabs = BrowserTabs(frame)
             guard tabs.botId == watchedBrowser?.botId else { return }
@@ -585,8 +592,11 @@ final class AppStore {
 
     // MARK: Projects and bots
 
-    func createProject(name: String) async throws -> Project {
-        let reply = try await client.request("create_project", ["name": name])
+    /// With `description` when the daemon keeps one (`project_description`, 0.20).
+    func createProject(name: String, description: String = "") async throws -> Project {
+        var fields: JSONDict = ["name": name]
+        if !description.trimmed.isEmpty, capabilities.contains("project_description") { fields["description"] = description.trimmed }
+        let reply = try await client.request("create_project", fields)
         guard let row = reply.dict("project") else {
             throw DaemonError(code: "internal", message: "The Flotilla service did not return the project.")
         }
@@ -606,8 +616,10 @@ final class AppStore {
     /// Only the project is required: without a name the daemon picks "New Bot",
     /// and without a charter the bot starts by asking what it is for.
     func createBot(projectId: String, name: String, description: String, instructions: String,
-                   avatar: String?, engine: BotEngine? = nil, peerId: String? = nil) async throws -> Bot {
+                   avatar: String?, engine: BotEngine? = nil, peerId: String? = nil, lead: Bool = false) async throws -> Bot {
         var fields: JSONDict = ["project_id": projectId]
+        // The project's lead from the start (`create_bot_lead`, 0.20).
+        if lead { fields["lead"] = true }
         if let engine { fields["runtime"] = engine.rawValue }
         // On a peer: the bot runs there, in the linked project, and stands in here.
         if let peerId { fields["peer_id"] = peerId }
