@@ -41,6 +41,10 @@ nonisolated enum Flotilla_Board_V1_ColumnCategory: SwiftProtobuf.Enum, Swift.Cas
   case deploying // = 7
   case done // = 8
   case cancelled // = 9
+
+  /// Between Ready and Doing (0.21.0): a task or bug's assignee reads the
+  /// code and records findings before it may start (guard `start.research`).
+  case research // = 10
   case UNRECOGNIZED(Int)
 
   init() {
@@ -59,6 +63,7 @@ nonisolated enum Flotilla_Board_V1_ColumnCategory: SwiftProtobuf.Enum, Swift.Cas
     case 7: self = .deploying
     case 8: self = .done
     case 9: self = .cancelled
+    case 10: self = .research
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -75,6 +80,7 @@ nonisolated enum Flotilla_Board_V1_ColumnCategory: SwiftProtobuf.Enum, Swift.Cas
     case .deploying: return 7
     case .done: return 8
     case .cancelled: return 9
+    case .research: return 10
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -91,6 +97,7 @@ nonisolated enum Flotilla_Board_V1_ColumnCategory: SwiftProtobuf.Enum, Swift.Cas
     .deploying,
     .done,
     .cancelled,
+    .research,
   ]
 
 }
@@ -248,6 +255,11 @@ nonisolated enum Flotilla_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable 
 
 }
 
+/// A card's type. From 0.21.0 (capability `item_types_v2`) cards are tasks,
+/// design tickets, bugs and spikes: features and epics live in the plan
+/// (plan.proto) and chores became tasks. A 0.21 home refuses creating or
+/// retyping a card to EPIC, FEATURE or CHORE (`new.type_retired`); the values
+/// stay so older homes and clients still decode.
 nonisolated enum Flotilla_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseIterable {
   typealias RawValue = Int
   case unspecified // = 0
@@ -256,6 +268,13 @@ nonisolated enum Flotilla_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseItera
   case bug // = 3
   case spike // = 4
   case chore // = 5
+
+  /// Build something; passes Research before Doing.
+  case task // = 6
+
+  /// Mockups or a spec. Done, it can be linked to the tasks that build it
+  /// (`LINK_KIND_DESIGN`).
+  case design // = 7
   case UNRECOGNIZED(Int)
 
   init() {
@@ -270,6 +289,8 @@ nonisolated enum Flotilla_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseItera
     case 3: self = .bug
     case 4: self = .spike
     case 5: self = .chore
+    case 6: self = .task
+    case 7: self = .design
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -282,6 +303,8 @@ nonisolated enum Flotilla_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseItera
     case .bug: return 3
     case .spike: return 4
     case .chore: return 5
+    case .task: return 6
+    case .design: return 7
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -294,6 +317,8 @@ nonisolated enum Flotilla_Board_V1_ItemType: SwiftProtobuf.Enum, Swift.CaseItera
     .bug,
     .spike,
     .chore,
+    .task,
+    .design,
   ]
 
 }
@@ -534,6 +559,10 @@ nonisolated enum Flotilla_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseItera
   /// A conversation about the item (0.19.0): the chat of a bot invited to
   /// discuss it as a draft. `ref` is the bot's id.
   case thread // = 10
+
+  /// The design ticket a task builds (0.21.0): `ref` is the Design card's id.
+  /// The task shows that card's documents.
+  case design // = 11
   case UNRECOGNIZED(Int)
 
   init() {
@@ -553,6 +582,7 @@ nonisolated enum Flotilla_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseItera
     case 8: self = .itemRelates
     case 9: self = .itemDuplicates
     case 10: self = .thread
+    case 11: self = .design
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -570,6 +600,7 @@ nonisolated enum Flotilla_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseItera
     case .itemRelates: return 8
     case .itemDuplicates: return 9
     case .thread: return 10
+    case .design: return 11
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -587,6 +618,7 @@ nonisolated enum Flotilla_Board_V1_LinkKind: SwiftProtobuf.Enum, Swift.CaseItera
     .itemRelates,
     .itemDuplicates,
     .thread,
+    .design,
   ]
 
 }
@@ -1227,6 +1259,17 @@ nonisolated struct Flotilla_Board_V1_Item: @unchecked Sendable {
     set {_uniqueStorage()._state = newValue}
   }
 
+  /// The plan node it belongs to (0.21.0): a spike or design ticket of an
+  /// initiative or epic in research, or a task of a feature.
+  var planNodeID: String {
+    get {_storage._planNodeID ?? String()}
+    set {_uniqueStorage()._planNodeID = newValue}
+  }
+  /// Returns true if `planNodeID` has been explicitly set.
+  var hasPlanNodeID: Bool {_storage._planNodeID != nil}
+  /// Clears the value of `planNodeID`. Subsequent reads from it will return its default value.
+  mutating func clearPlanNodeID() {_uniqueStorage()._planNodeID = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1367,6 +1410,16 @@ nonisolated struct Flotilla_Board_V1_ItemCard: @unchecked Sendable {
   var hasMoveBlock: Bool {_storage._moveBlock != nil}
   /// Clears the value of `moveBlock`. Subsequent reads from it will return its default value.
   mutating func clearMoveBlock() {_uniqueStorage()._moveBlock = nil}
+
+  /// The plan node it belongs to (0.21.0).
+  var planNodeID: String {
+    get {_storage._planNodeID ?? String()}
+    set {_uniqueStorage()._planNodeID = newValue}
+  }
+  /// Returns true if `planNodeID` has been explicitly set.
+  var hasPlanNodeID: Bool {_storage._planNodeID != nil}
+  /// Clears the value of `planNodeID`. Subsequent reads from it will return its default value.
+  mutating func clearPlanNodeID() {_uniqueStorage()._planNodeID = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1719,7 +1772,7 @@ nonisolated struct Flotilla_Board_V1_Unmet: Sendable {
 fileprivate nonisolated let _protobuf_package = "flotilla.board.v1"
 
 nonisolated extension Flotilla_Board_V1_ColumnCategory: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0COLUMN_CATEGORY_UNSPECIFIED\0\u{1}COLUMN_CATEGORY_INBOX\0\u{1}COLUMN_CATEGORY_READY\0\u{1}COLUMN_CATEGORY_DOING\0\u{1}COLUMN_CATEGORY_REVIEW\0\u{1}COLUMN_CATEGORY_VERIFY\0\u{1}COLUMN_CATEGORY_APPROVAL\0\u{1}COLUMN_CATEGORY_DEPLOYING\0\u{1}COLUMN_CATEGORY_DONE\0\u{1}COLUMN_CATEGORY_CANCELLED\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0COLUMN_CATEGORY_UNSPECIFIED\0\u{1}COLUMN_CATEGORY_INBOX\0\u{1}COLUMN_CATEGORY_READY\0\u{1}COLUMN_CATEGORY_DOING\0\u{1}COLUMN_CATEGORY_REVIEW\0\u{1}COLUMN_CATEGORY_VERIFY\0\u{1}COLUMN_CATEGORY_APPROVAL\0\u{1}COLUMN_CATEGORY_DEPLOYING\0\u{1}COLUMN_CATEGORY_DONE\0\u{1}COLUMN_CATEGORY_CANCELLED\0\u{1}COLUMN_CATEGORY_RESEARCH\0")
 }
 
 nonisolated extension Flotilla_Board_V1_ColumnKind: SwiftProtobuf._ProtoNameProviding {
@@ -1735,7 +1788,7 @@ nonisolated extension Flotilla_Board_V1_Role: SwiftProtobuf._ProtoNameProviding 
 }
 
 nonisolated extension Flotilla_Board_V1_ItemType: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ITEM_TYPE_UNSPECIFIED\0\u{1}ITEM_TYPE_EPIC\0\u{1}ITEM_TYPE_FEATURE\0\u{1}ITEM_TYPE_BUG\0\u{1}ITEM_TYPE_SPIKE\0\u{1}ITEM_TYPE_CHORE\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ITEM_TYPE_UNSPECIFIED\0\u{1}ITEM_TYPE_EPIC\0\u{1}ITEM_TYPE_FEATURE\0\u{1}ITEM_TYPE_BUG\0\u{1}ITEM_TYPE_SPIKE\0\u{1}ITEM_TYPE_CHORE\0\u{1}ITEM_TYPE_TASK\0\u{1}ITEM_TYPE_DESIGN\0")
 }
 
 nonisolated extension Flotilla_Board_V1_Platform: SwiftProtobuf._ProtoNameProviding {
@@ -1759,7 +1812,7 @@ nonisolated extension Flotilla_Board_V1_VerificationResult: SwiftProtobuf._Proto
 }
 
 nonisolated extension Flotilla_Board_V1_LinkKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LINK_KIND_UNSPECIFIED\0\u{1}LINK_KIND_TASK\0\u{1}LINK_KIND_DECISION\0\u{1}LINK_KIND_ARTIFACT\0\u{1}LINK_KIND_BRANCH\0\u{1}LINK_KIND_PR\0\u{1}LINK_KIND_MEETING\0\u{1}LINK_KIND_ITEM_BLOCKS\0\u{1}LINK_KIND_ITEM_RELATES\0\u{1}LINK_KIND_ITEM_DUPLICATES\0\u{1}LINK_KIND_THREAD\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LINK_KIND_UNSPECIFIED\0\u{1}LINK_KIND_TASK\0\u{1}LINK_KIND_DECISION\0\u{1}LINK_KIND_ARTIFACT\0\u{1}LINK_KIND_BRANCH\0\u{1}LINK_KIND_PR\0\u{1}LINK_KIND_MEETING\0\u{1}LINK_KIND_ITEM_BLOCKS\0\u{1}LINK_KIND_ITEM_RELATES\0\u{1}LINK_KIND_ITEM_DUPLICATES\0\u{1}LINK_KIND_THREAD\0\u{1}LINK_KIND_DESIGN\0")
 }
 
 nonisolated extension Flotilla_Board_V1_ItemEventKind: SwiftProtobuf._ProtoNameProviding {
@@ -2332,7 +2385,7 @@ nonisolated extension Flotilla_Board_V1_ItemVerification: SwiftProtobuf.Message,
 
 nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Item"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}seq\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}rank\0\u{3}column_key\0\u{1}category\0\u{1}blocked\0\u{1}assignee\0\u{3}parent_id\0\u{3}release_id\0\u{1}labels\0\u{3}acceptance_criteria\0\u{1}people\0\u{1}verifications\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{3}state_entered_at\0\u{3}done_at\0\u{1}version\0\u{3}board_id\0\u{1}state\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}seq\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}rank\0\u{3}column_key\0\u{1}category\0\u{1}blocked\0\u{1}assignee\0\u{3}parent_id\0\u{3}release_id\0\u{1}labels\0\u{3}acceptance_criteria\0\u{1}people\0\u{1}verifications\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{3}state_entered_at\0\u{3}done_at\0\u{1}version\0\u{3}board_id\0\u{1}state\0\u{3}plan_node_id\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2362,6 +2415,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
     var _version: UInt64 = 0
     var _boardID: String = String()
     var _state: String = String()
+    var _planNodeID: String? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2399,6 +2453,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
       _version = source._version
       _boardID = source._boardID
       _state = source._state
+      _planNodeID = source._planNodeID
     }
   }
 
@@ -2444,6 +2499,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
         case 25: try { try decoder.decodeSingularUInt64Field(value: &_storage._version) }()
         case 26: try { try decoder.decodeSingularStringField(value: &_storage._boardID) }()
         case 27: try { try decoder.decodeSingularStringField(value: &_storage._state) }()
+        case 28: try { try decoder.decodeSingularStringField(value: &_storage._planNodeID) }()
         default: break
         }
       }
@@ -2537,6 +2593,9 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
       if !_storage._state.isEmpty {
         try visitor.visitSingularStringField(value: _storage._state, fieldNumber: 27)
       }
+      try { if let v = _storage._planNodeID {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 28)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2573,6 +2632,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
         if _storage._version != rhs_storage._version {return false}
         if _storage._boardID != rhs_storage._boardID {return false}
         if _storage._state != rhs_storage._state {return false}
+        if _storage._planNodeID != rhs_storage._planNodeID {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -2584,7 +2644,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCard"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0\u{3}plan_node_id\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2607,6 +2667,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
     var _draft: Bool = false
     var _invited: [String] = []
     var _moveBlock: Flotilla_Board_V1_MoveBlock? = nil
+    var _planNodeID: String? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2637,6 +2698,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       _draft = source._draft
       _invited = source._invited
       _moveBlock = source._moveBlock
+      _planNodeID = source._planNodeID
     }
   }
 
@@ -2675,6 +2737,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         case 18: try { try decoder.decodeSingularBoolField(value: &_storage._draft) }()
         case 19: try { try decoder.decodeRepeatedStringField(value: &_storage._invited) }()
         case 20: try { try decoder.decodeSingularMessageField(value: &_storage._moveBlock) }()
+        case 21: try { try decoder.decodeSingularStringField(value: &_storage._planNodeID) }()
         default: break
         }
       }
@@ -2747,6 +2810,9 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       try { if let v = _storage._moveBlock {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
       } }()
+      try { if let v = _storage._planNodeID {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 21)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2776,6 +2842,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         if _storage._draft != rhs_storage._draft {return false}
         if _storage._invited != rhs_storage._invited {return false}
         if _storage._moveBlock != rhs_storage._moveBlock {return false}
+        if _storage._planNodeID != rhs_storage._planNodeID {return false}
         return true
       }
       if !storagesAreEqual {return false}

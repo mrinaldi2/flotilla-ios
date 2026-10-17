@@ -20,6 +20,7 @@ package flotilla.board.v1;
 
 import "google/protobuf/timestamp.proto";
 import "flotilla/board/v1/board.proto";
+import "flotilla/board/v1/plan.proto";
 
 message BoardRequest {
   oneof request {
@@ -76,6 +77,18 @@ message BoardRequest {
     ItemDraftChanges item_draft_changes = 38;
     // The owner taking back one change to a draft (0.19.0 K5).
     ItemDraftUndo item_draft_undo = 39;
+    // The plan (0.21.0, plan.proto; capability `plan_v1`).
+    PlanGet plan_get = 40;
+    PlanNodeGet plan_node_get = 41;
+    PlanEnable plan_enable = 42;
+    PlanCreate plan_create = 43;
+    PlanPropose plan_propose = 44;
+    PlanUpdate plan_update = 45;
+    PlanSubmit plan_submit = 46;
+    PlanRule plan_rule = 47;
+    PlanResearchSkip plan_research_skip = 48;
+    PlanDrop plan_drop = 49;
+    PlanDocRead plan_doc_read = 50;
   }
 }
 
@@ -106,6 +119,14 @@ message BoardResponse {
     AttachmentChunk attachment = 11;
     // To `item_draft_changes`.
     DraftChanges draft_changes = 12;
+    // To `plan_get` and `plan_enable`.
+    PlanTree plan = 13;
+    // To `plan_node_get`.
+    PlanNodeDetail plan_node = 14;
+    // To the plan edits.
+    PlanResult planned = 15;
+    // To `plan_doc_read`.
+    PlanDocContent plan_doc = 16;
   }
 }
 
@@ -113,6 +134,8 @@ message BoardResponse {
 message BoardPush {
   oneof push {
     BoardEvent board_event = 1;
+    // A plan node changed (0.21.0).
+    PlanChange plan_change = 2;
   }
 }
 
@@ -298,6 +321,8 @@ message ItemQuery {
   optional bool blocked = 8;
   // Cards carrying any of these labels (`platform:web`).
   repeated string labels = 9;
+  // Cards of these plan nodes or of their descendants (0.21.0).
+  repeated string plan_node_ids = 10;
 }
 
 // What stands between the item and every other column, for this connection.
@@ -358,6 +383,9 @@ message ItemCreate {
   // Saved as a draft: on no column until the owner finalizes it. The
   // owner's alone.
   optional bool draft = 12;
+  // The plan node it belongs to (0.21.0). On a project with planning on, a
+  // card on an initiative's board must name a node of that initiative.
+  optional string plan_node_id = 13;
 }
 
 // Change an item's fields; never its column or rank.
@@ -378,9 +406,11 @@ message ItemUpdate {
   // The whole list, replacing the old one. A criterion whose text stays the
   // same keeps its check. Fixed once the item reaches Verify.
   StringList acceptance_criteria = 10;
-  // A feature that turns out to be an umbrella becomes an epic. The lead's
-  // or the owner's call.
+  // The lead's or the owner's call. From 0.21.0 only to TASK, DESIGN, BUG
+  // or SPIKE.
   optional ItemType type = 11;
+  // Moves the card to another plan node of the same initiative (0.21.0).
+  optional string plan_node_id = 12;
 }
 
 // A column's WIP limit, set by the owner. Left out, the column has none:

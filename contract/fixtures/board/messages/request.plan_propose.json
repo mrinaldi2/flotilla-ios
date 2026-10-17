@@ -1,0 +1,11 @@
+{
+  "reqId": "44",
+  "boardRequest": {
+    "planPropose": {
+      "projectId": "p1",
+      "parentId": "PL-1",
+      "title": "Combat audio cues",
+      "summary": "Sound could warn players of attacks off screen."
+    }
+  }
+}

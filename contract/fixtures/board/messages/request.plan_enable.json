@@ -1,0 +1,9 @@
+{
+  "reqId": "42",
+  "boardRequest": {
+    "planEnable": {
+      "projectId": "p1",
+      "enabled": true
+    }
+  }
+}

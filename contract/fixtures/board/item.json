@@ -1,7 +1,7 @@
 {
   "id": "H-017",
   "seq": 17,
-  "type": "ITEM_TYPE_FEATURE",
+  "type": "ITEM_TYPE_TASK",
   "title": "Board and dashboard",
   "description": "## Problem\nWork is tracked in a markdown file.",
   "platforms": [

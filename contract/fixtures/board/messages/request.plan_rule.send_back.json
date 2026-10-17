@@ -1,0 +1,11 @@
+{
+  "reqId": "47",
+  "boardRequest": {
+    "planRule": {
+      "id": "PL-4",
+      "expectedVersion": "6",
+      "approve": false,
+      "note": "Say how the cue scales with difficulty."
+    }
+  }
+}

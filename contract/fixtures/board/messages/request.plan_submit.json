@@ -1,0 +1,22 @@
+{
+  "reqId": "46",
+  "boardRequest": {
+    "planSubmit": {
+      "id": "PL-4",
+      "expectedVersion": "5",
+      "docPath": "docs/initiatives/combat-readability/epics/attack-telegraphing/hld.md",
+      "sha": "4e1c9a2",
+      "prNumber": 18,
+      "note": "Second round: risks added.",
+      "children": [
+        {
+          "title": "Wind-up cue per attack tier",
+          "summary": "Telegraph component and per-attack data."
+        },
+        {
+          "title": "Colour-blind telegraph palette"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "reqId": "43",
+  "boardRequest": {
+    "planCreate": {
+      "projectId": "p1",
+      "kind": "PLAN_KIND_GOAL",
+      "title": "Improve the combat user experience",
+      "summary": "Combat satisfaction from 3.1 to 4+/5.",
+      "due": "Playtest round 2"
+    }
+  }
+}

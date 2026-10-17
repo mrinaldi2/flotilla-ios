@@ -1,0 +1,8 @@
+{
+  "reqId": "41",
+  "boardRequest": {
+    "planNodeGet": {
+      "id": "PL-4"
+    }
+  }
+}

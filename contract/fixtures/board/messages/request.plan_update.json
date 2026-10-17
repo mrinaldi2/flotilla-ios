@@ -1,0 +1,11 @@
+{
+  "reqId": "45",
+  "boardRequest": {
+    "planUpdate": {
+      "id": "PL-1",
+      "expectedVersion": "2",
+      "summary": "Combat satisfaction from 3.1 to 4.2/5.",
+      "stage": "PLAN_STAGE_MET"
+    }
+  }
+}

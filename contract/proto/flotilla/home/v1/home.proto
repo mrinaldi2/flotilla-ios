@@ -176,6 +176,7 @@ enum AttentionKind {
   DRAFT_UPDATED = 17;                       // a bot changed a draft since the owner last looked (0.19.0)
   CARD_WAITING = 18;                        // the board keeper: a card waits for the owner's review, went quiet, or can't move (0.19.0)
   BOT_STOPPED = 19;                         // a bot stopped, crashed, or can't run: `bot`, `bot_state` (0.20.0, capability `attention_bot_stopped`)
+  PLAN_GATE = 20;                           // a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
 }
 
 message AttentionRow {
@@ -196,6 +197,7 @@ message AttentionRow {
     uint32 pr_number = 16;                  // pr_review: the PR, in the project's numbering
     string cleanup_job_id = 17;             // cleanup_held: the job (cleanup_resolve)
     string machine = 18;                    // disk_low: the computer (cleanup_now, disk_report)
+    string plan_node_id = 19;               // plan_gate: the node (plan_node_get, plan_rule)
   }
   uint32 relayed_count = 20;                // relayed_rulings only
   string priority = 21;                     // decision only: P0..P3
