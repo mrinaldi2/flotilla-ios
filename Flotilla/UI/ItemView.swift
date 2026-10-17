@@ -95,7 +95,7 @@ struct ItemView: View {
                         SectionTitle("Acceptance criteria")
                     }
                 }
-                AttachmentsSection(attachments: detail.attachments)
+                AttachmentsSection(attachments: detail.attachments, projectId: project)
                 if item.state == "draft", let draftModel, let discussion {
                     DraftSections(detail: detail, projectId: project, board: board, model: draftModel,
                                   discussion: discussion, chatting: $chatting) { await load() }

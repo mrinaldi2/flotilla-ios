@@ -101,6 +101,9 @@ final class AppStore {
     @ObservationIgnored var onCountsChanged: (() -> Void)?
     /// A project's row on the projects home changed (`projects_overview_changed`).
     @ObservationIgnored var onHomeChanged: (() -> Void)?
+    /// Board activity for the toasts (0.20): `board_activity`, and turns starting and ending on a card.
+    @ObservationIgnored var onActivity: ((ActivityNotice) -> Void)?
+    @ObservationIgnored private var turns = TurnTracker()
     /// Bumped by `owner_thread_updated`: the main chat rereads its threads.
     var ownerThreadsVersion = 0
     /// Turns of a bot's chat that are new or changed (`chat_turns`).
@@ -376,6 +379,8 @@ final class AppStore {
             if let comment = frame.dict("comment").map(DecisionComment.init) { append(comment) }
         case "projects_overview_changed":
             onHomeChanged?()
+        case "board_activity":
+            boardActivity(frame)
         case "owner_thread_updated":
             ownerThreadsVersion += 1
         default:
@@ -390,11 +395,23 @@ final class AppStore {
         let previous = bots[index].state
         bots[index].state = state
         bots[index].stateReason = frame.str("reason")
+        if !inBackground, let notice = turns.notice(botId: id, state: state, itemId: frame.optStr("item_id"),
+                                                    itemTitle: frame.optStr("item_title"), bot: bots[index], computerId: defaults.id) {
+            onActivity?(notice)
+        }
         if state != .waitingForApproval { approvals[id] = nil }
         if inBackground, state == .waitingForUser, previous != state {
             notify("\(bots[index].name) is waiting for you", activity[id]?.text ?? "", id: "wait-\(id)",
                    about: (.waiting, id, id))
         }
+    }
+
+    /// Someone moved, assigned or edited a card, or a move was refused.
+    private func boardActivity(_ frame: JSONDict) {
+        guard !inBackground, let activity = try? HomeJSON.decode(BoardActivity.self, frame["activity"]),
+              let notice = ActivityWords.notice(activity, computerId: defaults.id, botName: { self.bot($0)?.name })
+        else { return }
+        onActivity?(notice)
     }
 
     private func permissionArrived(_ request: PermissionRequest) {

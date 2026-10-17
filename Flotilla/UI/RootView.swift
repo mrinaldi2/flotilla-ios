@@ -39,6 +39,12 @@ struct RootView: View {
             }
         }
         .overlay(alignment: .top) { noticeBanner }
+        // What bots do on the boards, wherever the owner is (0.20).
+        .overlay(alignment: .top) {
+            ActivityToastsView { toast in
+                land(HomeLanding(filter: nil, push: .item(computerId: toast.computerId, itemId: toast.itemId)))
+            }
+        }
         .overlay(alignment: .top) { UpdatedToast() }
         .overlay(alignment: .top) { openingBanner }
         // A release approval's Undo and outcome, wherever the owner is (UX-040).
