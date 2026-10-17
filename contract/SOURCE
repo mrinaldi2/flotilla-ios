@@ -1,5 +1,5 @@
 proto/ and fixtures/ come from the Hermes repo at
-c5002b78f4270688ab3117f64c1524e4dae42647
+715a5a1bc042bcd43d78feae7d989d2bed73ed18
 (proto/, crates/bus/fixtures/home/ and crates/bus/fixtures/board/).
 Refresh with scripts/contract/vendor.sh; never edit these files by hand.
 
@@ -124,7 +124,7 @@ abd9d3978192595c5550f7e0eeb9b31012d6334f16a00d6e885249f81801ab4b  fixtures/board
 fe7cd7c99a07ac3ccb20e57c6050e6719bf4cfe6a02d3b88e8ca5c56975dd75e  proto/flotilla/board/v1/board.proto
 ce38ed1e109559a2ce1a0b78ac74c1e64e33394b79c38053262c9a4d3065eda4  proto/flotilla/board/v1/meetings.proto
 560e86d939b6f05161cdfcf9684c483f902d016277a23777fb31652ca97be46c  proto/flotilla/board/v1/releases.proto
-3b78a082cdbcc005ce5247fabb0839eab60481ce5318cf05b027559816418819  proto/flotilla/board/v1/requests.proto
+9768a7ce196eabaef54abc55c95172e0aa1a6ec7c9d2e3391ebf31d91ca4fd10  proto/flotilla/board/v1/requests.proto
 24f4a7565dcb684eb4bafe9ff2d3a0807aa461fa6e6a196f3ee4c22509892741  proto/flotilla/home/v1/home.proto
 53cba03d894b14b34936bdbf04ff308c583d83eb674a8be965f54bed63d54ca4  proto/flotilla/pr/v1/pr.proto
 109baad8463a96bb8ec8b88b63d974b08982739f5b9b4a1c9f0f6c8f184d473e  proto/flotilla/pr/v1/tools.proto
