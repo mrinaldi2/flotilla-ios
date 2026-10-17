@@ -1,0 +1,16 @@
+{
+  "reqId": "46",
+  "boardResponse": {
+    "planned": {
+      "refused": {
+        "unmet": [
+          {
+            "code": "plan.research_open",
+            "text": "Research is still open: CR-14 has no document yet.",
+            "fix": "Attach the spike's research document, or ask the owner to skip research."
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "reqId": "9",
+  "boardRequest": {
+    "itemCreate": {
+      "projectId": "p1",
+      "type": "ITEM_TYPE_TASK",
+      "title": "Play-mode test for hitstop duration",
+      "boardId": "p1/combat-readability",
+      "planNodeId": "PL-6",
+      "draft": true
+    }
+  }
+}

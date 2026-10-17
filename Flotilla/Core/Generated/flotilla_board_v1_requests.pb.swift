@@ -449,6 +449,95 @@ nonisolated struct Flotilla_Board_V1_BoardRequest: Sendable {
     set {request = .itemDraftUndo(newValue)}
   }
 
+  /// The plan (0.21.0, plan.proto; capability `plan_v1`).
+  var planGet: Flotilla_Board_V1_PlanGet {
+    get {
+      if case .planGet(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanGet()
+    }
+    set {request = .planGet(newValue)}
+  }
+
+  var planNodeGet: Flotilla_Board_V1_PlanNodeGet {
+    get {
+      if case .planNodeGet(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanNodeGet()
+    }
+    set {request = .planNodeGet(newValue)}
+  }
+
+  var planEnable: Flotilla_Board_V1_PlanEnable {
+    get {
+      if case .planEnable(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanEnable()
+    }
+    set {request = .planEnable(newValue)}
+  }
+
+  var planCreate: Flotilla_Board_V1_PlanCreate {
+    get {
+      if case .planCreate(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanCreate()
+    }
+    set {request = .planCreate(newValue)}
+  }
+
+  var planPropose: Flotilla_Board_V1_PlanPropose {
+    get {
+      if case .planPropose(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanPropose()
+    }
+    set {request = .planPropose(newValue)}
+  }
+
+  var planUpdate: Flotilla_Board_V1_PlanUpdate {
+    get {
+      if case .planUpdate(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanUpdate()
+    }
+    set {request = .planUpdate(newValue)}
+  }
+
+  var planSubmit: Flotilla_Board_V1_PlanSubmit {
+    get {
+      if case .planSubmit(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanSubmit()
+    }
+    set {request = .planSubmit(newValue)}
+  }
+
+  var planRule: Flotilla_Board_V1_PlanRule {
+    get {
+      if case .planRule(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanRule()
+    }
+    set {request = .planRule(newValue)}
+  }
+
+  var planResearchSkip: Flotilla_Board_V1_PlanResearchSkip {
+    get {
+      if case .planResearchSkip(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanResearchSkip()
+    }
+    set {request = .planResearchSkip(newValue)}
+  }
+
+  var planDrop: Flotilla_Board_V1_PlanDrop {
+    get {
+      if case .planDrop(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanDrop()
+    }
+    set {request = .planDrop(newValue)}
+  }
+
+  var planDocRead: Flotilla_Board_V1_PlanDocRead {
+    get {
+      if case .planDocRead(let v)? = request {return v}
+      return Flotilla_Board_V1_PlanDocRead()
+    }
+    set {request = .planDocRead(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Request: Equatable, Sendable {
@@ -505,6 +594,18 @@ nonisolated struct Flotilla_Board_V1_BoardRequest: Sendable {
     case itemDraftChanges(Flotilla_Board_V1_ItemDraftChanges)
     /// The owner taking back one change to a draft (0.19.0 K5).
     case itemDraftUndo(Flotilla_Board_V1_ItemDraftUndo)
+    /// The plan (0.21.0, plan.proto; capability `plan_v1`).
+    case planGet(Flotilla_Board_V1_PlanGet)
+    case planNodeGet(Flotilla_Board_V1_PlanNodeGet)
+    case planEnable(Flotilla_Board_V1_PlanEnable)
+    case planCreate(Flotilla_Board_V1_PlanCreate)
+    case planPropose(Flotilla_Board_V1_PlanPropose)
+    case planUpdate(Flotilla_Board_V1_PlanUpdate)
+    case planSubmit(Flotilla_Board_V1_PlanSubmit)
+    case planRule(Flotilla_Board_V1_PlanRule)
+    case planResearchSkip(Flotilla_Board_V1_PlanResearchSkip)
+    case planDrop(Flotilla_Board_V1_PlanDrop)
+    case planDocRead(Flotilla_Board_V1_PlanDocRead)
 
   }
 
@@ -627,6 +728,42 @@ nonisolated struct Flotilla_Board_V1_BoardResponse: Sendable {
     set {response = .draftChanges(newValue)}
   }
 
+  /// To `plan_get` and `plan_enable`.
+  var plan: Flotilla_Board_V1_PlanTree {
+    get {
+      if case .plan(let v)? = response {return v}
+      return Flotilla_Board_V1_PlanTree()
+    }
+    set {response = .plan(newValue)}
+  }
+
+  /// To `plan_node_get`.
+  var planNode: Flotilla_Board_V1_PlanNodeDetail {
+    get {
+      if case .planNode(let v)? = response {return v}
+      return Flotilla_Board_V1_PlanNodeDetail()
+    }
+    set {response = .planNode(newValue)}
+  }
+
+  /// To the plan edits.
+  var planned: Flotilla_Board_V1_PlanResult {
+    get {
+      if case .planned(let v)? = response {return v}
+      return Flotilla_Board_V1_PlanResult()
+    }
+    set {response = .planned(newValue)}
+  }
+
+  /// To `plan_doc_read`.
+  var planDoc: Flotilla_Board_V1_PlanDocContent {
+    get {
+      if case .planDoc(let v)? = response {return v}
+      return Flotilla_Board_V1_PlanDocContent()
+    }
+    set {response = .planDoc(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Response: Equatable, Sendable {
@@ -655,6 +792,14 @@ nonisolated struct Flotilla_Board_V1_BoardResponse: Sendable {
     case attachment(Flotilla_Board_V1_AttachmentChunk)
     /// To `item_draft_changes`.
     case draftChanges(Flotilla_Board_V1_DraftChanges)
+    /// To `plan_get` and `plan_enable`.
+    case plan(Flotilla_Board_V1_PlanTree)
+    /// To `plan_node_get`.
+    case planNode(Flotilla_Board_V1_PlanNodeDetail)
+    /// To the plan edits.
+    case planned(Flotilla_Board_V1_PlanResult)
+    /// To `plan_doc_read`.
+    case planDoc(Flotilla_Board_V1_PlanDocContent)
 
   }
 
@@ -677,10 +822,21 @@ nonisolated struct Flotilla_Board_V1_BoardPush: Sendable {
     set {push = .boardEvent(newValue)}
   }
 
+  /// A plan node changed (0.21.0).
+  var planChange: Flotilla_Board_V1_PlanChange {
+    get {
+      if case .planChange(let v)? = push {return v}
+      return Flotilla_Board_V1_PlanChange()
+    }
+    set {push = .planChange(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Push: Equatable, Sendable {
     case boardEvent(Flotilla_Board_V1_BoardEvent)
+    /// A plan node changed (0.21.0).
+    case planChange(Flotilla_Board_V1_PlanChange)
 
   }
 
@@ -1270,6 +1426,9 @@ nonisolated struct Flotilla_Board_V1_ItemQuery: Sendable {
   /// Cards carrying any of these labels (`platform:web`).
   var labels: [String] = []
 
+  /// Cards of these plan nodes or of their descendants (0.21.0).
+  var planNodeIds: [String] = []
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1454,6 +1613,17 @@ nonisolated struct Flotilla_Board_V1_ItemCreate: Sendable {
   /// Clears the value of `draft`. Subsequent reads from it will return its default value.
   mutating func clearDraft() {self._draft = nil}
 
+  /// The plan node it belongs to (0.21.0). On a project with planning on, a
+  /// card on an initiative's board must name a node of that initiative.
+  var planNodeID: String {
+    get {_planNodeID ?? String()}
+    set {_planNodeID = newValue}
+  }
+  /// Returns true if `planNodeID` has been explicitly set.
+  var hasPlanNodeID: Bool {self._planNodeID != nil}
+  /// Clears the value of `planNodeID`. Subsequent reads from it will return its default value.
+  mutating func clearPlanNodeID() {self._planNodeID = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1464,6 +1634,7 @@ nonisolated struct Flotilla_Board_V1_ItemCreate: Sendable {
   fileprivate var _parentID: String? = nil
   fileprivate var _boardID: String? = nil
   fileprivate var _draft: Bool? = nil
+  fileprivate var _planNodeID: String? = nil
 }
 
 /// Change an item's fields; never its column or rank.
@@ -1554,8 +1725,8 @@ nonisolated struct Flotilla_Board_V1_ItemUpdate: Sendable {
   /// Clears the value of `acceptanceCriteria`. Subsequent reads from it will return its default value.
   mutating func clearAcceptanceCriteria() {self._acceptanceCriteria = nil}
 
-  /// A feature that turns out to be an umbrella becomes an epic. The lead's
-  /// or the owner's call.
+  /// The lead's or the owner's call. From 0.21.0 only to TASK, DESIGN, BUG
+  /// or SPIKE.
   var type: Flotilla_Board_V1_ItemType {
     get {_type ?? .unspecified}
     set {_type = newValue}
@@ -1564,6 +1735,16 @@ nonisolated struct Flotilla_Board_V1_ItemUpdate: Sendable {
   var hasType: Bool {self._type != nil}
   /// Clears the value of `type`. Subsequent reads from it will return its default value.
   mutating func clearType() {self._type = nil}
+
+  /// Moves the card to another plan node of the same initiative (0.21.0).
+  var planNodeID: String {
+    get {_planNodeID ?? String()}
+    set {_planNodeID = newValue}
+  }
+  /// Returns true if `planNodeID` has been explicitly set.
+  var hasPlanNodeID: Bool {self._planNodeID != nil}
+  /// Clears the value of `planNodeID`. Subsequent reads from it will return its default value.
+  mutating func clearPlanNodeID() {self._planNodeID = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1578,6 +1759,7 @@ nonisolated struct Flotilla_Board_V1_ItemUpdate: Sendable {
   fileprivate var _parentID: String? = nil
   fileprivate var _acceptanceCriteria: Flotilla_Board_V1_StringList? = nil
   fileprivate var _type: Flotilla_Board_V1_ItemType? = nil
+  fileprivate var _planNodeID: String? = nil
 }
 
 /// A column's WIP limit, set by the owner. Left out, the column has none:
@@ -2825,7 +3007,7 @@ nonisolated extension Flotilla_Board_V1_BoardEventKind: SwiftProtobuf._ProtoName
 
 nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_get\0\u{3}item_get\0\u{3}item_history\0\u{3}item_query\0\u{3}item_move_check\0\u{3}item_move\0\u{3}board_watch\0\u{3}board_unwatch\0\u{3}item_create\0\u{3}item_update\0\u{3}item_comment\0\u{3}item_link\0\u{3}item_unlink\0\u{3}item_block\0\u{3}item_unblock\0\u{3}item_assign\0\u{3}item_rank\0\u{3}item_check_ac\0\u{3}board_enable\0\u{3}column_set_limit\0\u{3}role_set\0\u{3}item_flag_ac\0\u{3}board_list\0\u{3}board_create\0\u{3}board_update\0\u{3}column_add\0\u{3}column_update\0\u{3}column_remove\0\u{3}automation_set\0\u{3}board_proposal_rule\0\u{3}item_attach\0\u{3}item_detach\0\u{3}attachment_upload\0\u{3}attachment_read\0\u{3}item_invite\0\u{3}item_finalize\0\u{3}item_discard\0\u{3}item_draft_changes\0\u{3}item_draft_undo\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_get\0\u{3}item_get\0\u{3}item_history\0\u{3}item_query\0\u{3}item_move_check\0\u{3}item_move\0\u{3}board_watch\0\u{3}board_unwatch\0\u{3}item_create\0\u{3}item_update\0\u{3}item_comment\0\u{3}item_link\0\u{3}item_unlink\0\u{3}item_block\0\u{3}item_unblock\0\u{3}item_assign\0\u{3}item_rank\0\u{3}item_check_ac\0\u{3}board_enable\0\u{3}column_set_limit\0\u{3}role_set\0\u{3}item_flag_ac\0\u{3}board_list\0\u{3}board_create\0\u{3}board_update\0\u{3}column_add\0\u{3}column_update\0\u{3}column_remove\0\u{3}automation_set\0\u{3}board_proposal_rule\0\u{3}item_attach\0\u{3}item_detach\0\u{3}attachment_upload\0\u{3}attachment_read\0\u{3}item_invite\0\u{3}item_finalize\0\u{3}item_discard\0\u{3}item_draft_changes\0\u{3}item_draft_undo\0\u{3}plan_get\0\u{3}plan_node_get\0\u{3}plan_enable\0\u{3}plan_create\0\u{3}plan_propose\0\u{3}plan_update\0\u{3}plan_submit\0\u{3}plan_rule\0\u{3}plan_research_skip\0\u{3}plan_drop\0\u{3}plan_doc_read\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3340,6 +3522,149 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
           self.request = .itemDraftUndo(v)
         }
       }()
+      case 40: try {
+        var v: Flotilla_Board_V1_PlanGet?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planGet(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planGet(v)
+        }
+      }()
+      case 41: try {
+        var v: Flotilla_Board_V1_PlanNodeGet?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planNodeGet(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planNodeGet(v)
+        }
+      }()
+      case 42: try {
+        var v: Flotilla_Board_V1_PlanEnable?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planEnable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planEnable(v)
+        }
+      }()
+      case 43: try {
+        var v: Flotilla_Board_V1_PlanCreate?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planCreate(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planCreate(v)
+        }
+      }()
+      case 44: try {
+        var v: Flotilla_Board_V1_PlanPropose?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planPropose(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planPropose(v)
+        }
+      }()
+      case 45: try {
+        var v: Flotilla_Board_V1_PlanUpdate?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planUpdate(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planUpdate(v)
+        }
+      }()
+      case 46: try {
+        var v: Flotilla_Board_V1_PlanSubmit?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planSubmit(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planSubmit(v)
+        }
+      }()
+      case 47: try {
+        var v: Flotilla_Board_V1_PlanRule?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planRule(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planRule(v)
+        }
+      }()
+      case 48: try {
+        var v: Flotilla_Board_V1_PlanResearchSkip?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planResearchSkip(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planResearchSkip(v)
+        }
+      }()
+      case 49: try {
+        var v: Flotilla_Board_V1_PlanDrop?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planDrop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planDrop(v)
+        }
+      }()
+      case 50: try {
+        var v: Flotilla_Board_V1_PlanDocRead?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .planDocRead(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .planDocRead(v)
+        }
+      }()
       default: break
       }
     }
@@ -3507,6 +3832,50 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
       guard case .itemDraftUndo(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 39)
     }()
+    case .planGet?: try {
+      guard case .planGet(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
+    }()
+    case .planNodeGet?: try {
+      guard case .planNodeGet(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 41)
+    }()
+    case .planEnable?: try {
+      guard case .planEnable(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
+    }()
+    case .planCreate?: try {
+      guard case .planCreate(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
+    }()
+    case .planPropose?: try {
+      guard case .planPropose(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
+    }()
+    case .planUpdate?: try {
+      guard case .planUpdate(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 45)
+    }()
+    case .planSubmit?: try {
+      guard case .planSubmit(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 46)
+    }()
+    case .planRule?: try {
+      guard case .planRule(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 47)
+    }()
+    case .planResearchSkip?: try {
+      guard case .planResearchSkip(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 48)
+    }()
+    case .planDrop?: try {
+      guard case .planDrop(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 49)
+    }()
+    case .planDocRead?: try {
+      guard case .planDocRead(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 50)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3521,7 +3890,7 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
 
 nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}board\0\u{1}item\0\u{1}history\0\u{1}items\0\u{3}move_check\0\u{1}moved\0\u{1}unwatched\0\u{1}edited\0\u{1}structure\0\u{1}upload\0\u{1}attachment\0\u{3}draft_changes\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}board\0\u{1}item\0\u{1}history\0\u{1}items\0\u{3}move_check\0\u{1}moved\0\u{1}unwatched\0\u{1}edited\0\u{1}structure\0\u{1}upload\0\u{1}attachment\0\u{3}draft_changes\0\u{1}plan\0\u{3}plan_node\0\u{1}planned\0\u{3}plan_doc\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3685,6 +4054,58 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
           self.response = .draftChanges(v)
         }
       }()
+      case 13: try {
+        var v: Flotilla_Board_V1_PlanTree?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .plan(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .plan(v)
+        }
+      }()
+      case 14: try {
+        var v: Flotilla_Board_V1_PlanNodeDetail?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .planNode(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .planNode(v)
+        }
+      }()
+      case 15: try {
+        var v: Flotilla_Board_V1_PlanResult?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .planned(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .planned(v)
+        }
+      }()
+      case 16: try {
+        var v: Flotilla_Board_V1_PlanDocContent?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .planDoc(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .planDoc(v)
+        }
+      }()
       default: break
       }
     }
@@ -3744,6 +4165,22 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
       guard case .draftChanges(let v)? = self.response else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
+    case .plan?: try {
+      guard case .plan(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .planNode?: try {
+      guard case .planNode(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case .planned?: try {
+      guard case .planned(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case .planDoc?: try {
+      guard case .planDoc(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3758,7 +4195,7 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardPush"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_event\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_event\0\u{3}plan_change\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3779,6 +4216,19 @@ nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftP
           self.push = .boardEvent(v)
         }
       }()
+      case 2: try {
+        var v: Flotilla_Board_V1_PlanChange?
+        var hadOneofValue = false
+        if let current = self.push {
+          hadOneofValue = true
+          if case .planChange(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.push = .planChange(v)
+        }
+      }()
       default: break
       }
     }
@@ -3789,9 +4239,17 @@ nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftP
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .boardEvent(let v)? = self.push {
+    switch self.push {
+    case .boardEvent?: try {
+      guard case .boardEvent(let v)? = self.push else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
+    }()
+    case .planChange?: try {
+      guard case .planChange(let v)? = self.push else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4499,7 +4957,7 @@ nonisolated extension Flotilla_Board_V1_ItemHistory: SwiftProtobuf.Message, Swif
 
 nonisolated extension Flotilla_Board_V1_ItemQuery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemQuery"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}text\0\u{3}column_keys\0\u{1}assignee\0\u{1}types\0\u{1}priorities\0\u{1}platforms\0\u{1}blocked\0\u{1}labels\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}text\0\u{3}column_keys\0\u{1}assignee\0\u{1}types\0\u{1}priorities\0\u{1}platforms\0\u{1}blocked\0\u{1}labels\0\u{3}plan_node_ids\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4516,6 +4974,7 @@ nonisolated extension Flotilla_Board_V1_ItemQuery: SwiftProtobuf.Message, SwiftP
       case 7: try { try decoder.decodeRepeatedEnumField(value: &self.platforms) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self._blocked) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.labels) }()
+      case 10: try { try decoder.decodeRepeatedStringField(value: &self.planNodeIds) }()
       default: break
       }
     }
@@ -4553,6 +5012,9 @@ nonisolated extension Flotilla_Board_V1_ItemQuery: SwiftProtobuf.Message, SwiftP
     if !self.labels.isEmpty {
       try visitor.visitRepeatedStringField(value: self.labels, fieldNumber: 9)
     }
+    if !self.planNodeIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.planNodeIds, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4566,6 +5028,7 @@ nonisolated extension Flotilla_Board_V1_ItemQuery: SwiftProtobuf.Message, SwiftP
     if lhs.platforms != rhs.platforms {return false}
     if lhs._blocked != rhs._blocked {return false}
     if lhs.labels != rhs.labels {return false}
+    if lhs.planNodeIds != rhs.planNodeIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4747,7 +5210,7 @@ nonisolated extension Flotilla_Board_V1_PlatformList: SwiftProtobuf.Message, Swi
 
 nonisolated extension Flotilla_Board_V1_ItemCreate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCreate"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}labels\0\u{3}parent_id\0\u{3}acceptance_criteria\0\u{3}board_id\0\u{1}draft\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}type\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}labels\0\u{3}parent_id\0\u{3}acceptance_criteria\0\u{3}board_id\0\u{1}draft\0\u{3}plan_node_id\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4767,6 +5230,7 @@ nonisolated extension Flotilla_Board_V1_ItemCreate: SwiftProtobuf.Message, Swift
       case 10: try { try decoder.decodeRepeatedStringField(value: &self.acceptanceCriteria) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self._boardID) }()
       case 12: try { try decoder.decodeSingularBoolField(value: &self._draft) }()
+      case 13: try { try decoder.decodeSingularStringField(value: &self._planNodeID) }()
       default: break
       }
     }
@@ -4813,6 +5277,9 @@ nonisolated extension Flotilla_Board_V1_ItemCreate: SwiftProtobuf.Message, Swift
     try { if let v = self._draft {
       try visitor.visitSingularBoolField(value: v, fieldNumber: 12)
     } }()
+    try { if let v = self._planNodeID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4829,6 +5296,7 @@ nonisolated extension Flotilla_Board_V1_ItemCreate: SwiftProtobuf.Message, Swift
     if lhs.acceptanceCriteria != rhs.acceptanceCriteria {return false}
     if lhs._boardID != rhs._boardID {return false}
     if lhs._draft != rhs._draft {return false}
+    if lhs._planNodeID != rhs._planNodeID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4836,7 +5304,7 @@ nonisolated extension Flotilla_Board_V1_ItemCreate: SwiftProtobuf.Message, Swift
 
 nonisolated extension Flotilla_Board_V1_ItemUpdate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemUpdate"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}expected_version\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}labels\0\u{3}parent_id\0\u{3}acceptance_criteria\0\u{1}type\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}expected_version\0\u{1}title\0\u{1}description\0\u{1}platforms\0\u{1}size\0\u{1}priority\0\u{1}labels\0\u{3}parent_id\0\u{3}acceptance_criteria\0\u{1}type\0\u{3}plan_node_id\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4855,6 +5323,7 @@ nonisolated extension Flotilla_Board_V1_ItemUpdate: SwiftProtobuf.Message, Swift
       case 9: try { try decoder.decodeSingularStringField(value: &self._parentID) }()
       case 10: try { try decoder.decodeSingularMessageField(value: &self._acceptanceCriteria) }()
       case 11: try { try decoder.decodeSingularEnumField(value: &self._type) }()
+      case 12: try { try decoder.decodeSingularStringField(value: &self._planNodeID) }()
       default: break
       }
     }
@@ -4898,6 +5367,9 @@ nonisolated extension Flotilla_Board_V1_ItemUpdate: SwiftProtobuf.Message, Swift
     try { if let v = self._type {
       try visitor.visitSingularEnumField(value: v, fieldNumber: 11)
     } }()
+    try { if let v = self._planNodeID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 12)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4913,6 +5385,7 @@ nonisolated extension Flotilla_Board_V1_ItemUpdate: SwiftProtobuf.Message, Swift
     if lhs._parentID != rhs._parentID {return false}
     if lhs._acceptanceCriteria != rhs._acceptanceCriteria {return false}
     if lhs._type != rhs._type {return false}
+    if lhs._planNodeID != rhs._planNodeID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

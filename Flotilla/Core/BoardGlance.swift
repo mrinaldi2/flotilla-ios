@@ -192,7 +192,8 @@ enum MiniBoard {
         return switch column.category.lowercased() {
         case "inbox": .todo
         case "ready": .ready
-        case "doing", "deploying": .doing
+        // Research (0.21) is where a task's bot reads the code before Doing.
+        case "research", "doing", "deploying": .doing
         case "review": .review
         case "verify", "approval": .verify
         case "done": .done
@@ -356,7 +357,7 @@ enum AskAction {
         case .ownerQuestion: return "Answer"
         case .decision: return "Decide"
         case .permissionPrompt: return "Approve"
-        case .releaseAwaiting, .draftUpdated, .prReview: return "Review"
+        case .releaseAwaiting, .draftUpdated, .prReview, .planGate: return "Review"
         default: return "Open"
         }
     }
@@ -366,7 +367,8 @@ extension NeedsDestination {
     /// The computer its screen talks to; nil for a note.
     var computerId: String? {
         switch self {
-        case .decision(let id, _), .bot(let id, _, _), .item(let id, _), .reply(let id, _, _), .release(let id, _): id
+        case .decision(let id, _), .bot(let id, _, _), .item(let id, _), .reply(let id, _, _), .release(let id, _),
+             .planNode(let id, _, _): id
         case .note: nil
         }
     }

@@ -1,0 +1,12 @@
+{
+  "reqId": "50",
+  "boardRequest": {
+    "planDocRead": {
+      "projectId": "p1",
+      "path": "docs/initiatives/combat-readability/prd.md",
+      "diffFrom": "77ad310",
+      "offset": "0",
+      "limit": 524288
+    }
+  }
+}

@@ -36,10 +36,14 @@ enum DocumentSource: Hashable {
     case artifact(projectId: String, path: String, name: String)
     /// A bot's file (its folder or the artifacts), by the path it gave.
     case botFile(botId: String, path: String, name: String)
+    /// A plan document in the project's repository (0.21, `plan_doc_read`),
+    /// at a commit (the one approved or submitted), else the default branch's
+    /// head; a page's files are read beside it at the same commit.
+    case planDoc(projectId: String, path: String, sha: String?, name: String)
 
     var name: String {
         switch self {
-        case .attachment(_, let name, _), .artifact(_, _, let name), .botFile(_, _, let name): name
+        case .attachment(_, let name, _), .artifact(_, _, let name), .botFile(_, _, let name), .planDoc(_, _, _, let name): name
         }
     }
 
@@ -47,7 +51,7 @@ enum DocumentSource: Hashable {
     var path: String {
         switch self {
         case .attachment(_, let name, _): (name as NSString).lastPathComponent
-        case .artifact(_, let path, _), .botFile(_, let path, _): path
+        case .artifact(_, let path, _), .botFile(_, let path, _), .planDoc(_, let path, _, _): path
         }
     }
 }
@@ -109,6 +113,8 @@ extension AppStore {
             return Self.document(try await readArtifact(projectId: projectId, path: path))
         case .botFile(let botId, _, _):
             return Self.document(try await readFile(botId: botId, path: path))
+        case .planDoc(let projectId, _, let sha, _):
+            return try await planDocument(projectId: projectId, path: path, sha: sha)
         }
     }
 

@@ -139,7 +139,7 @@ struct Release: Identifiable {
 
         /// Column names when the board gives none (UX-025 §2, as desktop).
         static func column(_ key: String) -> String {
-            let names = ["inbox": "Inbox", "ready": "Ready", "doing": "Doing", "review": "Review", "verify": "Verify",
+            let names = ["inbox": "Inbox", "ready": "Ready", "research": "Research", "doing": "Doing", "review": "Review", "verify": "Verify",
                          "approval": "Awaiting owner", "deploying": "Deploying", "done": "Done", "cancelled": "Cancelled"]
             return names[key] ?? key.capitalizedFirst
         }

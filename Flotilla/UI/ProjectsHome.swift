@@ -34,6 +34,8 @@ enum NeedsDestination: Hashable {
     /// The card with "Reply to <bot>" open on that comment (H-248, H-210).
     case reply(computerId: String, itemId: String, commentId: String)
     case release(computerId: String, releaseId: String)
+    /// A plan node waiting for the owner (0.21): its gate, on the board's home.
+    case planNode(computerId: String, projectId: String, nodeId: String)
     case note(title: String, text: String)
 }
 
@@ -567,6 +569,12 @@ struct ProjectsHomeView: View {
     @ViewBuilder private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
         if StoppedBot.restarts(row) {
             restartButton(row, card: card, primary: primary, inList: inList)
+        } else if row.kind == .planGate, let on = fleet.computer(daemonId: row.daemonID) ?? fleet.computer(id: card.computerId),
+                  on.store.hasPlanAttention {
+            // A plan gate's two answers (0.21): Review / Later, Accept / Decline, Skip / Keep research.
+            separated(inList) {
+                PlanAskRow(row: row, computer: on, primary: primary) { path.append($0) }
+            }
         } else {
             openButton(row, card: card, primary: primary, inList: inList)
         }
@@ -723,6 +731,9 @@ extension Fleet {
             // The card on the computer that keeps its board, where a comment is
             // accepted (H-210); the bot's computer would refuse it.
             if let home = boardComputer(itemId: id) ?? on { return .item(computerId: home.id, itemId: id) }
+        case .planNodeID(let id)?:
+            // A gate, a proposed initiative or a research skip: ruled on the home that keeps the plan.
+            if let on, on.store.hasPlanAttention { return .planNode(computerId: on.id, projectId: row.projectID, nodeId: id) }
         case .prNumber?, .cleanupJobID?, .machine?, nil:
             // PR reviews, cleanups and disk space are answered on the computer.
             break
@@ -766,6 +777,10 @@ struct NeedsDestinations: ViewModifier {
             case .release(let computerId, let releaseId):
                 if let computer = fleet.computer(id: computerId) {
                     ReleaseView(releaseId: releaseId).computerEnvironment(computer)
+                }
+            case .planNode(let computerId, let projectId, let nodeId):
+                if let computer = fleet.computer(id: computerId) {
+                    PlanGateScreen(projectId: projectId, nodeId: nodeId).computerEnvironment(computer)
                 }
             case .note(let title, let text):
                 NeedsNote(title: title, text: text)
@@ -891,6 +906,7 @@ extension HomeAttentionRow {
         case .servingOff: "Not serving"
         case .ownerQuestion: "Question"
         case .draftUpdated: "Draft updated"
+        case .planGate: "Plan"
         default: "Needs you"
         }
     }
@@ -908,6 +924,7 @@ extension HomeAttentionRow {
         case .servingOff: "wifi.slash"
         case .ownerQuestion: "questionmark.bubble.fill"
         case .draftUpdated: "square.and.pencil"
+        case .planGate: "flag.fill"
         default: "circle"
         }
     }

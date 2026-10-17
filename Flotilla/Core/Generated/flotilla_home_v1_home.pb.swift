@@ -132,6 +132,9 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
 
   /// a bot stopped, crashed, or can't run: `bot`, `bot_state` (0.20.0, capability `attention_bot_stopped`)
   case botStopped // = 19
+
+  /// a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
+  case planGate // = 20
   case UNRECOGNIZED(Int)
 
   init() {
@@ -160,6 +163,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case 17: self = .draftUpdated
     case 18: self = .cardWaiting
     case 19: self = .botStopped
+    case 20: self = .planGate
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -186,6 +190,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case .draftUpdated: return 17
     case .cardWaiting: return 18
     case .botStopped: return 19
+    case .planGate: return 20
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -212,6 +217,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     .draftUpdated,
     .cardWaiting,
     .botStopped,
+    .planGate,
   ]
 
 }
@@ -953,6 +959,15 @@ nonisolated struct Flotilla_Home_V1_AttentionRow: @unchecked Sendable {
     set {_uniqueStorage()._target = .machine(newValue)}
   }
 
+  /// plan_gate: the node (plan_node_get, plan_rule)
+  var planNodeID: String {
+    get {
+      if case .planNodeID(let v)? = _storage._target {return v}
+      return String()
+    }
+    set {_uniqueStorage()._target = .planNodeID(newValue)}
+  }
+
   /// relayed_rulings only
   var relayedCount: UInt32 {
     get {_storage._relayedCount}
@@ -1011,6 +1026,8 @@ nonisolated struct Flotilla_Home_V1_AttentionRow: @unchecked Sendable {
     case cleanupJobID(String)
     /// disk_low: the computer (cleanup_now, disk_report)
     case machine(String)
+    /// plan_gate: the node (plan_node_get, plan_rule)
+    case planNodeID(String)
 
   }
 
@@ -2161,7 +2178,7 @@ nonisolated extension Flotilla_Home_V1_BotStatus: SwiftProtobuf._ProtoNameProvid
 }
 
 nonisolated extension Flotilla_Home_V1_AttentionKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0\u{1}PLAN_GATE\0")
 }
 
 nonisolated extension Flotilla_Home_V1_BoardActivityKind: SwiftProtobuf._ProtoNameProviding {
@@ -2954,7 +2971,7 @@ nonisolated extension Flotilla_Home_V1_AttentionSummary: SwiftProtobuf.Message, 
 
 nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AttentionRow"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{4}\u{2}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{3}plan_node_id\0\u{3}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -3095,6 +3112,14 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
             _storage._target = .machine(v)
           }
         }()
+        case 19: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .planNodeID(v)
+          }
+        }()
         case 20: try { try decoder.decodeSingularUInt32Field(value: &_storage._relayedCount) }()
         case 21: try { try decoder.decodeSingularStringField(value: &_storage._priority) }()
         case 22: try { try decoder.decodeSingularStringField(value: &_storage._questionCommentID) }()
@@ -3169,6 +3194,10 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
       case .machine?: try {
         guard case .machine(let v)? = _storage._target else { preconditionFailure() }
         try visitor.visitSingularStringField(value: v, fieldNumber: 18)
+      }()
+      case .planNodeID?: try {
+        guard case .planNodeID(let v)? = _storage._target else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 19)
       }()
       case nil: break
       }

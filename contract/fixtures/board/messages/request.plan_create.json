@@ -1,0 +1,13 @@
+{
+  "reqId": "43",
+  "boardRequest": {
+    "planCreate": {
+      "projectId": "p1",
+      "kind": "PLAN_KIND_INITIATIVE",
+      "title": "Combat audio cues",
+      "parentId": "PL-1",
+      "summary": "Players with the camera turned away miss attacks.",
+      "lead": "b-lead"
+    }
+  }
+}

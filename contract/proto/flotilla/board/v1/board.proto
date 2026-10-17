@@ -24,6 +24,9 @@ enum ColumnCategory {
   COLUMN_CATEGORY_DEPLOYING = 7;
   COLUMN_CATEGORY_DONE = 8;
   COLUMN_CATEGORY_CANCELLED = 9;
+  // Between Ready and Doing (0.21.0): a task or bug's assignee reads the
+  // code and records findings before it may start (guard `start.research`).
+  COLUMN_CATEGORY_RESEARCH = 10;
 }
 
 // What a column means to the board itself: open (not started), active (WIP,
@@ -58,6 +61,11 @@ enum Role {
   ROLE_REVIEWER_CE = 8;
 }
 
+// A card's type. From 0.21.0 (capability `item_types_v2`) cards are tasks,
+// design tickets, bugs and spikes: features and epics live in the plan
+// (plan.proto) and chores became tasks. A 0.21 home refuses creating or
+// retyping a card to EPIC, FEATURE or CHORE (`new.type_retired`); the values
+// stay so older homes and clients still decode.
 enum ItemType {
   ITEM_TYPE_UNSPECIFIED = 0;
   ITEM_TYPE_EPIC = 1;
@@ -65,6 +73,11 @@ enum ItemType {
   ITEM_TYPE_BUG = 3;
   ITEM_TYPE_SPIKE = 4;
   ITEM_TYPE_CHORE = 5;
+  // Build something; passes Research before Doing.
+  ITEM_TYPE_TASK = 6;
+  // Mockups or a spec. Done, it can be linked to the tasks that build it
+  // (`LINK_KIND_DESIGN`).
+  ITEM_TYPE_DESIGN = 7;
 }
 
 // Deprecated (0.19.0 K8): what 0.18 apps and linked computers read and
@@ -123,6 +136,9 @@ enum LinkKind {
   // A conversation about the item (0.19.0): the chat of a bot invited to
   // discuss it as a draft. `ref` is the bot's id.
   LINK_KIND_THREAD = 10;
+  // The design ticket a task builds (0.21.0): `ref` is the Design card's id.
+  // The task shows that card's documents.
+  LINK_KIND_DESIGN = 11;
 }
 
 // What an item-history event records. Metrics are computed from these.
@@ -313,6 +329,9 @@ message Item {
   // to discuss it), "live", or "discarded" (a draft the owner dropped, kept
   // with its history). Empty from a home older than 0.19, which means live.
   string state = 27;
+  // The plan node it belongs to (0.21.0): a spike or design ticket of an
+  // initiative or epic in research, or a task of a feature.
+  optional string plan_node_id = 28;
 }
 
 // The compact form a board column lists; the drawer fetches the Item.
@@ -349,6 +368,8 @@ message ItemCard {
   // next column's rules stop it. Absent when nothing does, and from a home
   // older than 0.19.0's card-flow fix.
   optional MoveBlock move_block = 20;
+  // The plan node it belongs to (0.21.0).
+  optional string plan_node_id = 21;
 }
 
 // What stops a card, for its "can't move" line. Computed when the card is

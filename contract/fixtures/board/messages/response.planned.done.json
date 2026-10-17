@@ -1,0 +1,70 @@
+{
+  "reqId": "46",
+  "boardResponse": {
+    "planned": {
+      "done": {
+        "id": "PL-4",
+        "projectId": "p1",
+        "kind": "PLAN_KIND_EPIC",
+        "parentId": "PL-2",
+        "title": "Enemy attack telegraphing",
+        "summary": "Players see every attack coming.",
+        "stage": "PLAN_STAGE_HLD",
+        "lead": "b-lead",
+        "boardId": "p1/combat-readability",
+        "docs": [
+          {
+            "kind": "PLAN_DOC_KIND_RESEARCH",
+            "path": "docs/initiatives/combat-readability/epics/attack-telegraphing/research/references.md",
+            "itemId": "CR-12"
+          },
+          {
+            "kind": "PLAN_DOC_KIND_DESIGN",
+            "path": "docs/initiatives/combat-readability/epics/attack-telegraphing/design/design.md",
+            "approvedSha": "9b2f0c1",
+            "approvedAt": "2026-10-15T09:00:00Z"
+          },
+          {
+            "kind": "PLAN_DOC_KIND_HLD",
+            "path": "docs/initiatives/combat-readability/epics/attack-telegraphing/hld.md"
+          }
+        ],
+        "research": {
+          "state": "PLAN_RESEARCH_STATE_CLOSED",
+          "spikes": [
+            "CR-12",
+            "CR-14"
+          ],
+          "closedAt": "2026-10-14T16:00:00Z"
+        },
+        "gate": {
+          "stage": "PLAN_STAGE_HLD",
+          "docPath": "docs/initiatives/combat-readability/epics/attack-telegraphing/hld.md",
+          "sha": "4e1c9a2",
+          "prNumber": 18,
+          "submittedBy": "bot:b-lead",
+          "submittedAt": "2026-10-17T10:00:00Z",
+          "note": "Second round: risks added.",
+          "children": [
+            {
+              "title": "Wind-up cue per attack tier",
+              "summary": "Telegraph component and per-attack data."
+            },
+            {
+              "title": "Colour-blind telegraph palette"
+            }
+          ],
+          "decisionId": "d-41",
+          "round": 2
+        },
+        "cardsTotal": 2,
+        "cardsDone": 2,
+        "createdBy": "user",
+        "createdAt": "2026-10-11T08:00:00Z",
+        "updatedAt": "2026-10-17T10:00:00Z",
+        "version": "6",
+        "rank": "a1"
+      }
+    }
+  }
+}

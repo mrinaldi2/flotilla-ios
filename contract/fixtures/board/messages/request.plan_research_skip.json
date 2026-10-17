@@ -1,0 +1,10 @@
+{
+  "reqId": "48",
+  "boardRequest": {
+    "planResearchSkip": {
+      "id": "PL-2",
+      "expectedVersion": "3",
+      "reason": "Playtest notes already cover it."
+    }
+  }
+}

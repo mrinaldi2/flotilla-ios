@@ -1,0 +1,10 @@
+{
+  "reqId": "49",
+  "boardRequest": {
+    "planDrop": {
+      "id": "PL-9",
+      "expectedVersion": "1",
+      "reason": "Out of scope for the thesis build."
+    }
+  }
+}
