@@ -1,5 +1,5 @@
 proto/ and fixtures/ come from the Hermes repo at
-715a5a1bc042bcd43d78feae7d989d2bed73ed18
+6e0dc6ece76ee01d0740199c38888e89156fd326
 (proto/, crates/bus/fixtures/home/ and crates/bus/fixtures/board/).
 Refresh with scripts/contract/vendor.sh; never edit these files by hand.
 
