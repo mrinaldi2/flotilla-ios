@@ -12,32 +12,32 @@ protocol BoardService: AnyObject {
     func watchBoard(projectId: String) async throws -> BoardSnapshot
     func listen(projectId: String, _ handler: @escaping (BoardEvent) -> Void) -> UUID
     func stopListening(projectId: String, _ token: UUID)
-    func moveCheck(itemId: String) async throws -> Hermes_Board_V1_MoveCheck
-    func move(_ move: Hermes_Board_V1_ItemMove) async throws -> Hermes_Board_V1_MoveResult
+    func moveCheck(itemId: String) async throws -> Flotilla_Board_V1_MoveCheck
+    func move(_ move: Flotilla_Board_V1_ItemMove) async throws -> Flotilla_Board_V1_MoveResult
 }
 
 /// A draft's life: created with its files, discussed, reviewed, finalized or discarded.
 @MainActor
 protocol DraftService: AnyObject {
-    func createItem(_ create: Hermes_Board_V1_ItemCreate) async throws -> Hermes_Board_V1_EditResult
-    func upload(_ chunk: Hermes_Board_V1_AttachmentUpload) async throws -> UInt64
-    func attach(_ attach: Hermes_Board_V1_ItemAttach) async throws -> BoardItemDetail
-    func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges
+    func createItem(_ create: Flotilla_Board_V1_ItemCreate) async throws -> Flotilla_Board_V1_EditResult
+    func upload(_ chunk: Flotilla_Board_V1_AttachmentUpload) async throws -> UInt64
+    func attach(_ attach: Flotilla_Board_V1_ItemAttach) async throws -> BoardItemDetail
+    func draftChanges(itemId: String, markSeen: Bool) async throws -> Flotilla_Board_V1_DraftChanges
     /// Invites a bot to discuss a draft (`item_invite`), or, with `remove`, ends its discussion.
     func invite(itemId: String, botId: String?, remove: Bool) async throws -> BoardItemDetail
     /// The draft as the daemon has it (`item_get`).
     func item(_ id: String) async throws -> BoardItemDetail
-    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult
-    func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult
+    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Flotilla_Board_V1_MoveResult
+    func discard(itemId: String, version: UInt64, reason: String) async throws -> Flotilla_Board_V1_EditResult
     /// Takes back one revision (`item_draft_undo`, K5): the owner's alone.
-    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Flotilla_Board_V1_EditResult
 }
 
 extension AppStore: BoardService, DraftService {
     /// One board request and its response, or the service's refusal as an error.
-    func boardCall(_ request: Hermes_Board_V1_BoardRequest.OneOf_Request, name: String) async throws
-        -> Hermes_Board_V1_BoardResponse.OneOf_Response {
-        var board = Hermes_Board_V1_BoardRequest()
+    func boardCall(_ request: Flotilla_Board_V1_BoardRequest.OneOf_Request, name: String) async throws
+        -> Flotilla_Board_V1_BoardResponse.OneOf_Response {
+        var board = Flotilla_Board_V1_BoardRequest()
         board.request = request
         let envelope = try await client.request(.boardRequest(board), name: name)
         guard case .boardResponse(let response)? = envelope.body, let answer = response.response else {
@@ -53,7 +53,7 @@ extension AppStore: BoardService, DraftService {
     // MARK: Watching
 
     func watchBoard(projectId: String) async throws -> BoardSnapshot {
-        var watch = Hermes_Board_V1_BoardWatch()
+        var watch = Flotilla_Board_V1_BoardWatch()
         watch.projectID = projectId
         guard case .board(let snapshot) = try await boardCall(.boardWatch(watch), name: "board_watch") else { throw unexpected("board_watch") }
         return snapshot
@@ -71,7 +71,7 @@ extension AppStore: BoardService, DraftService {
         guard boardListeners[projectId]?.isEmpty ?? true else { return }
         boardListeners[projectId] = nil
         guard status == .connected else { return }
-        var unwatch = Hermes_Board_V1_BoardUnwatch()
+        var unwatch = Flotilla_Board_V1_BoardUnwatch()
         unwatch.projectID = projectId
         Task {
             // Another screen of the project (a card pushed over the board) may watch it by now.
@@ -81,44 +81,44 @@ extension AppStore: BoardService, DraftService {
     }
 
     /// A binary push: a board event goes to the screens watching its project.
-    func envelopePushed(_ envelope: Hermes_Wire_V1_Envelope) {
+    func envelopePushed(_ envelope: Flotilla_Wire_V1_Envelope) {
         guard case .boardPush(let push)? = envelope.body, case .boardEvent(let event)? = push.push else { return }
         for handler in (boardListeners[event.projectID] ?? [:]).values { handler(event) }
     }
 
     // MARK: Moves
 
-    func moveCheck(itemId: String) async throws -> Hermes_Board_V1_MoveCheck {
-        var check = Hermes_Board_V1_ItemMoveCheck()
+    func moveCheck(itemId: String) async throws -> Flotilla_Board_V1_MoveCheck {
+        var check = Flotilla_Board_V1_ItemMoveCheck()
         check.id = itemId
         guard case .moveCheck(let result) = try await boardCall(.itemMoveCheck(check), name: "item_move_check") else { throw unexpected("item_move_check") }
         return result
     }
 
-    func move(_ move: Hermes_Board_V1_ItemMove) async throws -> Hermes_Board_V1_MoveResult {
+    func move(_ move: Flotilla_Board_V1_ItemMove) async throws -> Flotilla_Board_V1_MoveResult {
         guard case .moved(let result) = try await boardCall(.itemMove(move), name: "item_move") else { throw unexpected("item_move") }
         return result
     }
 
     // MARK: Drafts and attachments
 
-    func createItem(_ create: Hermes_Board_V1_ItemCreate) async throws -> Hermes_Board_V1_EditResult {
+    func createItem(_ create: Flotilla_Board_V1_ItemCreate) async throws -> Flotilla_Board_V1_EditResult {
         guard case .edited(let result) = try await boardCall(.itemCreate(create), name: "item_create") else { throw unexpected("item_create") }
         return result
     }
 
-    func upload(_ chunk: Hermes_Board_V1_AttachmentUpload) async throws -> UInt64 {
+    func upload(_ chunk: Flotilla_Board_V1_AttachmentUpload) async throws -> UInt64 {
         guard case .upload(let progress) = try await boardCall(.attachmentUpload(chunk), name: "attachment_upload") else { throw unexpected("attachment_upload") }
         return progress.received
     }
 
-    func attach(_ attach: Hermes_Board_V1_ItemAttach) async throws -> BoardItemDetail {
+    func attach(_ attach: Flotilla_Board_V1_ItemAttach) async throws -> BoardItemDetail {
         guard case .item(let detail) = try await boardCall(.itemAttach(attach), name: "item_attach") else { throw unexpected("item_attach") }
         return detail
     }
 
-    func draftChanges(itemId: String, markSeen: Bool) async throws -> Hermes_Board_V1_DraftChanges {
-        var changes = Hermes_Board_V1_ItemDraftChanges()
+    func draftChanges(itemId: String, markSeen: Bool) async throws -> Flotilla_Board_V1_DraftChanges {
+        var changes = Flotilla_Board_V1_ItemDraftChanges()
         changes.id = itemId
         if markSeen { changes.markSeen = true }
         guard case .draftChanges(let result) = try await boardCall(.itemDraftChanges(changes), name: "item_draft_changes") else {
@@ -128,7 +128,7 @@ extension AppStore: BoardService, DraftService {
     }
 
     func invite(itemId: String, botId: String?, remove: Bool) async throws -> BoardItemDetail {
-        var invite = Hermes_Board_V1_ItemInvite()
+        var invite = Flotilla_Board_V1_ItemInvite()
         invite.id = itemId
         if let botId { invite.bot = botId }
         if remove { invite.remove = true }
@@ -136,8 +136,8 @@ extension AppStore: BoardService, DraftService {
         return detail
     }
 
-    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Hermes_Board_V1_MoveResult {
-        var finalize = Hermes_Board_V1_ItemFinalize()
+    func finalize(itemId: String, version: UInt64, column: String?) async throws -> Flotilla_Board_V1_MoveResult {
+        var finalize = Flotilla_Board_V1_ItemFinalize()
         finalize.id = itemId
         finalize.expectedVersion = version
         if let column { finalize.column = column }
@@ -145,8 +145,8 @@ extension AppStore: BoardService, DraftService {
         return result
     }
 
-    func discard(itemId: String, version: UInt64, reason: String) async throws -> Hermes_Board_V1_EditResult {
-        var discard = Hermes_Board_V1_ItemDiscard()
+    func discard(itemId: String, version: UInt64, reason: String) async throws -> Flotilla_Board_V1_EditResult {
+        var discard = Flotilla_Board_V1_ItemDiscard()
         discard.id = itemId
         discard.expectedVersion = version
         discard.reason = reason
@@ -154,8 +154,8 @@ extension AppStore: BoardService, DraftService {
         return result
     }
 
-    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Hermes_Board_V1_EditResult {
-        var undo = Hermes_Board_V1_ItemDraftUndo()
+    func undo(itemId: String, version: UInt64, revision: Int64) async throws -> Flotilla_Board_V1_EditResult {
+        var undo = Flotilla_Board_V1_ItemDraftUndo()
         undo.id = itemId
         undo.expectedVersion = version
         undo.revision = revision
@@ -167,7 +167,7 @@ extension AppStore: BoardService, DraftService {
     func attachmentData(_ id: String) async throws -> Data {
         var data = Data()
         while true {
-            var read = Hermes_Board_V1_AttachmentRead()
+            var read = Flotilla_Board_V1_AttachmentRead()
             read.attachmentID = id
             read.offset = UInt64(data.count)
             guard case .attachment(let chunk) = try await boardCall(.attachmentRead(read), name: "attachment_read") else {
@@ -182,7 +182,7 @@ extension AppStore: BoardService, DraftService {
 
     /// The owner's answer to a lead's proposed board change (`approve`).
     func ruleProposal(_ id: String, approve: Bool, note: String?) async throws {
-        var rule = Hermes_Board_V1_BoardProposalRule()
+        var rule = Flotilla_Board_V1_BoardProposalRule()
         rule.proposalID = id
         rule.approve = approve
         if let note, !note.isEmpty { rule.note = note }

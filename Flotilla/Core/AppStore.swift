@@ -47,6 +47,10 @@ final class AppStore {
     @ObservationIgnored var botOnScreen: String?
     /// Daemons this one is paired with; loaded by the network screen.
     var peers: [Peer] = []
+    /// How each project's repository clone went (`repo_clone`, 0.20).
+    var repoClones: [String: RepoClone] = [:]
+    /// Who waits for a project's clone to end.
+    @ObservationIgnored var cloneWaiters: [String: [CheckedContinuation<RepoClone, Never>]] = [:]
 
     var projects: [Project] = []
     /// A release waiting to be installed on this device (H-230): the banner.
@@ -97,6 +101,9 @@ final class AppStore {
     @ObservationIgnored var onCountsChanged: (() -> Void)?
     /// A project's row on the projects home changed (`projects_overview_changed`).
     @ObservationIgnored var onHomeChanged: (() -> Void)?
+    /// Board activity for the toasts (0.20): `board_activity`, and turns starting and ending on a card.
+    @ObservationIgnored var onActivity: ((ActivityNotice) -> Void)?
+    @ObservationIgnored private var turns = TurnTracker()
     /// Bumped by `owner_thread_updated`: the main chat rereads its threads.
     var ownerThreadsVersion = 0
     /// Turns of a bot's chat that are new or changed (`chat_turns`).
@@ -195,6 +202,7 @@ final class AppStore {
     private func statusChanged(_ status: ConnectionStatus) {
         self.status = status
         if status != .connected { latency = nil }
+        if case .disconnected = status { cloneConnectionLost() }
         noteTrouble(status)
         guard status == .connected else { return }
         reconnects += 1
@@ -348,6 +356,8 @@ final class AppStore {
             resolvePermission(frame.str("request_id"))
         case "workers_updated":
             workersRevision[frame.str("project_id"), default: 0] += 1
+        case "repo_clone":
+            cloneUpdated(RepoClone(frame))
         case "browser_tabs":
             let tabs = BrowserTabs(frame)
             guard tabs.botId == watchedBrowser?.botId else { return }
@@ -369,6 +379,8 @@ final class AppStore {
             if let comment = frame.dict("comment").map(DecisionComment.init) { append(comment) }
         case "projects_overview_changed":
             onHomeChanged?()
+        case "board_activity":
+            boardActivity(frame)
         case "owner_thread_updated":
             ownerThreadsVersion += 1
         default:
@@ -383,11 +395,23 @@ final class AppStore {
         let previous = bots[index].state
         bots[index].state = state
         bots[index].stateReason = frame.str("reason")
+        if !inBackground, let notice = turns.notice(botId: id, state: state, itemId: frame.optStr("item_id"),
+                                                    itemTitle: frame.optStr("item_title"), bot: bots[index], computerId: defaults.id) {
+            onActivity?(notice)
+        }
         if state != .waitingForApproval { approvals[id] = nil }
         if inBackground, state == .waitingForUser, previous != state {
             notify("\(bots[index].name) is waiting for you", activity[id]?.text ?? "", id: "wait-\(id)",
                    about: (.waiting, id, id))
         }
+    }
+
+    /// Someone moved, assigned or edited a card, or a move was refused.
+    private func boardActivity(_ frame: JSONDict) {
+        guard !inBackground, let activity = try? HomeJSON.decode(BoardActivity.self, frame["activity"]),
+              let notice = ActivityWords.notice(activity, computerId: defaults.id, botName: { self.bot($0)?.name })
+        else { return }
+        onActivity?(notice)
     }
 
     private func permissionArrived(_ request: PermissionRequest) {
@@ -585,8 +609,11 @@ final class AppStore {
 
     // MARK: Projects and bots
 
-    func createProject(name: String) async throws -> Project {
-        let reply = try await client.request("create_project", ["name": name])
+    /// With `description` when the daemon keeps one (`project_description`, 0.20).
+    func createProject(name: String, description: String = "") async throws -> Project {
+        var fields: JSONDict = ["name": name]
+        if !description.trimmed.isEmpty, capabilities.contains("project_description") { fields["description"] = description.trimmed }
+        let reply = try await client.request("create_project", fields)
         guard let row = reply.dict("project") else {
             throw DaemonError(code: "internal", message: "The Flotilla service did not return the project.")
         }
@@ -595,11 +622,21 @@ final class AppStore {
         return project
     }
 
+    /// Archives the project with its bots; what it left on disk goes to the
+    /// Trash (the owner's, from the app or a paired device).
+    func deleteProject(_ projectId: String) async throws {
+        _ = try await client.request("delete_project", ["project_id": projectId])
+        projects.removeAll { $0.id == projectId }
+        bots.removeAll { $0.projectId == projectId }
+    }
+
     /// Only the project is required: without a name the daemon picks "New Bot",
     /// and without a charter the bot starts by asking what it is for.
     func createBot(projectId: String, name: String, description: String, instructions: String,
-                   avatar: String?, engine: BotEngine? = nil, peerId: String? = nil) async throws -> Bot {
+                   avatar: String?, engine: BotEngine? = nil, peerId: String? = nil, lead: Bool = false) async throws -> Bot {
         var fields: JSONDict = ["project_id": projectId]
+        // The project's lead from the start (`create_bot_lead`, 0.20).
+        if lead { fields["lead"] = true }
         if let engine { fields["runtime"] = engine.rawValue }
         // On a peer: the bot runs there, in the linked project, and stands in here.
         if let peerId { fields["peer_id"] = peerId }

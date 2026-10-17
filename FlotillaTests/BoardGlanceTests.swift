@@ -48,7 +48,7 @@ final class BoardGlanceTests: XCTestCase {
         if let active { row.lastActivityAt = Google_Protobuf_Timestamp(date: active) }
         row.boardHome = home
         row.members = members.map { id in
-            var member = Hermes_Home_V1_Member()
+            var member = Flotilla_Home_V1_Member()
             member.daemonID = id
             return member
         }

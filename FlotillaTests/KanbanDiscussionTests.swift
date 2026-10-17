@@ -38,18 +38,18 @@ final class KanbanDiscussionTests: XCTestCase {
         let url = Self.fixtures.appendingPathComponent("messages/push.board_event.draft_changed.json")
         var text = try String(contentsOf: url, encoding: .utf8)
         // The vendored fixture is from a draft nobody discusses: no `invited`, which reads as none.
-        let plain = try Hermes_Wire_V1_Envelope(jsonString: text)
+        let plain = try Flotilla_Wire_V1_Envelope(jsonString: text)
         guard case .boardPush(let push)? = plain.body, case .boardEvent(let event)? = push.push else { return XCTFail("not a push") }
         XCTAssertTrue(event.card.draft)
         XCTAssertTrue(event.card.invited.isEmpty)
 
         text = text.replacingOccurrences(of: "\"draft\": true", with: "\"draft\": true,\n        \"invited\": [\"b-lead\", \"b-ios\"]")
-        let envelope = try Hermes_Wire_V1_Envelope(jsonString: text)
+        let envelope = try Flotilla_Wire_V1_Envelope(jsonString: text)
         guard case .boardPush(let filled)? = envelope.body, case .boardEvent(let card)? = filled.push else { return XCTFail("not a push") }
         XCTAssertEqual(card.card.invited, ["b-lead", "b-ios"])
 
         // Through the binary wire, as the phone reads it: field 19.
-        let back = try Hermes_Wire_V1_Envelope(serializedBytes: try envelope.serializedData())
+        let back = try Flotilla_Wire_V1_Envelope(serializedBytes: try envelope.serializedData())
         guard case .boardPush(let wire)? = back.body, case .boardEvent(let wired)? = wire.push else { return XCTFail("not a push") }
         XCTAssertEqual(wired.card.invited, ["b-lead", "b-ios"])
     }

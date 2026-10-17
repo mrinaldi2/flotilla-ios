@@ -13,7 +13,8 @@ struct HomeProjectLink: Hashable, Identifiable {
     var page = Page.overview
 
     enum Page: Hashable {
-        case overview, board, settings
+        /// `newCard`: the Board, with a new card's sheet open (0.20).
+        case overview, board, newCard, settings
     }
 
     var id: String { "\(computerId):\(projectId):\(page)" }
@@ -37,7 +38,7 @@ enum NeedsDestination: Hashable {
 }
 
 extension ReleaseStatusWords {
-    static func pill(_ release: Hermes_Home_V1_ReleaseBrief) -> (String, Tone) {
+    static func pill(_ release: Flotilla_Home_V1_ReleaseBrief) -> (String, Tone) {
         let version = release.version.isEmpty ? "Release" : release.version
         // Something only the owner can give it (H-248): that, before its state.
         if release.ownerBlockerCount > 0 { return (WaitingWords.projectsPill(version), .needsYou) }
@@ -73,6 +74,16 @@ struct ProjectsHomeView: View {
     @State private var expanded: Set<String> = []
     @State private var showingDecisions = false
     @State private var addingLead: HomeProjectLink?
+    /// `bot_stopped` rows whose Restart is on its way.
+    @State private var restarting: Set<String> = []
+    @State private var restartFailed: String?
+    /// A column opened from a card's bar (case 5).
+    @State private var column: ColumnSheetLink?
+    /// Pull-down search, from five projects (§3).
+    @State private var search = ""
+    /// The project whose Delete asks first.
+    @State private var deleting: HomeCard?
+    @State private var deleteFailed: String?
     /// Bumped by every route that lands here (RootView): back to the list,
     /// then the screen in `openNeeds`, if any.
     var landings = 0
@@ -94,7 +105,7 @@ struct ProjectsHomeView: View {
 
     private func shown(_ now: Date = Date()) -> Shown {
         let all = BoardGlance.ordered(feed.cards(fleet.computers), now: now)
-        let visible = all.filter { BoardGlance.matches($0, feed.filter, now: now) }
+        let visible = all.filter { BoardGlance.matches($0, feed.filter, now: now) && BoardGlance.matches($0, search: search) }
         return Shown(all: all,
                      full: visible.filter { BoardGlance.group($0, now: now) != .quiet },
                      quiet: visible.filter { BoardGlance.group($0, now: now) == .quiet },
@@ -107,6 +118,14 @@ struct ProjectsHomeView: View {
             ScrollViewReader { proxy in
                 Group {
                     if sizeClass == .regular { grid(shown) } else { list(shown) }
+                }
+                // Done (F7): the new card, in view.
+                .onChange(of: fleet.creations.highlighted?.projectId) { _, projectId in
+                    guard let projectId, let card = shown.all.first(where: { $0.row.projectID == projectId }) else { return }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        withAnimation { proxy.scrollTo(card.id, anchor: .top) }
+                    }
                 }
                 // "See all in Needs you" on a project's Overview: its list, open, in view.
                 .onChange(of: feed.needsFocus, initial: true) { _, id in
@@ -121,6 +140,18 @@ struct ProjectsHomeView: View {
                 }
             }
             .navigationTitle("Projects")
+            .modifier(GlanceSearch(enabled: shown.all.count >= BoardGlance.filtersFrom, text: $search))
+            .confirmationDialog(deleting.map { "Delete \($0.row.name)?" } ?? "", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                                titleVisibility: .visible, presenting: deleting) { card in
+                Button("Delete project", role: .destructive) { delete(card) }
+            } message: { card in
+                Text(DeleteWords.message(card, computer: fleet.computer(id: card.computerId)?.name ?? "its computer"))
+            }
+            .alert("Couldn't delete", isPresented: Binding(get: { deleteFailed != nil }, set: { if !$0 { deleteFailed = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deleteFailed ?? "")
+            }
             .toolbar {
                 // Every decision, settled ones too (UX-024), as Needs you offered.
                 ToolbarItem(placement: .topBarLeading) {
@@ -129,6 +160,9 @@ struct ProjectsHomeView: View {
                 ToolbarItem(placement: .topBarTrailing) { NewProjectButton() }
             }
             .sheet(isPresented: $showingDecisions) { DecisionsView(openDecision: .constant(nil)) }
+            .sheet(item: $column) { link in
+                ColumnSheet(link: link) { openProject(link.card.showing(.board)) }
+            }
             .sheet(item: $addingLead) { link in
                 if let computer = fleet.computer(id: link.computerId) {
                     NewBotSheet(projectId: link.projectId) { _ in
@@ -137,6 +171,11 @@ struct ProjectsHomeView: View {
                     }
                     .computerEnvironment(computer)
                 }
+            }
+            .alert("Couldn't restart", isPresented: Binding(get: { restartFailed != nil }, set: { if !$0 { restartFailed = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(restartFailed ?? "")
             }
             .refreshable { await feed.refreshAll(fleet.computers, force: true) }
             #if DEBUG
@@ -178,6 +217,10 @@ struct ProjectsHomeView: View {
     }
 
     private func openProject(_ link: HomeProjectLink) {
+        // Opening the new project is what its New mark asked for.
+        if fleet.creations.highlighted.map({ $0.computerId == link.computerId && $0.projectId == link.projectId }) ?? false {
+            fleet.creations.highlighted = nil
+        }
         if let open { open(link) } else { path.append(link) }
     }
 
@@ -380,22 +423,35 @@ struct ProjectsHomeView: View {
     /// The top of a card: opens the project; long press for its actions.
     private func cardBody(_ card: HomeCard) -> some View {
         let link = HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID)
-        let first = (feed.attention[card.id] ?? []).first
+        let first = feed.asks(for: card).first
         let destination = first.map { fleet.needsDestination($0, answeredBy: card.computerId) }
         let action = first.flatMap { row in destination.map { AskAction.label(row, opens: $0) } }
         let available = destination.map { fleet.unavailable($0) == nil } ?? false
         let ask = first.map { row in [row.displayTitle, action, destination.flatMap(fleet.unavailable)].compactMap { $0 }.joined(separator: ", ") }
             ?? (card.row.attention.count > 0 ? AttentionWords.summary(card.row.attention) : nil)
-        return Button { openProject(link) } label: {
-            ProjectCardBody(card: card, bots: fleet.glanceBots(card))
-        }
-        .buttonStyle(GlanceButtonStyle())
+        let columns = MiniBoard.segments(card.row.columns).filter { $0.key != nil }
+        // Not a Button: the columns under its bar are buttons of their own.
+        return ProjectCardBody(card: card, bots: fleet.glanceBots(card), openColumn: { segment in
+            column = segment.key.flatMap { ColumnSheetLink.of(card, key: $0, fleet: fleet) }
+        }, isNew: fleet.creations.isHighlighted(card))
+        .contentShape(Rectangle())
+        .onTapGesture { openProject(link) }
         .hoverEffect(.highlight)
         .contextMenu { cardMenu(card) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(ProjectCardBody.spoken(card, ask: ask))
         .accessibilityHint("Opens the project")
+        .accessibilityAction { openProject(link) }
         .accessibilityActions {
-            if let action, let destination, available {
+            ForEach(columns, id: \.key) { segment in
+                if let key = segment.key, let target = ColumnSheetLink.of(card, key: key, fleet: fleet) {
+                    Button("Open \(segment.name)") { column = target }
+                }
+            }
+            if let first, StoppedBot.restarts(first), fleet.restartUnavailable(first, answeredBy: card.computerId) == nil {
+                Button("Restart") { restart(first, card: card) }
+            } else if let action, let destination, available {
                 Button(action) { path.append(destination) }
             }
             Button("Open board") { openProject(link.showing(.board)) }
@@ -410,7 +466,7 @@ struct ProjectsHomeView: View {
     /// whole list once opened (always, under the Needs you filter). Until the
     /// rows load, the summary holds their place.
     @ViewBuilder private func asks(_ card: HomeCard, inList: Bool) -> some View {
-        let rows = feed.attention[card.id] ?? []
+        let rows = feed.asks(for: card)
         let waiting = Int(card.row.attention.count)
         let open = feed.filter == .needsYou || expanded.contains(card.id)
         if !rows.isEmpty {
@@ -442,6 +498,36 @@ struct ProjectsHomeView: View {
                         .accessibilityHidden(true)
                 }
             }
+        } else if let creation = fleet.creations.creation(computerId: card.computerId, projectId: card.row.projectID),
+                  let failed = creation.failedStep, let computer = fleet.computer(id: card.computerId) {
+            // Made from the phone, and something after the board didn't work (§7).
+            separated(inList) {
+                Button { fleet.creations.retry(creation, step: failed, on: computer.store) } label: {
+                    ItemRow(title: failed == .lead || failed == .reading ? "Retry the lead" : "Retry: \(creation.label(failed))",
+                            subtitle: creation.detail(failed, computerName: computer.name), titleTone: .needsYou) {
+                        AskGlyphSymbol(symbol: "arrow.clockwise")
+                    } trailing: {
+                        AskButtonLabel(text: "Retry", primary: true, enabled: computer.store.status == .connected)
+                    }
+                }
+                .buttonStyle(GlanceButtonStyle())
+                .disabled(computer.store.status != .connected)
+                .contextMenu { Button("Dismiss", systemImage: "xmark") { fleet.creations.dismiss(creation) } }
+            }
+        } else if fleet.creations.isHighlighted(card), card.row.columns.allSatisfy({ $0.count == 0 }) {
+            // Done (F7): one next step.
+            separated(inList) {
+                Button {
+                    openProject(HomeProjectLink(computerId: card.computerId, projectId: card.row.projectID).showing(.newCard))
+                } label: {
+                    ItemRow(title: "Add the first card", subtitle: firstCardSubtitle(card)) {
+                        AskGlyphSymbol(symbol: "plus")
+                    } trailing: {
+                        AskButtonLabel(text: "Add card", primary: true)
+                    }
+                }
+                .buttonStyle(GlanceButtonStyle())
+            }
         } else if BoardGlance.state(card) == .setUp, let computer = fleet.computer(id: card.computerId),
                   computer.store.status == .connected, computer.store.canControl {
             separated(inList) {
@@ -459,6 +545,15 @@ struct ProjectsHomeView: View {
         }
     }
 
+    /// "Thesis Lead is reading the project…" while its first turn runs, else what a card is for.
+    private func firstCardSubtitle(_ card: HomeCard) -> String {
+        if let creation = fleet.creations.creation(computerId: card.computerId, projectId: card.row.projectID),
+           creation.states[.reading] == .running {
+            return "\(creation.plan.leadName.trimmed) is reading the project…"
+        }
+        return "Say what you want; the lead turns it into a plan."
+    }
+
     /// In the list a row is its own; in a grid tile a line goes above it.
     @ViewBuilder private func separated(_ inList: Bool, @ViewBuilder _ content: () -> some View) -> some View {
         if inList {
@@ -469,7 +564,47 @@ struct ProjectsHomeView: View {
         }
     }
 
-    private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+    @ViewBuilder private func askButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+        if StoppedBot.restarts(row) {
+            restartButton(row, card: card, primary: primary, inList: inList)
+        } else {
+            openButton(row, card: card, primary: primary, inList: inList)
+        }
+    }
+
+    /// A crashed or stopped bot (BG-Rules §2): Restart, right on the card.
+    private func restartButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
+        let busy = restarting.contains(row.id)
+        let reason = busy ? "Restarting…" : fleet.restartUnavailable(row, answeredBy: card.computerId)
+        return separated(inList) {
+            Button { restart(row, card: card) } label: {
+                AskRow(row: row, action: busy ? "Restarting" : "Restart", primary: primary, unavailable: reason)
+            }
+            .buttonStyle(GlanceButtonStyle())
+            .disabled(reason != nil)
+            .contextMenu {
+                if case .bot(let ref)? = row.target, let on = fleet.computer(daemonId: ref.daemonID) ?? fleet.computer(id: card.computerId) {
+                    Button("Open \(ref.name)", systemImage: "person.crop.circle") {
+                        path.append(NeedsDestination.bot(computerId: on.id, botId: ref.botID, chat: false))
+                    }
+                }
+            }
+        }
+    }
+
+    private func restart(_ row: HomeAttentionRow, card: HomeCard) {
+        restarting.insert(row.id)
+        Task {
+            do {
+                try await fleet.restart(row, answeredBy: card.computerId)
+            } catch {
+                restartFailed = error.localizedDescription
+            }
+            restarting.remove(row.id)
+        }
+    }
+
+    private func openButton(_ row: HomeAttentionRow, card: HomeCard, primary: Bool, inList: Bool) -> some View {
         let destination = fleet.needsDestination(row, answeredBy: card.computerId)
         let reason = fleet.unavailable(destination)
         let action = AskAction.label(row, opens: destination)
@@ -504,8 +639,35 @@ struct ProjectsHomeView: View {
                 path.append(NeedsDestination.bot(computerId: card.computerId, botId: lead.id, chat: true))
             }
         }
+        if canEdit(card), !card.row.columns.isEmpty {
+            Button("Add a card", systemImage: "plus") { openProject(link.showing(.newCard)) }
+        }
         pinButton(card)
         Button("Project settings", systemImage: "gearshape") { openProject(link.showing(.settings)) }
+        if canEdit(card) {
+            Divider()
+            Button(role: .destructive) { deleting = card } label: {
+                Label { Text("Delete project…"); Text("Files go to the Trash") } icon: { Image(systemName: "trash") }
+            }
+        }
+    }
+
+    /// The card's computer is here and takes the owner's changes.
+    private func canEdit(_ card: HomeCard) -> Bool {
+        guard let store = fleet.computer(id: card.computerId)?.store else { return false }
+        return store.status == .connected && store.canControl && !BoardGlance.isReadOnly(card)
+    }
+
+    private func delete(_ card: HomeCard) {
+        guard let computer = fleet.computer(id: card.computerId) else { return }
+        Task {
+            do {
+                try await computer.store.deleteProject(card.row.projectID)
+                await feed.refresh(computer, force: true)
+            } catch {
+                deleteFailed = error.localizedDescription
+            }
+        }
     }
 
     @ViewBuilder private func pinButton(_ card: HomeCard) -> some View {
@@ -538,6 +700,8 @@ extension Fleet {
     func needsDestination(_ row: HomeAttentionRow, answeredBy computerId: String) -> NeedsDestination {
         let on = computer(daemonId: row.daemonID) ?? computer(id: computerId)
         let place = on?.name ?? "that computer"
+        // A bot that can't sign in or hit its limit: what to do, not its chat.
+        if let advice = StoppedBot.advice(row, on: place) { return .note(title: row.title, text: advice) }
         switch row.target {
         case .decisionID(let id)?:
             if let on { return .decision(computerId: on.id, decisionId: id) }
@@ -566,6 +730,8 @@ extension Fleet {
         switch row.kind {
         case .relayedRulings:
             return .note(title: row.title, text: "Confirm them under Decisions on \(place).")
+        case .botStopped:
+            return .note(title: row.title, text: "Restart it from its page on \(place).")
         case .servingOff:
             return .note(title: row.title, text: "\(place) isn't serving the phone securely. Check it in Settings → Computers.")
         default:
@@ -623,6 +789,7 @@ struct HomeProjectDestinations: ViewModifier {
                 switch link.page {
                 case .overview: ProjectScreen(projectId: link.projectId).computerEnvironment(computer)
                 case .board: ProjectScreen(projectId: link.projectId, segment: .board).computerEnvironment(computer)
+                case .newCard: ProjectScreen(projectId: link.projectId, segment: .board, addCard: true).computerEnvironment(computer)
                 case .settings: ProjectView(projectId: link.projectId).computerEnvironment(computer)
                 }
             }

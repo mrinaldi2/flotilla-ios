@@ -6,17 +6,17 @@ import Foundation
 // daemon. A 0.18 home sends no `boards`: the project then has one board,
 // every column and card is on it, and drafts and attachments don't exist.
 
-typealias KanbanBoard = Hermes_Board_V1_Board
-typealias BoardColumnRow = Hermes_Board_V1_BoardColumn
-typealias ItemAttachment = Hermes_Board_V1_ItemAttachment
-typealias DraftRevision = Hermes_Board_V1_DraftRevision
-typealias BoardEvent = Hermes_Board_V1_BoardEvent
-typealias BoardUnmet = Hermes_Board_V1_Unmet
+typealias KanbanBoard = Flotilla_Board_V1_Board
+typealias BoardColumnRow = Flotilla_Board_V1_BoardColumn
+typealias ItemAttachment = Flotilla_Board_V1_ItemAttachment
+typealias DraftRevision = Flotilla_Board_V1_DraftRevision
+typealias BoardEvent = Flotilla_Board_V1_BoardEvent
+typealias BoardUnmet = Flotilla_Board_V1_Unmet
 
-extension Hermes_Board_V1_BoardColumn {
+extension Flotilla_Board_V1_BoardColumn {
     /// What the column means to the board. A 0.18 home sends no kind, so it
     /// comes from the category, as the daemon's own migration maps it.
-    var effectiveKind: Hermes_Board_V1_ColumnKind {
+    var effectiveKind: Flotilla_Board_V1_ColumnKind {
         if kind != .unspecified { return kind }
         switch category {
         case .inbox, .ready: return .open
@@ -35,7 +35,7 @@ extension Hermes_Board_V1_BoardColumn {
 
 /// A column kind in the glossary's words: a glyph and a word, never colour alone.
 enum ColumnKindWords {
-    static func chip(_ kind: Hermes_Board_V1_ColumnKind) -> String {
+    static func chip(_ kind: Flotilla_Board_V1_ColumnKind) -> String {
         switch kind {
         case .active: "◐ active"
         case .done: "● done"
@@ -203,7 +203,7 @@ struct MoveOption: Identifiable, Equatable {
     /// The board's columns but the card's own, in board order, each with its
     /// unmet guards from `item_move_check`. A column the check didn't name is
     /// on another board and left out.
-    static func options(_ check: Hermes_Board_V1_MoveCheck, columns: [BoardColumnRow], from current: String) -> [MoveOption] {
+    static func options(_ check: Flotilla_Board_V1_MoveCheck, columns: [BoardColumnRow], from current: String) -> [MoveOption] {
         let checked = Dictionary(check.columns.map { ($0.columnKey, $0.unmet) }, uniquingKeysWith: { first, _ in first })
         return columns.compactMap { column in
             guard column.key != current, let unmet = checked[column.key] else { return nil }
@@ -230,7 +230,7 @@ enum MoveOutcome: Equatable {
     /// The card changed meanwhile: check again.
     case conflict
 
-    init(_ result: Hermes_Board_V1_MoveResult) {
+    init(_ result: Flotilla_Board_V1_MoveResult) {
         switch result.outcome {
         case .done?: self = .done
         case .refused(let refused)?: self = .refused(refused.unmet)

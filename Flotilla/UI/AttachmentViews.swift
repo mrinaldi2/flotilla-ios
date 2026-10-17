@@ -2,11 +2,16 @@ import QuickLook
 import SwiftUI
 
 /// A card's attachments (K4b): images as thumbnails that open full screen,
-/// files with their name, type and size (opened in Quick Look), linked
-/// documents, and a placeholder for each one removed.
+/// files with their name, type and size, linked documents, and a
+/// placeholder for each one removed. Markdown, HTML, text and PDFs, attached
+/// or linked from the artifacts, open in the app (0.20); other files in
+/// Quick Look.
 struct AttachmentsSection: View {
     @Environment(AppStore.self) private var store
     let attachments: [ItemAttachment]
+    /// The card's project, so its linked documents can be read.
+    var projectId: String?
+    @State private var document: DocumentSheet?
     @State private var opened: Int?
     @State private var preview: URL?
     @State private var reading: String?
@@ -25,7 +30,8 @@ struct AttachmentsSection: View {
                     Button { open(file) } label: {
                         ItemRow(title: file.name, subtitle: AttachmentWords.line(file),
                                 detail: file.caption.isEmpty ? nil : file.caption) {
-                            IconTile(systemImage: file.name.lowercased().hasSuffix(".pdf") ? "doc.richtext" : "doc.text")
+                            IconTile(systemImage: DocumentKind(mime: file.mime, name: file.name) == .html ? "globe"
+                                     : file.name.lowercased().hasSuffix(".pdf") ? "doc.richtext" : "doc.text")
                         } trailing: {
                             if reading == file.id { ProgressView() }
                         }
@@ -38,6 +44,12 @@ struct AttachmentsSection: View {
                         Link(destination: url) {
                             ItemRow(title: doc.name.isEmpty ? doc.url : doc.name, subtitle: doc.url) { IconTile(systemImage: "link") }
                         }
+                    } else if let projectId, !doc.path.isEmpty {
+                        Button { document = DocumentSheet(source: .artifact(projectId: projectId, path: doc.path, name: doc.name)) } label: {
+                            ItemRow(title: doc.name, subtitle: "Project document · \(doc.path)") { IconTile(systemImage: Self.symbol(doc.path)) }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens the document")
                     } else {
                         ItemRow(title: doc.name, subtitle: "Project document · \(doc.path)") { IconTile(systemImage: "doc.on.doc") }
                     }
@@ -57,6 +69,16 @@ struct AttachmentsSection: View {
                 ImageViewer(sources: images.map { .attachment(id: $0.id, name: $0.name) }, index: start.index)
             }
             .quickLookPreview($preview)
+            .sheet(item: $document) { sheet in DocumentScreen(source: sheet.source) }
+        }
+    }
+
+    private static func symbol(_ name: String) -> String {
+        switch DocumentKind(mime: "", name: name) {
+        case .html?: "globe"
+        case .markdown?: "doc.richtext"
+        case .pdf?: "doc.richtext"
+        default: "doc.on.doc"
         }
     }
 
@@ -79,8 +101,13 @@ struct AttachmentsSection: View {
         }
     }
 
-    /// Reads the file from the board's home into a temporary copy for Quick Look.
+    /// A document opens in the app; anything else is read from the board's
+    /// home into a temporary copy for Quick Look.
     private func open(_ file: ItemAttachment) {
+        if DocumentKind(mime: file.mime, name: file.name) != nil {
+            document = DocumentSheet(source: .attachment(id: file.id, name: file.name, mime: file.mime))
+            return
+        }
         reading = file.id
         failure = nil
         Task {
@@ -97,6 +124,11 @@ struct AttachmentsSection: View {
             }
         }
     }
+}
+
+private struct DocumentSheet: Identifiable {
+    let source: DocumentSource
+    var id: String { "\(source)" }
 }
 
 private struct AttachmentStart: Identifiable {

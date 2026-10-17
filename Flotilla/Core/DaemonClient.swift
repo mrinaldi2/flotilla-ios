@@ -64,7 +64,7 @@ final class DaemonClient {
     /// must be seen in wire order with the `term` pushes that follow them.
     var onPush: ((String, JSONDict) -> Void)?
     /// Binary pushes (`req_id` 0): typed `hermes.wire.v1.Envelope`s, e.g. `board_push`.
-    var onEnvelopePush: ((Hermes_Wire_V1_Envelope) -> Void)?
+    var onEnvelopePush: ((Flotilla_Wire_V1_Envelope) -> Void)?
 
     private let session: URLSession
     private var task: URLSessionWebSocketTask?
@@ -72,7 +72,7 @@ final class DaemonClient {
     private var pending: [String: CheckedContinuation<JSONDict, Error>] = [:]
     private var nextRequestId = 1
     /// Typed requests in binary frames (ADR-001), by their numeric `req_id`.
-    private var pendingEnvelopes: [UInt64: CheckedContinuation<Hermes_Wire_V1_Envelope, Error>] = [:]
+    private var pendingEnvelopes: [UInt64: CheckedContinuation<Flotilla_Wire_V1_Envelope, Error>] = [:]
     private var nextEnvelopeId: UInt64 = 1
     /// Bumped on every open/stop so a stale socket's callbacks are ignored.
     private var generation = 0
@@ -189,14 +189,14 @@ final class DaemonClient {
 
     /// A typed request in a binary frame (ADR-001): one `Envelope` out, the
     /// one under the same `req_id` back. An `Error` body throws.
-    func request(_ body: Hermes_Wire_V1_Envelope.OneOf_Body, name: String) async throws -> Hermes_Wire_V1_Envelope {
+    func request(_ body: Flotilla_Wire_V1_Envelope.OneOf_Body, name: String) async throws -> Flotilla_Wire_V1_Envelope {
         await awaitConnection()
         guard status == .connected, let task else {
             throw DaemonError(code: "not_connected", message: "Not connected to the Flotilla service.")
         }
         let id = nextEnvelopeId
         nextEnvelopeId += 1
-        var envelope = Hermes_Wire_V1_Envelope()
+        var envelope = Flotilla_Wire_V1_Envelope()
         envelope.reqID = id
         envelope.body = body
         let data: Data = try envelope.serializedData()
@@ -384,7 +384,7 @@ final class DaemonClient {
 
     /// A binary frame: a reply to a typed request, or a push (`req_id` 0).
     private func handle(_ data: Data) {
-        guard let envelope = try? Hermes_Wire_V1_Envelope(serializedBytes: data) else { return }
+        guard let envelope = try? Flotilla_Wire_V1_Envelope(serializedBytes: data) else { return }
         guard envelope.reqID != 0, let continuation = pendingEnvelopes.removeValue(forKey: envelope.reqID) else {
             onEnvelopePush?(envelope)
             return

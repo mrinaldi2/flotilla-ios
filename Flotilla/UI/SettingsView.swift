@@ -5,6 +5,7 @@ import UserNotifications
 /// computer (its addresses, token, screen sharing, daemon and Lens) is on
 /// its page under Computers.
 struct SettingsView: View {
+    @AppStorage(ActivityFeed.enabledKey) private var boardActivity = true
     /// The Settings tab (UX-024), rather than a sheet with Done.
     var inTab = false
     @AppStorage("terminalFontSize") private var fontSize = 11.0
@@ -42,6 +43,12 @@ struct SettingsView: View {
                     SectionTitle("Terminal")
                 } footer: {
                     Text("Opening a bot's terminal resizes it to fit this screen. The terminal is shared, so Flotilla on the computer shows that size too until it resizes it again.").foregroundStyle(Color.secondaryText)
+                }
+
+                Section {
+                    Toggle("Board activity", isOn: $boardActivity)
+                } footer: {
+                    Text("While Flotilla is open, a toast at the top says when a bot moves or picks up a card, starts or finishes working on it, or can't move it. Tap it for the card.").foregroundStyle(Color.secondaryText)
                 }
 
                 Section {

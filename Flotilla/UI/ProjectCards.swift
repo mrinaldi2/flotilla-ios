@@ -112,17 +112,25 @@ private struct Hatch: View {
     }
 }
 
-/// Counts and names under the bar: "9 To do".
+/// Counts and names under the bar: "9 To do". With `open`, each column is a
+/// tap target for its sheet (§4, case 5).
 struct MiniBoardLegend: View {
     let segments: [BoardSegment]
+    var open: ((BoardSegment) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
-                (Text("\(segment.count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
-                    + Text(" \(segment.name)").font(.caption).foregroundStyle(Color.secondaryText))
+                let label = (Text("\(segment.count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
+                    + Text(" \(segment.name)").font(.caption).foregroundStyle(segment.shade == .review ? Tone.needsYou.text : Color.secondaryText))
                     .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: open == nil ? nil : 44, alignment: .topLeading)
+                if let open, segment.key != nil {
+                    Button { open(segment) } label: { label.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                } else {
+                    label
+                }
             }
         }
         .accessibilityHidden(true)
@@ -132,12 +140,13 @@ struct MiniBoardLegend: View {
 /// At accessibility text sizes the bar becomes a row per column (§6, case 7).
 struct MiniBoardRows: View {
     let segments: [BoardSegment]
+    var open: ((BoardSegment) -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
                 if index > 0 { Divider() }
-                HStack(spacing: 12) {
+                let row = HStack(spacing: 12) {
                     RoundedRectangle(cornerRadius: 4, style: .continuous).fill(segment.shade.color)
                         .frame(width: 14, height: 14)
                     Text(segment.name).fontWeight(segment.shade == .review ? .bold : .regular)
@@ -146,6 +155,12 @@ struct MiniBoardRows: View {
                 }
                 .frame(minHeight: 50)
                 .padding(.horizontal, 14)
+                .contentShape(Rectangle())
+                if let open, segment.key != nil {
+                    Button { open(segment) } label: { row }.buttonStyle(.plain)
+                } else {
+                    row
+                }
             }
         }
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -169,6 +184,12 @@ extension Fleet {
     /// computers this phone talks to, then other working bots of the computer
     /// that answered; at most four.
     func glanceBots(_ card: HomeCard) -> [GlanceBot] {
+        // From 0.20 the row lists its bots across computers (`overview_bots`).
+        if !card.row.botList.isEmpty {
+            return GlanceFleet.shown(card.row.botList).map { bot in
+                GlanceBot(id: "\(bot.daemonID)/\(bot.botID)", name: bot.name, avatar: bot.avatar, working: bot.status == .working)
+            }
+        }
         var seen = Set<String>()
         var bots: [GlanceBot] = []
         func known(_ id: String) -> Bot? {
@@ -237,6 +258,10 @@ struct FleetAvatars: View {
 struct ProjectCardBody: View {
     let card: HomeCard
     var bots: [GlanceBot] = []
+    /// Opens a column of the board as a sheet (case 5); nil when it can't.
+    var openColumn: ((BoardSegment) -> Void)?
+    /// Just made from the phone (F7): marked New until it is opened.
+    var isNew = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var row: HomeRow { card.row }
@@ -278,14 +303,14 @@ struct ProjectCardBody: View {
                     ProjectGlyph(name: row.name, seed: card.glyphSeed, size: 34)
                     name
                 }
-                StatePill(state: state)
+                if isNew { Pill(text: "New", tone: .needsYou) } else { StatePill(state: state) }
             }
         } else {
             HStack(spacing: 10) {
                 ProjectGlyph(name: row.name, seed: card.glyphSeed)
                 name
                 Spacer(minLength: 6)
-                StatePill(state: state)
+                if isNew { Pill(text: "New", tone: .needsYou) } else { StatePill(state: state) }
             }
         }
     }
@@ -308,11 +333,11 @@ struct ProjectCardBody: View {
                 }
             }
         } else if large {
-            MiniBoardRows(segments: segments)
+            MiniBoardRows(segments: segments, open: readOnly ? nil : openColumn)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 MiniBoardBar(segments: segments).opacity(readOnly ? 0.6 : 1)
-                MiniBoardLegend(segments: segments)
+                MiniBoardLegend(segments: segments, open: readOnly ? nil : openColumn)
             }
         }
     }
@@ -520,19 +545,23 @@ struct NotConnectedBanner: View {
     }
 }
 
-/// + on Projects and in the iPad sidebar: the New project sheet on the
-/// computer on screen, then its first bot. (Phase 2 brings the guided flow.)
+/// + on Projects and in the iPad sidebar: on the computer on screen, the
+/// guided flow (0.20), or on an older daemon the New project sheet and then
+/// its first bot.
 struct NewProjectButton: View {
     @Environment(Fleet.self) private var fleet
     var prominent = false
     @State private var creating: Creating?
 
     private enum Creating: Identifiable {
+        /// The guided flow (0.20), on a daemon that starts boards from presets.
+        case flow(computerId: String)
         case project(computerId: String)
         case bot(computerId: String, projectId: String)
 
         var id: String {
             switch self {
+            case .flow(let computer): "flow/\(computer)"
             case .project(let computer): "project/\(computer)"
             case .bot(let computer, let project): "bot/\(computer)/\(project)"
             }
@@ -567,6 +596,12 @@ struct NewProjectButton: View {
         .accessibilityHint(computer == nil ? "Available when a computer is connected" : "")
         .sheet(item: $creating) { item in
             switch item {
+            case .flow(let id):
+                if let computer = fleet.computer(id: id) {
+                    NewProjectFlow(computer: computer)
+                        .computerEnvironment(computer)
+                        .onDisappear { Task { await fleet.home.refresh(computer, force: true) } }
+                }
             case .project(let id):
                 if let computer = fleet.computer(id: id) {
                     NewProjectSheet { project, addBot in
@@ -595,6 +630,18 @@ struct NewProjectButton: View {
     }
 
     private func start() {
-        if let computer { creating = .project(computerId: computer.id) }
+        guard let computer else { return }
+        creating = computer.store.hasGuidedSetup ? .flow(computerId: computer.id) : .project(computerId: computer.id)
+    }
+}
+
+/// A round icon for a card's own suggestions (Retry, Add the first card).
+struct AskGlyphSymbol: View {
+    let symbol: String
+
+    var body: some View {
+        Circle().fill(Tone.needsYou.color.opacity(0.18)).frame(width: 26, height: 26)
+            .overlay { Image(systemName: symbol).font(.system(size: 12, weight: .bold)).foregroundStyle(Tone.needsYou.text) }
+            .accessibilityHidden(true)
     }
 }

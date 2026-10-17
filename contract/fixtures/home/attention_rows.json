@@ -32,6 +32,36 @@
       "priority": "urgent"
     },
     {
+      "id": "bot_stopped:d-mac:b-tester",
+      "kind": "BOT_STOPPED",
+      "daemon_id": "d-mac",
+      "project_id": "p-gravity",
+      "title": "Tester stopped: Claude Code exited with status 1",
+      "created_at": "2026-10-06T10:05:00Z",
+      "weight": 2,
+      "bot": {
+        "daemon_id": "d-mac",
+        "bot_id": "b-tester",
+        "name": "Tester"
+      },
+      "bot_state": "crashed"
+    },
+    {
+      "id": "bot_stopped:d-imac:b-helper",
+      "kind": "BOT_STOPPED",
+      "daemon_id": "d-imac",
+      "project_id": "p-gravity-imac",
+      "title": "Helper can't run: Codex isn't signed in on imac",
+      "created_at": "2026-10-06T10:12:00Z",
+      "weight": 2,
+      "bot": {
+        "daemon_id": "d-imac",
+        "bot_id": "b-helper",
+        "name": "Helper"
+      },
+      "bot_state": "auth_failed"
+    },
+    {
       "id": "relayed_rulings:d-mac:p-gravity",
       "kind": "RELAYED_RULINGS",
       "daemon_id": "d-mac",
@@ -49,10 +79,19 @@
       "title": "Desktop Dev is waiting for you: Didn't connect",
       "created_at": "2026-10-06T09:30:00Z",
       "weight": 1,
-      "bot": { "daemon_id": "d-mac", "bot_id": "b-dev", "name": "Desktop Dev" }
+      "bot": {
+        "daemon_id": "d-mac",
+        "bot_id": "b-dev",
+        "name": "Desktop Dev"
+      }
     }
   ],
   "sources": [
-    { "daemon_id": "d-imac", "name": "imac", "state": "OK", "as_of": "2026-10-06T10:41:00Z" }
+    {
+      "daemon_id": "d-imac",
+      "name": "imac",
+      "state": "OK",
+      "as_of": "2026-10-06T10:41:00Z"
+    }
   ]
 }

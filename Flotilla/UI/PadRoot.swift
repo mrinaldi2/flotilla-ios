@@ -22,6 +22,9 @@ struct PadRootView: View {
     @State private var pendingPath: NavigationPath?
     /// The segment a project opens on: Board from a card's Open board.
     @State private var pendingSegment: ProjectScreen.Segment?
+    /// The project opens with a new card's sheet (a card's Add a card).
+    @State private var pendingAddCard = false
+    @State private var projectAddCard = false
     @State private var projectSegment = ProjectScreen.Segment.overview
 
     enum Item: Hashable {
@@ -115,8 +118,10 @@ struct PadRootView: View {
         .onChange(of: selection) { _, item in
             projectPath = pendingPath ?? NavigationPath()
             projectSegment = pendingSegment ?? .overview
+            projectAddCard = pendingAddCard
             pendingPath = nil
             pendingSegment = nil
+            pendingAddCard = false
             switch item {
             case .chat: tab = .chat; chatPanel = false
             case .settings: tab = .settings
@@ -147,7 +152,7 @@ struct PadRootView: View {
         case .project(let link):
             if let computer = fleet.computer(id: link.computerId) {
                 NavigationStack(path: $projectPath) {
-                    ProjectScreen(projectId: link.projectId, segment: projectSegment)
+                    ProjectScreen(projectId: link.projectId, segment: projectSegment, addCard: projectAddCard)
                         .computerEnvironment(computer)
                         .needsDestinations()
                         .homeProjectDestinations()
@@ -158,7 +163,8 @@ struct PadRootView: View {
         case .projects, nil:
             ProjectsHomeView(landings: landings, openNeeds: $openNeeds) { link in
                 // The sidebar row is the project itself; the page it asks for opens inside.
-                pendingSegment = link.page == .board ? .board : nil
+                pendingSegment = link.page == .board || link.page == .newCard ? .board : nil
+                pendingAddCard = link.page == .newCard
                 if link.page == .settings { pendingPath = NavigationPath([link]) }
                 selection = .project(HomeProjectLink(computerId: link.computerId, projectId: link.projectId))
             }

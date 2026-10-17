@@ -5,7 +5,7 @@ import Foundation
 // on that tab, not a tab of its own (BG-Rules §3). The rules live here, apart
 // from the views, so the tests hold them.
 
-typealias HomeColumn = Hermes_Home_V1_ColumnCount
+typealias HomeColumn = Flotilla_Home_V1_ColumnCount
 
 /// The app's tabs (BG-Rules, decided 16 Oct): Projects · Chat · Settings.
 enum AppTab: Hashable {
@@ -116,13 +116,15 @@ enum BoardGlance {
         return .idle
     }
 
-    /// Needs you first, in the home's rank (score, then the oldest ask); then
-    /// Working, the rest and Quiet, each pinned first and then by name, so
-    /// cards stay put while bots work.
+    /// Needs you first, a stopped bot's project ahead (§3), then the home's
+    /// rank (score, then the oldest ask); then Working, the rest and Quiet,
+    /// each pinned first and then by name, so cards stay put while bots work.
     static func ordered(_ cards: [HomeCard], now: Date = Date()) -> [HomeCard] {
         let groups = cards.map { group($0, now: now) }
+        let stopped = cards.map { ($0.row.attention.byKind["bot_stopped"] ?? 0) > 0 }
         return cards.indices.sorted { a, b in
             if groups[a] != groups[b] { return groups[a] < groups[b] }
+            if groups[a] == .needsYou, stopped[a] != stopped[b] { return stopped[a] }
             if groups[a] != .needsYou {
                 let (ra, rb) = (cards[a].row, cards[b].row)
                 if ra.pinned != rb.pinned { return ra.pinned }
@@ -140,6 +142,12 @@ enum BoardGlance {
         case .working: group(card, now: now) == .working
         case .quiet: group(card, now: now) == .quiet
         }
+    }
+
+    /// Pull-down search (§3): the projects whose name has the words typed.
+    static func matches(_ card: HomeCard, search: String) -> Bool {
+        let words = search.split(whereSeparator: \.isWhitespace)
+        return words.allSatisfy { card.row.name.localizedStandardContains($0) }
     }
 
     /// Each chip's number: All counts every project, the others their group.
@@ -170,13 +178,18 @@ struct BoardSegment: Equatable {
     let shade: Shade
     /// The columns it stands for: one, or several folded into "+N more".
     var columns = 1
+    /// The column it is, to open as a sheet (§4); nil for "+N more".
+    var key: String?
 }
 
 enum MiniBoard {
     static let maxSegments = 5
 
     static func shade(_ column: HomeColumn, at index: Int, of total: Int) -> BoardSegment.Shade {
-        switch column.category.lowercased() {
+        // A custom board's Review is an active column like Doing; the
+        // presets name it `review`, and it is the owner's (§4).
+        if column.key == "review" { return .review }
+        return switch column.category.lowercased() {
         case "inbox": .todo
         case "ready": .ready
         case "doing", "deploying": .doing
@@ -193,8 +206,11 @@ enum MiniBoard {
     /// last, the owner's Review, Doing and its first column in sight, and folds
     /// the rest into one "+N more" just before Done.
     static func segments(_ columns: [HomeColumn]) -> [BoardSegment] {
+        // Hidden columns (a preset's Cancelled) are left out (§4).
+        let columns = columns.filter { !$0.hidden }
         let all = columns.enumerated().map { index, column in
-            BoardSegment(name: column.name, count: Int(column.count), shade: shade(column, at: index, of: columns.count))
+            BoardSegment(name: column.name, count: Int(column.count), shade: shade(column, at: index, of: columns.count),
+                         key: column.key.isEmpty ? nil : column.key)
         }
         guard all.count > maxSegments else { return all }
         let doneIndex = all.lastIndex { $0.shade == .done } ?? all.count - 1
@@ -231,6 +247,7 @@ enum GlanceWords {
     static func fleet(_ row: HomeRow, readOnly: Bool = false) -> String {
         guard row.bots > 0 else { return "No bots yet" }
         if readOnly { return "\(row.bots) bot\(row.bots == 1 ? "" : "s") · status unknown" }
+        if !row.botList.isEmpty { return FleetCounts(row.botList, total: Int(row.bots)).words }
         let (working, waiting) = (Int(row.botsWorking), Int(row.botsWaiting))
         let idle = max(0, Int(row.bots) - working - waiting)
         var parts: [String] = []
@@ -245,6 +262,7 @@ enum GlanceWords {
         guard row.bots > 0 else { return "No bots yet." }
         let bots = "\(row.bots) bot\(row.bots == 1 ? "" : "s")"
         if readOnly { return "\(bots), status unknown." }
+        if !row.botList.isEmpty { return FleetCounts(row.botList, total: Int(row.bots)).sentence(bots: Int(row.bots)) }
         let (working, waiting) = (Int(row.botsWorking), Int(row.botsWaiting))
         let idle = max(0, Int(row.bots) - working - waiting)
         if working == 0, waiting == 0 { return "\(bots), all idle." }
@@ -285,7 +303,9 @@ enum GlanceWords {
 
     /// "Last seen 10:42 · board as of then".
     static func lastSeen(_ card: HomeCard, readOnly: Bool) -> String? {
-        guard let since = card.staleSince else { return readOnly ? "Showing its board as last seen" : nil }
+        // When the computer was last seen, from 0.20; before, when it last answered.
+        let seen = GlanceFleet.lastSeen(card.row, among: card.offline) ?? card.staleSince
+        guard let since = seen else { return readOnly ? "Showing its board as last seen" : nil }
         let time = "Last seen \(since.formatted(date: .omitted, time: .shortened))"
         return readOnly ? "\(time) · board as of then" : time
     }
@@ -332,6 +352,7 @@ enum AskAction {
         // Something the phone can only explain, not do: say so.
         if case .note = destination { return "Details" }
         switch row.kind {
+        case .botStopped: return StoppedBot.restarts(row) ? "Restart" : "Details"
         case .ownerQuestion: return "Answer"
         case .decision: return "Decide"
         case .permissionPrompt: return "Approve"

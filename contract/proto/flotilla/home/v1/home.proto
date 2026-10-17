@@ -1,0 +1,502 @@
+// The projects home (H-128 rev 2, frozen): one row per project with what
+// needs the owner, across linked computers. Requests travel in WS binary
+// frames inside `flotilla.wire.v1.Envelope` (`HomeRequest`/`HomeResponse`) and
+// as proto3 JSON on the JSON WS, `{type, req_id, ...}`, with the proto field
+// names. The peer messages ride the JSON peer link as proto3 JSON.
+//
+// Fields may be added; none renamed or renumbered (ADR-001): a breaking
+// change is flotilla.home.v2.
+syntax = "proto3";
+
+package flotilla.home.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ---- requests (WS type in brackets; grant) ----
+message ProjectsOverviewRequest {          // [projects_overview] read
+  repeated string project_ids = 1;          // empty = all (iOS N1)
+}
+message AttentionRowsRequest {              // [attention_rows] read
+  string project_id = 1;
+}
+message AttentionDismissRequest {           // [attention_dismiss] approve
+  string id = 1;
+}
+message ProjectPinRequest {                 // [project_pin] control
+  string project_id = 1;
+  bool pinned = 2;
+}
+message OwnerThreadsRequest {}              // [owner_threads] read
+message OwnerThreadGetRequest {             // [owner_thread_get] read
+  string bot_id = 1;
+  optional int64 before_num = 2;
+  optional uint32 limit = 3;                // default 50, max 200
+}
+message OwnerThreadReadRequest {            // [owner_thread_read] read
+  string bot_id = 1;
+  int64 up_to_num = 2;
+}
+
+// ---- answers ----
+message ProjectsOverview {
+  google.protobuf.Timestamp as_of = 1;
+  repeated ProjectRow rows = 2;             // sorted by rank
+  repeated Source sources = 3;
+  AttentionSummary total = 4;               // across rows: the app badge (iOS N2)
+}
+
+message ProjectRow {
+  string project_id = 1;                    // this computer's id
+  string name = 2;
+  repeated Member members = 3;              // this computer first
+  string board_home = 4;                    // daemon_id; empty = no board
+  ReleaseBrief current_release = 5;         // unset = none
+  uint32 open_tasks = 6;
+  repeated DoingBrief doing = 7;            // at most 3, board order
+  uint32 bots = 8;
+  uint32 bots_working = 9;
+  AttentionSummary attention = 10;
+  bool partial = 11;
+  repeated string stale_sources = 12;       // daemon_ids answering from last-good or not at all (iOS N5)
+  google.protobuf.Timestamp last_activity_at = 13;   // last item event, task or message (iOS N3)
+  bool pinned = 14;
+  uint32 rank = 15;                         // 0 = first
+  SummaryBrief latest_summary = 16;         // unset = none
+  bool legacy = 17;                         // only set by clients for an older daemon (R2.1)
+  // Additions (H-144), for the projects home card:
+  repeated ColumnCount columns = 18;        // every board column, board order; empty = no board
+  uint32 doing_total = 19;                  // cards in Doing columns; `doing` lists at most 3
+  uint32 bots_waiting = 20;                 // bots waiting for the owner, across computers
+  // Additions (0.20.0, capability `overview_bots`), for the Board glance:
+  // every bot of the project across its computers, this computer's own and
+  // each linked computer's (`ProjectAttention.Part.bots`), a linked bot
+  // once. Order: the lead first, then WAITING, WORKING, FAILED and STOPPED,
+  // IDLE, OFFLINE; within a group by name, case-insensitively. At most 24:
+  // `bots` and the counts above stay the totals. Empty from an older daemon.
+  repeated BotBrief bot_list = 21;
+  // Addition (0.20.0, capability `overview_top_attention`): the row the
+  // project's Needs-you list would show first, by the `AttentionRows` sort
+  // (weight desc, created_at asc, then id) over every computer's rows, this
+  // one's and the linked ones' parts. Unset when nothing needs the owner,
+  // and from an older daemon.
+  AttentionRow top_attention = 22;
+}
+
+message ColumnCount {                       // addition (H-144)
+  string key = 1;
+  string name = 2;
+  string category = 3;                      // ColumnCategory name, lowercase: inbox, ready, doing…
+  uint32 count = 4;                         // cards in the column
+  // Additions (0.20.0). An older daemon leaves both unset: derive the kind
+  // from `category`, and treat a column as visible.
+  string kind = 5;                          // ColumnKind name, lowercase: open, active, done, cancelled
+  bool hidden = 6;                          // hidden on the board (a preset's Cancelled); still counted
+}
+
+message Member {
+  string daemon_id = 1;
+  string project_id = 2;
+  string computer_name = 3;
+  // Additions (0.20.0, capability `overview_bots`). `online`: this computer
+  // always; a linked one while its link is up. An older daemon sends false
+  // for every member: without the capability, read the member's `Source`
+  // instead (none for this computer, which is online).
+  bool online = 4;
+  google.protobuf.Timestamp last_seen_at = 5;   // the link last up; unset for this computer and a computer never seen
+}
+
+// What a bot is doing, in the words the Board glance shows (0.20.0). Read
+// off its raw `BotState` (`BotBrief.state`) on the bot's own computer:
+//   WORKING   starting, working
+//   IDLE      ready, with nothing waiting on the owner
+//   WAITING   waits on the owner: waiting_for_approval (a permission
+//             prompt), waiting_for_user, or a BOT_WAITING row (a question)
+//   STOPPED   stopping, stopped
+//   FAILED    crashed, auth_failed, rate_limited
+//   OFFLINE   its computer isn't answering; `state` is the last one known
+enum BotStatus {
+  BOT_STATUS_UNSPECIFIED = 0;
+  BOT_STATUS_WORKING = 1;
+  BOT_STATUS_IDLE = 2;
+  BOT_STATUS_WAITING = 3;
+  BOT_STATUS_STOPPED = 4;
+  BOT_STATUS_FAILED = 5;
+  BOT_STATUS_OFFLINE = 6;
+}
+
+// One bot, for the Board glance (0.20.0). Ids are its own computer's: a
+// client opens or restarts it there (`restart_bot` on `daemon_id`).
+message BotBrief {
+  string daemon_id = 1;                     // the bot's own computer
+  string bot_id = 2;                        // its id there
+  string name = 3;
+  string avatar = 4;                        // as on the bot: icon:<name>, color:#rrggbb or empty
+  string runtime = 5;                       // claude_code | codex_cli
+  BotStatus status = 6;
+  string state = 7;                         // its raw BotState, lowercase: working, crashed…
+  string state_reason = 8;                  // as on the bot; empty when none
+  string computer_name = 9;                 // its computer, as Member.computer_name
+  bool lead = 10;                           // the project's lead (as the answering computer has it)
+  google.protobuf.Timestamp since = 11;     // in this status since; unset when unknown
+}
+
+message Source {
+  enum State { STATE_UNSPECIFIED = 0; OK = 1; OFFLINE = 2; TIMEOUT = 3; OLD_VERSION = 4; }
+  string daemon_id = 1;
+  string name = 2;
+  State state = 3;
+  google.protobuf.Timestamp as_of = 4;      // of the data in use; unset = never answered
+}
+
+message AttentionSummary {
+  uint32 count = 1;
+  uint32 score = 2;
+  map<string, uint32> by_kind = 3;          // key = AttentionKind name, lowercase
+  google.protobuf.Timestamp oldest_at = 4;  // oldest counted row (iOS M2)
+}
+
+enum AttentionKind {
+  ATTENTION_KIND_UNSPECIFIED = 0;
+  RELEASE_AWAITING = 1;
+  OWNER_ACTION = 2;
+  PERMISSION_PROMPT = 3;
+  DECISION = 4;
+  RELAYED_RULINGS = 5;
+  P0_ITEM = 6;
+  BOT_WAITING = 7;
+  OFF_BOARD = 8;
+  SERVING_OFF = 9;
+  OWNER_QUESTION = 10;
+  PR_REVIEW = 11;                           // a PR waits for the owner's review (H-269)
+  PR_MERGE_STUCK = 12;                      // DevOps hasn't run a PR's merge in 30 min (H-284)
+  MAIN_MOVED_OUTSIDE = 13;                  // main reached a PR's head with no merge gate pass (H-284)
+  CLEANUP_HELD = 14;                        // a cleanup held 3 days, or failed: Remove anyway or Keep (H-275)
+  DISK_LOW = 15;                            // a computer is under 20 GB free: Clean up (H-275)
+  CHECK_UNROUTABLE = 16;                    // a required check no computer can run, for 1 h (H-318)
+  DRAFT_UPDATED = 17;                       // a bot changed a draft since the owner last looked (0.19.0)
+  CARD_WAITING = 18;                        // the board keeper: a card waits for the owner's review, went quiet, or can't move (0.19.0)
+  BOT_STOPPED = 19;                         // a bot stopped, crashed, or can't run: `bot`, `bot_state` (0.20.0, capability `attention_bot_stopped`)
+}
+
+message AttentionRow {
+  string id = 1;                            // stable: "<kind>:<daemon_id>:<target id>" (iOS M3)
+  AttentionKind kind = 2;
+  string daemon_id = 3;                     // the computer that acts on it
+  string project_id = 4;                    // in that computer's ids
+  string title = 5;                         // one line, at most 120 characters, set by the daemon
+  google.protobuf.Timestamp created_at = 6;
+  uint32 weight = 7;
+  oneof target {
+    string decision_id = 10;
+    string release_id = 11;
+    string action_id = 12;                  // owner action (H-117)
+    string request_id = 13;                 // permission prompt or terminal card
+    BotRef bot = 14;                        // bot_waiting, off_board, owner_question in a thread, bot_stopped
+    string item_id = 15;                    // p0_item, owner_question on a card
+    uint32 pr_number = 16;                  // pr_review: the PR, in the project's numbering
+    string cleanup_job_id = 17;             // cleanup_held: the job (cleanup_resolve)
+    string machine = 18;                    // disk_low: the computer (cleanup_now, disk_report)
+  }
+  uint32 relayed_count = 20;                // relayed_rulings only
+  string priority = 21;                     // decision only: P0..P3
+  string question_comment_id = 22;          // owner_question on a card: the comment that asked (H-211)
+  CleanupRow cleanup = 23;                  // cleanup_held: what the app words the row from (UX-055)
+  // bot_stopped (0.20.0): why the bot isn't running, its raw BotState:
+  // crashed | auth_failed | rate_limited | stopped. The row's action is
+  // `restart_bot {bot_id}` on the bot's computer (`bot.daemon_id`), but
+  // auth_failed needs the owner to sign the runtime in on that computer
+  // first, and rate_limited clears by itself: a client offers Restart for
+  // crashed and stopped, and words the other two as what to do.
+  string bot_state = 24;
+}
+
+// A held or failed cleanup, in fields: the app composes the words (UX-055).
+message CleanupRow {
+  string state = 1;                         // held | failed
+  string machine = 2;                       // the computer the tree is on
+  BotRef bot = 3;                           // whose tree; unset when in no bot's folder
+  uint32 pr_number = 4;                     // 0 = found by the daily sweep, no PR
+  uint32 uncommitted = 5;                   // changed or untracked files
+  uint32 unpushed = 6;                      // commits on no remote
+  bool salvaged = 7;                        // its changes are saved: Remove anyway can work
+  string reason = 8;                        // why it is kept or failed, when not unsaved work
+  google.protobuf.Timestamp since = 9;      // held or failed since
+}
+
+message AttentionRows {
+  repeated AttentionRow rows = 1;           // sorted: weight desc, created_at asc
+  repeated Source sources = 2;
+}
+
+message BotRef {
+  string daemon_id = 1;                     // the bot's own computer
+  string bot_id = 2;                        // its id there
+  string name = 3;
+}
+
+message ReleaseBrief {                      // iOS M4
+  string release_id = 1;
+  string version = 2;
+  string state = 3;                         // ReleaseStatus name
+  bool awaiting_owner = 4;
+  uint32 items_total = 5;
+  uint32 items_done = 6;
+  google.protobuf.Timestamp deployed_at = 7;
+  uint32 items_ready = 8;                   // addition (H-144): items in Verify or later (H-137)
+  uint32 owner_blocker_count = 9;           // addition (H-247): what it waits on from the owner
+}
+
+message DoingBrief {
+  string item_id = 1;
+  string title = 2;                         // at most 80 characters, cut by the daemon with "…"
+  string assignee_name = 3;
+  string assignee_bot_id = 4;
+}
+
+message SummaryBrief {
+  string meeting_id = 1;
+  string text = 2;                          // at most 200 characters
+  google.protobuf.Timestamp at = 3;
+}
+
+message OwnerThreads { repeated OwnerThread threads = 1; }
+message OwnerThread {
+  BotRef bot = 1;
+  string project_id = 2;
+  MessageBrief last = 3;
+  uint32 unread = 4;
+  bool open_question = 5;
+}
+message MessageBrief {
+  int64 num = 1;
+  bool from_owner = 2;
+  string text = 3;                          // at most 200 characters
+  google.protobuf.Timestamp at = 4;
+  bool asks = 5;
+  string unverified_from = 6;               // see ThreadMessage
+}
+
+// ---- pushes ----
+message ProjectsOverviewChanged { repeated string project_ids = 1; }   // [projects_overview_changed]
+message OwnerThreadUpdated { BotRef bot = 1; string project_id = 2; }  // [owner_thread_updated]
+
+// [board_activity] What someone just did on a board (0.19.0), for the
+// owner's toasts and phone notices: every connection gets it, whatever
+// boards it watches. Moves, assignments and bot edits to drafts come from
+// the history the change recorded; a refused move is pushed only here, never
+// as a `BoardEvent`, so it takes no place in a board's sequence.
+enum BoardActivityKind {
+  BOARD_ACTIVITY_KIND_UNSPECIFIED = 0;
+  BOARD_ACTIVITY_KIND_MOVED = 1;            // from_column -> to_column
+  BOARD_ACTIVITY_KIND_ASSIGNED = 2;         // assignee is the new one
+  BOARD_ACTIVITY_KIND_UNASSIGNED = 3;
+  BOARD_ACTIVITY_KIND_MOVE_REFUSED = 4;     // to_column wasn't allowed: unmet says why
+  BOARD_ACTIVITY_KIND_DRAFT_UPDATED = 5;    // note names the fields changed
+  BOARD_ACTIVITY_KIND_CHECKED = 6;          // the board keeper, actor daemon: asked `assignee` about the card, or raised a Needs-you row; note says why
+}
+message BoardActivity {
+  string project_id = 1;
+  string item_id = 2;
+  BoardActivityKind kind = 3;
+  string actor = 4;                         // user | device:<id> | bot:<id> | daemon
+  string actor_name = 5;                    // the bot's or device's name; empty for user and daemon
+  string item_title = 6;
+  string from_column = 7;                   // column keys
+  string to_column = 8;
+  string from_name = 9;                     // their names, as the board shows them
+  string to_name = 10;
+  string note = 11;                         // a move's reason, the fact, or the fields
+  repeated string unmet = 12;               // a refusal's reasons, one per guard
+  string assignee = 13;                     // bot id, on ASSIGNED
+  string assignee_name = 14;
+  google.protobuf.Timestamp at = 15;
+  // The change was asked for on the connection this push goes to: a client
+  // already showed its own action and skips it.
+  bool from_this_client = 16;
+  string title = 17;                        // a notification's title and body, ready to show
+  string body = 18;
+}
+
+// ---- peer (wire envelope, peer protocol v1 unchanged otherwise) ----
+message ProjectAttentionRequest {         // [project_attention]
+  repeated string project_ids = 1;
+  // Addition (0.20.0): the home additions the caller decodes. A daemon's
+  // proto3 JSON refuses fields and enum values it doesn't know, so an answer
+  // carries only what the caller asked for: 0 (left out, a caller before
+  // 0.20) gets no `Part.bots`, no BOT_STOPPED rows and no `bot_state`; 1
+  // gets the 0.20.0 additions. A callee older than 0.20 ignores the field.
+  uint32 revision = 2;
+}
+message ProjectAttention {
+  message Part {
+    string project_id = 1;                  // the caller's ids
+    AttentionSummary local = 2;             // rows this computer owns
+    repeated AttentionRow rows = 3;         // the same, in full, for attention_rows
+    uint32 bots_working = 4;                // its own bots (iOS N7)
+    bool is_home = 5;
+    ReleaseBrief current_release = 6;       // home only
+    SummaryBrief latest_summary = 7;        // home only
+    google.protobuf.Timestamp last_activity_at = 8;
+    bool pinned = 9;                        // addition (D7): pinned on that computer
+    uint32 bots_waiting = 10;               // addition (H-144): its own bots waiting for the owner
+    // Addition (0.20.0, capability `overview_bots`): its own bots, linked
+    // ones (stand-ins of another computer's) left out, in `bot_list` order.
+    repeated BotBrief bots = 11;
+  }
+  repeated Part parts = 1;
+}
+message ProjectAttentionChanged { repeated string project_ids = 1; }  // peer notify, debounced 2 s
+
+// ---- binary transport (additions to the frozen contract) ----
+// One request per binary frame, answered under its `req_id`.
+message HomeRequest {
+  oneof request {
+    ProjectsOverviewRequest projects_overview = 1;
+    AttentionRowsRequest attention_rows = 2;
+    AttentionDismissRequest attention_dismiss = 3;
+    ProjectPinRequest project_pin = 4;
+    OwnerThreadsRequest owner_threads = 5;
+    OwnerThreadGetRequest owner_thread_get = 6;
+    OwnerThreadReadRequest owner_thread_read = 7;
+  }
+}
+
+message HomeResponse {
+  oneof response {
+    // To `projects_overview`.
+    ProjectsOverview projects_overview = 1;
+    // To `attention_rows`.
+    AttentionRows attention_rows = 2;
+    // To `attention_dismiss`.
+    AttentionDismissed attention_dismissed = 3;
+    // To `project_pin`.
+    ProjectPinned project_pinned = 4;
+    // To `owner_threads`.
+    OwnerThreads owner_threads = 5;
+    // To `owner_thread_get`.
+    OwnerThreadPage owner_thread = 6;
+    // To `owner_thread_read`.
+    OwnerThreadMarked owner_thread_marked = 7;
+  }
+}
+
+// [attention_dismissed] the row closed.
+message AttentionDismissed {
+  string id = 1;
+}
+
+// ---- owner threads and pins (additions, H-132: D6, D7) ----
+
+// [project_pinned] the pin as stored on this computer.
+message ProjectPinned {
+  string project_id = 1;
+  bool pinned = 2;
+}
+
+// [owner_thread] a page of one bot's owner thread, oldest first.
+message OwnerThreadPage {
+  BotRef bot = 1;
+  string project_id = 2;                    // the asking computer's id
+  repeated ThreadMessage messages = 3;
+  int64 last_read_num = 4;                  // 0 = nothing read
+  bool has_more = 5;                        // older messages exist
+}
+
+message ThreadMessage {
+  int64 num = 1;
+  string id = 2;
+  bool from_owner = 3;
+  string text = 4;                          // in full; a bot's is at most 4 KB
+  google.protobuf.Timestamp at = 5;
+  bool asks = 6;                            // the bot asked the owner here
+  bool open = 7;                            // that question is still open
+  // The owner's chat a linked computer sent without proof this computer
+  // takes (H-303, H-306): that computer's name, and `from_owner` is false.
+  string unverified_from = 8;
+}
+
+// [owner_thread_marked] read state after `owner_thread_read`.
+message OwnerThreadMarked {
+  string bot_id = 1;
+  int64 last_read_num = 2;
+  uint32 unread = 3;
+}
+
+// ---- installing an iOS release on an iPhone or iPad (additions, H-229, UX-043) ----
+// JSON WS only, `{type, req_id, ...}` with these field names; unset fields
+// are left out. The desktop reads `release_install` and sends the link to a
+// paired device; the device reads its offers and opens `install_url` (H-230).
+
+// [release_install] what an iOS package offers for install on a phone.
+message ReleaseInstallRequest {             // [release_install] read
+  string release_id = 1;
+  bool check_site = 2;                      // also ask the build site whether it answers
+}
+
+message ReleaseInstall {
+  string release_id = 1;
+  string project_id = 2;
+  string version = 3;                       // what the owner sees, e.g. "0.6.1"
+  string build = 4;                         // the iOS build's version, e.g. "12"; empty = no build
+  string state = 5;                         // ReleaseStatus name
+  bool installable = 6;                     // the state offers install actions (UX-043 §1)
+  bool for_testing = 7;                     // awaiting_owner: installed to test it
+  string page_url = 8;                      // HTTPS install page (…/index.html); empty = not published
+  string install_url = 9;                   // the itms-services link; empty = not published
+  SiteCheck site = 10;                      // unset = not checked
+  string computer = 11;                     // the computer whose build site serves it
+  bool can_start_site = 12;                 // this computer may start the build site itself
+  repeated InstallDevice devices = 13;      // paired and not revoked, last seen first
+  string app_title = 14;                    // "Flotilla"
+  google.protobuf.Timestamp approved_at = 15;   // the owner's ruling; unset = not approved
+}
+
+message SiteCheck {
+  bool serving = 1;                         // the install page answered 2xx over HTTPS
+  string problem = 2;                       // why not, for the log; the copy is the client's
+  google.protobuf.Timestamp checked_at = 3;
+}
+
+message InstallDevice {
+  string device_id = 1;
+  string name = 2;
+  google.protobuf.Timestamp last_seen_at = 3;
+  bool connected = 4;                       // holds a live connection to this computer now
+  string app_version = 5;                   // "0.6.1 (12)" as it last reported (H-230); empty = unknown
+  google.protobuf.Timestamp app_version_seen_at = 6;  // when it last reported it (H-241); unset = never
+}
+
+// [install_offer] answers `release_send_to_device`; also pushed, with no
+// `req_id`, to that device's connections only.
+message ReleaseSendToDeviceRequest {        // [release_send_to_device] control
+  string release_id = 1;
+  string device_id = 2;
+}
+
+message InstallOffer {
+  string release_id = 1;
+  string project_id = 2;
+  string device_id = 3;
+  string device_name = 4;
+  string version = 5;
+  string build = 6;
+  string install_url = 7;                   // what a tap opens (itms-services)
+  string page_url = 8;                      // the HTTPS page, for a device that can't open the link
+  string title = 9;                         // the notification's title
+  string body = 10;                         // the notification's body
+  bool for_testing = 11;
+  google.protobuf.Timestamp sent_at = 12;
+  bool delivered = 13;                      // the device was connected when it was sent
+}
+
+// [install_offers] this device's waiting offer, at most one: the latest
+// sent, until it is dismissed or another replaces it.
+message InstallOffersRequest {}             // [install_offers] read
+message InstallOffers {
+  repeated InstallOffer offers = 1;
+}
+
+// [install_offers] Not now: the banner stays hidden until the next package.
+message InstallOfferDismissRequest {        // [install_offer_dismiss] control
+  string release_id = 1;
+}

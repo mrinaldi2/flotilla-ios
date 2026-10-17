@@ -164,6 +164,10 @@ final class Fleet {
     private(set) var computers: [Computer] = []
     /// The projects home and Needs you, across every computer.
     let home = HomeFeed()
+    /// Projects being created from the phone (0.20), and the last one made.
+    let creations = ProjectCreations()
+    /// Board activity toasts, from every computer (0.20).
+    let activity = ActivityFeed()
     /// Card ids this phone knows, and their previews (H-204).
     let cards = CardDirectory()
     /// A card to open, from a link that came from outside the app. Kept until
@@ -362,6 +366,7 @@ final class Fleet {
         computer.store.onHomeChanged = { [weak self, weak computer] in
             if let computer { self?.home.changed(computer) }
         }
+        computer.store.onActivity = { [weak self] notice in self?.activity.add(notice) }
         computers.append(computer)
         retag()
     }

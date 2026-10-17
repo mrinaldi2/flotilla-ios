@@ -4,7 +4,7 @@ import XCTest
 /// H-210: card questions can be answered (Reply opens a sheet) and dismissed;
 /// a dismissal goes to the computer that holds the question.
 final class H210Tests: XCTestCase {
-    private func row(_ kind: Hermes_Home_V1_AttentionKind, id: String, daemon: String = "") -> HomeAttentionRow {
+    private func row(_ kind: Flotilla_Home_V1_AttentionKind, id: String, daemon: String = "") -> HomeAttentionRow {
         var row = HomeAttentionRow()
         row.kind = kind
         row.id = id

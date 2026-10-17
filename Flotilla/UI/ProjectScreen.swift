@@ -11,11 +11,14 @@ struct ProjectScreen: View {
     let projectId: String
     @State private var segment: Segment
     @State private var showingArtifacts = false
+    /// Opens the Board with a new card's sheet (a card's Add a card, 0.20).
+    private let addCard: Bool
 
     /// `segment`: where it opens; a card's Open board asks for the Board.
-    init(projectId: String, segment: Segment = .overview) {
+    init(projectId: String, segment: Segment = .overview, addCard: Bool = false) {
         self.projectId = projectId
-        _segment = State(initialValue: segment)
+        self.addCard = addCard
+        _segment = State(initialValue: addCard ? .board : segment)
     }
 
     enum Segment: String, CaseIterable {
@@ -82,7 +85,7 @@ struct ProjectScreen: View {
             Group {
                 switch segment {
                 case .overview: OverviewPane(projectId: projectId, card: card, home: home)
-                case .board: BoardPane(home: home, homeName: boardHomeName)
+                case .board: BoardPane(home: home, homeName: boardHomeName, addCard: addCard)
                 case .team: TeamPane(projectId: projectId)
                 case .releases: ReleasesPane(home: home)
                 case .meetings: MeetingsPane(home: home)

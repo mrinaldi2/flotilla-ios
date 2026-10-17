@@ -12,6 +12,8 @@ struct BoardPane: View {
     let home: (computer: Computer, projectId: String)?
     /// The computer that keeps this project's board, for when this one can't show it.
     var homeName: String?
+    /// Opens a new card's sheet once the board is in (a card's Add a card).
+    var addCard = false
     @State private var model: BoardModel?
 
     /// A new model when the project or computer changes; a reload when the link comes back.
@@ -31,7 +33,7 @@ struct BoardPane: View {
                 ContentUnavailableView("Board needs an update", systemImage: "arrow.up.circle",
                                        description: Text("Update Flotilla on \(home.computer.name) to see the board here."))
             } else if let home, let model {
-                BoardContent(model: model, computer: home.computer, homeName: homeName)
+                BoardContent(model: model, computer: home.computer, homeName: homeName, addCard: addCard)
             } else {
                 ProgressView()
             }
@@ -59,8 +61,11 @@ private struct BoardContent: View {
     @Bindable var model: BoardModel
     let computer: Computer
     let homeName: String?
+    var addCard = false
     @State private var moving: BoardCard?
     @State private var adding = false
+    /// `addCard` opens the sheet once, not again on every reload.
+    @State private var addedCard = false
     /// A draft just saved, opened at once.
     @State private var opened: String?
     @State private var saveNotice: String?
@@ -86,6 +91,12 @@ private struct BoardContent: View {
 
     @ViewBuilder private func loaded(_ state: BoardState) -> some View {
         VStack(spacing: 0) {
+            Color.clear.frame(height: 0)
+                .task {
+                    guard addCard, !addedCard, state.hasBoards, store.canControl else { return }
+                    addedCard = true
+                    adding = true
+                }
             BoardBar(model: model, state: state)
             LabelFilterBar(model: model, groups: state.labelGroups())
             if let notice = saveNotice ?? model.notice {
@@ -106,7 +117,8 @@ private struct BoardContent: View {
                     let groups = state.labelGroups()
                     ForEach(state.columns, id: \.key) { column in
                         ColumnList(cards: state.cards(in: column.key, matching: model.filter), computerId: computer.id, bots: store.bots,
-                                   groups: groups, filtering: model.filter.isOn, canMove: store.canControl) { moving = $0 }
+                                   groups: groups, filtering: model.filter.isOn, canMove: store.canControl,
+                                   projectId: model.projectId) { moving = $0 }
                             .tag(column.key)
                     }
                     if state.hasBoards {
@@ -219,7 +231,10 @@ struct ColumnList: View {
     /// A label filter hides some of the column's cards.
     var filtering = false
     var canMove = false
+    /// The project, so a card can be given to one of its bots.
+    var projectId: String?
     var move: (BoardCard) -> Void = { _ in }
+    @State private var assignFailure: String?
 
     var body: some View {
         List {
@@ -236,6 +251,10 @@ struct ColumnList: View {
                 .contextMenu {
                     if canMove {
                         Button { move(card) } label: { Label("Move to…", systemImage: "arrow.right.square") }
+                        if let projectId {
+                            AssignMenu(itemId: card.id, version: card.version, assignee: card.hasAssignee ? card.assignee : nil,
+                                       projectId: projectId) { assignFailure = $0 }
+                        }
                     }
                 }
                 .accessibilityActions {
@@ -244,6 +263,7 @@ struct ColumnList: View {
             }
         }
         .listStyle(.insetGrouped)
+        .errorAlert("Couldn’t assign the card.", $assignFailure)
     }
 
     /// "ios · desktop": the values of its labels in the board's groups.

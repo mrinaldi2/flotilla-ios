@@ -27,7 +27,7 @@ final class KanbanLabelTests: XCTestCase {
         let card = try BoardCard(jsonString: try fixture("card.json"))
         XCTAssertEqual(card.labels, ["dashboard", "platform:daemon", "platform:desktop"])
         XCTAssertEqual(card.allLabels, card.labels, "the deprecated platforms say the same: nothing doubles")
-        let item = try Hermes_Board_V1_Item(jsonString: try fixture("item.json"))
+        let item = try Flotilla_Board_V1_Item(jsonString: try fixture("item.json"))
         XCTAssertEqual(item.allLabels, ["dashboard", "platform:daemon", "platform:desktop"])
     }
 
@@ -54,7 +54,7 @@ final class KanbanLabelTests: XCTestCase {
     }
 
     func testTheSettingsFixtureKeysMachinesByLabel() throws {
-        let settings = try Hermes_Board_V1_BoardSettings(jsonString: try fixture("settings.json"))
+        let settings = try Flotilla_Board_V1_BoardSettings(jsonString: try fixture("settings.json"))
         XCTAssertEqual(settings.requiredMachinesByLabel["platform:desktop"]?.values, ["mac", "win-pc"])
         XCTAssertEqual(settings.requiredMachines["desktop"]?.values, ["mac", "win-pc"], "still filled for 0.18 readers")
     }

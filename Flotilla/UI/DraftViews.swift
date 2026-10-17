@@ -7,7 +7,7 @@ import SwiftUI
 
 /// "✎ Draft · not on the board yet", or a discarded draft's note.
 struct DraftBanner: View {
-    let item: Hermes_Board_V1_Item
+    let item: Flotilla_Board_V1_Item
     var boardName: String?
 
     var body: some View {
@@ -50,7 +50,7 @@ struct DraftSections: View {
     /// The bot whose Remove asks first ("Remove Team Lead from RB-20?").
     @State private var removing: String?
 
-    private var item: Hermes_Board_V1_Item { detail.item }
+    private var item: Flotilla_Board_V1_Item { detail.item }
 
     /// The project's bots, the lead first; workers left out.
     private var bots: [Bot] {

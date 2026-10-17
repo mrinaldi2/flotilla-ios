@@ -7,7 +7,7 @@ import Foundation
 // labels here, as a 0.19 home would store them. The phone never sends
 // platforms.
 
-typealias LabelGroup = Hermes_Board_V1_LabelGroup
+typealias LabelGroup = Flotilla_Board_V1_LabelGroup
 
 /// A group as the filter bar, the cards and quick add read it.
 struct LabelGroupView: Equatable, Identifiable {
@@ -34,7 +34,7 @@ enum Labels {
     }
 
     /// A 0.18 platform as the label a 0.19 home stores it as.
-    static func label(of platform: Hermes_Board_V1_Platform) -> String? {
+    static func label(of platform: Flotilla_Board_V1_Platform) -> String? {
         switch platform {
         case .desktop: "platform:desktop"
         case .ios: "platform:ios"
@@ -46,7 +46,7 @@ enum Labels {
 
     /// The labels, with the platforms a 0.18 home sends as `platform:` labels.
     /// A 0.19 home fills both from the same labels, so nothing doubles.
-    static func merged(_ labels: [String], platforms: [Hermes_Board_V1_Platform]) -> [String] {
+    static func merged(_ labels: [String], platforms: [Flotilla_Board_V1_Platform]) -> [String] {
         var all = labels
         for label in platforms.compactMap(label(of:)) where !all.contains(label) { all.append(label) }
         return all
@@ -76,12 +76,12 @@ enum Labels {
     }
 }
 
-extension Hermes_Board_V1_ItemCard {
+extension Flotilla_Board_V1_ItemCard {
     /// Its labels, a 0.18 home's platforms included.
     var allLabels: [String] { Labels.merged(labels, platforms: platforms) }
 }
 
-extension Hermes_Board_V1_Item {
+extension Flotilla_Board_V1_Item {
     /// Its labels, a 0.18 home's platforms included.
     var allLabels: [String] { Labels.merged(labels, platforms: platforms) }
 }
@@ -138,7 +138,7 @@ extension BoardState {
     }
 }
 
-extension Hermes_Board_V1_BoardColumn {
+extension Flotilla_Board_V1_BoardColumn {
     /// "Doing 1 of 3" while a filter hides some cards; else as `chip(count:)`.
     func chip(shown: Int, of total: Int, filtering: Bool) -> String {
         filtering ? "\(name) \(shown) of \(total)" : chip(count: total)

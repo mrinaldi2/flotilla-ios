@@ -23,14 +23,30 @@ final class HomeTests: XCTestCase {
         XCTAssertEqual(row.members.map(\.computerName), ["mac", "imac"])
         XCTAssertEqual(row.currentRelease.state, "awaiting_owner")
         XCTAssertTrue(row.currentRelease.awaitingOwner)
-        XCTAssertEqual(row.attention.byKind["owner_action"], 1)
+        XCTAssertEqual(row.attention.byKind["bot_stopped"], 1)
         XCTAssertTrue(row.attention.hasOldestAt)
         XCTAssertEqual(row.columns.first?.category, "inbox")
         XCTAssertEqual(row.botsWaiting, 1)
     }
 
+    /// The 0.20 Board glance additions (overview_bots, overview_top_attention,
+    /// attention_bot_stopped, column kinds).
+    func testOverviewFixtureCarriesTheBoardGlanceAdditions() throws {
+        let row = try XCTUnwrap(try HomeJSON.decode(HomeOverview.self, json("overview")).rows.first)
+        XCTAssertEqual(row.botList.first?.name, "Lead")
+        XCTAssertTrue(row.botList.first?.lead ?? false)
+        XCTAssertEqual(row.botList.first?.status, .working)
+        XCTAssertTrue(row.botList.contains { $0.status == .offline })
+        XCTAssertEqual(row.topAttention.kind, .botStopped)
+        XCTAssertEqual(row.topAttention.botState, "crashed")
+        XCTAssertEqual(row.members.last?.online, false)
+        XCTAssertTrue(row.members.last?.hasLastSeenAt ?? false)
+        XCTAssertEqual(row.columns.last?.kind, "cancelled")
+        XCTAssertTrue(row.columns.last?.hidden ?? false)
+    }
+
     func testAttentionRowsFixtureDecodesTargets() throws {
-        let rows = try HomeJSON.decode(Hermes_Home_V1_AttentionRows.self, json("attention_rows")).rows
+        let rows = try HomeJSON.decode(Flotilla_Home_V1_AttentionRows.self, json("attention_rows")).rows
         XCTAssertEqual(rows.first?.kind, .ownerAction)
         XCTAssertEqual(rows.first?.target, .actionID("oa-7"))
         XCTAssertEqual(rows.first?.daemonID, "d-imac")
@@ -40,14 +56,14 @@ final class HomeTests: XCTestCase {
     }
 
     func testPeerAttentionFixtureDecodes() throws {
-        let attention = try HomeJSON.decode(Hermes_Home_V1_ProjectAttention.self, json("project_attention"))
+        let attention = try HomeJSON.decode(Flotilla_Home_V1_ProjectAttention.self, json("project_attention"))
         XCTAssertEqual(attention.parts.first?.local.count, 1)
         XCTAssertEqual(attention.parts.first?.botsWaiting, 1)
     }
 
     func testUnknownFieldsAndEnumsFromANewerDaemonAreTolerated() throws {
         let data = #"{"rows":[{"id":"x","kind":"SOMETHING_NEW","title":"New","weight":2,"brand_new_field":1}]}"#
-        let rows = try HomeJSON.decode(Hermes_Home_V1_AttentionRows.self, JSONSerialization.jsonObject(with: Data(data.utf8))).rows
+        let rows = try HomeJSON.decode(Flotilla_Home_V1_AttentionRows.self, JSONSerialization.jsonObject(with: Data(data.utf8))).rows
         XCTAssertEqual(rows.first?.title, "New")
     }
 
@@ -64,7 +80,7 @@ final class HomeTests: XCTestCase {
         row.projectID = members.first?.1 ?? name
         row.name = name
         row.members = members.map { daemon, project in
-            var member = Hermes_Home_V1_Member()
+            var member = Flotilla_Home_V1_Member()
             member.daemonID = daemon
             member.projectID = project
             return member
@@ -123,7 +139,7 @@ final class HomeTests: XCTestCase {
     // MARK: Words
 
     func testWhyItRanks() {
-        var attention = Hermes_Home_V1_AttentionSummary()
+        var attention = Flotilla_Home_V1_AttentionSummary()
         XCTAssertEqual(AttentionWords.summary(attention), "Nothing needs you")
         attention.count = 4
         attention.byKind = ["decision": 2, "release_awaiting": 1, "owner_action": 1]
@@ -133,7 +149,7 @@ final class HomeTests: XCTestCase {
     }
 
     func testReleaseWordsFollowTheGlossary() {
-        var release = Hermes_Home_V1_ReleaseBrief()
+        var release = Flotilla_Home_V1_ReleaseBrief()
         release.version = "0.17.0"
         release.state = "awaiting_owner"
         XCTAssertEqual(ReleaseStatusWords.pill(release).0, "0.17.0 ready for you to test")

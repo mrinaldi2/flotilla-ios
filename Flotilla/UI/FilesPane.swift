@@ -150,7 +150,11 @@ struct FilePreview: View {
     }
 
     @ViewBuilder private func content(_ loaded: DaemonFile) -> some View {
-        if loaded.mime.hasPrefix("image/"), let data = loaded.data, let image = UIImage(data: data) {
+        // A page as it shows, its CSS and images read beside it (0.20).
+        if loaded.mime == "text/html" {
+            PageView(source: .botFile(botId: botId, path: file.path, name: file.name), store: store)
+                .ignoresSafeArea(edges: .bottom)
+        } else if loaded.mime.hasPrefix("image/"), let data = loaded.data, let image = UIImage(data: data) {
             ScrollView([.horizontal, .vertical]) {
                 Image(uiImage: image).resizable().scaledToFit().frame(maxWidth: .infinity)
             }

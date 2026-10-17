@@ -5,8 +5,8 @@ import XCTest
 /// The main chat lists one thread per bot across computers (H-128 D6).
 final class MainChatTests: XCTestCase {
     private func thread(_ bot: String, daemon: String, name: String, text: String, at: Int64,
-                        unread: UInt32 = 0, question: Bool = false) -> Hermes_Home_V1_OwnerThread {
-        var t = Hermes_Home_V1_OwnerThread()
+                        unread: UInt32 = 0, question: Bool = false) -> Flotilla_Home_V1_OwnerThread {
+        var t = Flotilla_Home_V1_OwnerThread()
         t.bot.botID = bot
         t.bot.daemonID = daemon
         t.bot.name = name
@@ -35,7 +35,7 @@ final class MainChatTests: XCTestCase {
 
     func testOnlyConversationsNewestFirst() {
         // UX-031: bots you've never messaged aren't listed; ✎ reaches them.
-        var never = Hermes_Home_V1_OwnerThread()
+        var never = Flotilla_Home_V1_OwnerThread()
         never.bot.botID = "e"
         never.bot.name = "E"
         let cards = ThreadMerge.merge([("mac", "d-mac", [

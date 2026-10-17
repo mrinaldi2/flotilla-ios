@@ -10,12 +10,12 @@ final class KanbanDecodingTests: XCTestCase {
     private static let fixtures = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("contract/fixtures/board")
 
-    private func envelope(_ name: String) throws -> Hermes_Wire_V1_Envelope {
+    private func envelope(_ name: String) throws -> Flotilla_Wire_V1_Envelope {
         let text = try String(contentsOf: Self.fixtures.appendingPathComponent("messages/\(name).json"), encoding: .utf8)
-        return try Hermes_Wire_V1_Envelope(jsonString: text)
+        return try Flotilla_Wire_V1_Envelope(jsonString: text)
     }
 
-    private func response(_ name: String) throws -> Hermes_Board_V1_BoardResponse.OneOf_Response {
+    private func response(_ name: String) throws -> Flotilla_Board_V1_BoardResponse.OneOf_Response {
         guard case .boardResponse(let response)? = try envelope(name).body, let answer = response.response else {
             throw DaemonError(code: "fixture", message: "\(name) is not a board response")
         }
@@ -56,12 +56,12 @@ final class KanbanDecodingTests: XCTestCase {
 
     func testA018SnapshotSurvivesTheBinaryWire() throws {
         let snapshot = try BoardSnapshot(jsonString: Self.snapshot018)
-        var response = Hermes_Board_V1_BoardResponse()
+        var response = Flotilla_Board_V1_BoardResponse()
         response.response = .board(snapshot)
-        var envelope = Hermes_Wire_V1_Envelope()
+        var envelope = Flotilla_Wire_V1_Envelope()
         envelope.reqID = 3
         envelope.body = .boardResponse(response)
-        let decoded = try Hermes_Wire_V1_Envelope(serializedBytes: try envelope.serializedData())
+        let decoded = try Flotilla_Wire_V1_Envelope(serializedBytes: try envelope.serializedData())
         guard case .boardResponse(let back)? = decoded.body, case .board(let board)? = back.response else { return XCTFail("not a board") }
         XCTAssertTrue(board.boards.isEmpty)
         XCTAssertEqual(board.cards.map(\.boardID), ["", "", ""], "no board ids from a 0.18 home")
@@ -205,7 +205,7 @@ final class KanbanLogicTests: XCTestCase {
         """)
     }
 
-    private func event(_ seq: UInt64, _ kind: Hermes_Board_V1_BoardEventKind, _ id: String, card: BoardCard? = nil) -> BoardEvent {
+    private func event(_ seq: UInt64, _ kind: Flotilla_Board_V1_BoardEventKind, _ id: String, card: BoardCard? = nil) -> BoardEvent {
         var event = BoardEvent()
         event.projectID = "p1"
         event.seq = seq
@@ -277,9 +277,9 @@ final class KanbanLogicTests: XCTestCase {
     }
 
     func testMoveOptionsAskForAReasonOrAnOverrideOnlyWhenARuleDoes() {
-        var check = Hermes_Board_V1_MoveCheck()
-        func column(_ key: String, _ codes: [String]) -> Hermes_Board_V1_ColumnCheck {
-            var c = Hermes_Board_V1_ColumnCheck()
+        var check = Flotilla_Board_V1_MoveCheck()
+        func column(_ key: String, _ codes: [String]) -> Flotilla_Board_V1_ColumnCheck {
+            var c = Flotilla_Board_V1_ColumnCheck()
             c.columnKey = key
             c.unmet = codes.map { code in
                 var unmet = BoardUnmet()
@@ -346,7 +346,7 @@ final class KanbanLogicTests: XCTestCase {
     func testEachKindOfProposedChangeReadsAsTheDesktopDrawsIt() {
         let columns = [column("todo", "To do", ord: 0), column("doing", "Doing", ord: 1), column("done", "Done", ord: 2),
                        column("cancelled", "Cancelled", ord: 3, visible: false)]
-        var add = Hermes_Board_V1_ColumnAdd()
+        var add = Flotilla_Board_V1_ColumnAdd()
         add.name = "QA"
         add.after = "doing"
         add.rules = ["size_at_most:M", "fields_filled:Problem;Scope"]
@@ -358,7 +358,7 @@ final class KanbanLogicTests: XCTestCase {
         XCTAssertEqual(added.notes, ["+ adds: Size at most M", "+ adds: Template sections filled: Problem, Scope",
                                      "Moved in by: The lead, Roles dev, tester", "WIP limit 2"])
 
-        var update = Hermes_Board_V1_ColumnUpdate()
+        var update = Flotilla_Board_V1_ColumnUpdate()
         update.key = "doing"
         update.name = "In progress"
         update.after = ""
@@ -370,26 +370,26 @@ final class KanbanLogicTests: XCTestCase {
         XCTAssertEqual(updated.after.map(\.chip), ["~ In progress", "To do", "Done"], "renamed and moved first")
         XCTAssertEqual(updated.notes, ["+ adds: Has an assignee", "− drops: Not flagged blocked"])
 
-        var hide = Hermes_Board_V1_ColumnUpdate()
+        var hide = Flotilla_Board_V1_ColumnUpdate()
         hide.key = "done"
         hide.visible = false
         XCTAssertEqual(ProposalDiff(.columnUpdate(hide), columns: columns).after.map(\.chip), ["To do", "Doing"])
 
-        var remove = Hermes_Board_V1_ColumnRemove()
+        var remove = Flotilla_Board_V1_ColumnRemove()
         remove.key = "doing"
         remove.moveItemsTo = "todo"
         let removed = ProposalDiff(.columnRemove(remove), columns: columns)
         XCTAssertEqual(removed.after.map(\.chip), ["To do", "− Doing", "Done"])
         XCTAssertEqual(removed.notes, ["Its items move to To do"])
 
-        var automation = Hermes_Board_V1_AutomationSet()
+        var automation = Flotilla_Board_V1_AutomationSet()
         automation.fact = "pr.merged"
         automation.columnKey = "done"
         let automated = ProposalDiff(.automationSet(automation), columns: columns)
         XCTAssertFalse(automated.showsColumns)
         XCTAssertEqual(automated.notes, ["When PR merged → move to Done"])
 
-        var create = Hermes_Board_V1_BoardCreate()
+        var create = Flotilla_Board_V1_BoardCreate()
         create.name = "Research"
         create.preset = "simple"
         let created = ProposalDiff(.boardCreate(create), columns: [])
@@ -397,7 +397,7 @@ final class KanbanLogicTests: XCTestCase {
         XCTAssertEqual(created.after.map(\.chip), ["+ To do", "+ Doing", "+ Done"])
         XCTAssertEqual(created.notes, ["A new board, Research, from the Simple preset"])
 
-        var groups = Hermes_Board_V1_BoardUpdate()
+        var groups = Flotilla_Board_V1_BoardUpdate()
         var platform = LabelGroup()
         platform.name = "platform"
         platform.values = ["ios", "android"]
@@ -412,7 +412,7 @@ final class KanbanLogicTests: XCTestCase {
         proposal.decisionID = "dec-2"
         proposal.state = "open"
         proposal.summary = "create board “Research 2” (simple)"
-        var create = Hermes_Board_V1_BoardCreate()
+        var create = Flotilla_Board_V1_BoardCreate()
         create.name = "Research 2"
         create.preset = "simple"
         proposal.change = .boardCreate(create)

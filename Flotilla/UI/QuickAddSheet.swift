@@ -20,7 +20,7 @@ struct QuickAddSheet: View {
     @State private var readFailure: String?
     @FocusState private var titleFocused: Bool
 
-    private static let types: [(Hermes_Board_V1_ItemType, String)] = [
+    private static let types: [(Flotilla_Board_V1_ItemType, String)] = [
         (.feature, "Feature"), (.bug, "Bug"), (.chore, "Chore"), (.spike, "Spike"), (.epic, "Epic"),
     ]
     private static let fileTypes: [UTType] = [.image, .pdf, .plainText, .text, UTType(filenameExtension: "md"),

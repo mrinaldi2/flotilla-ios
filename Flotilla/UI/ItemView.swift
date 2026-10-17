@@ -32,6 +32,7 @@ struct ItemView: View {
     /// "Move to…" from the card itself, with its board's columns.
     @State private var moving: MoveTarget?
     @State private var moveFailure: String?
+    @State private var assignFailure: String?
 
     private struct MoveTarget: Identifiable {
         let card: BoardCard
@@ -94,7 +95,7 @@ struct ItemView: View {
                         SectionTitle("Acceptance criteria")
                     }
                 }
-                AttachmentsSection(attachments: detail.attachments)
+                AttachmentsSection(attachments: detail.attachments, projectId: project)
                 if item.state == "draft", let draftModel, let discussion {
                     DraftSections(detail: detail, projectId: project, board: board, model: draftModel,
                                   discussion: discussion, chatting: $chatting) { await load() }
@@ -130,12 +131,23 @@ struct ItemView: View {
                     Button("Move to…") { openMove(item) }
                         .accessibilityIdentifier("item-move")
                 }
+                if let project {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        AssignMenu(itemId: item.id, version: item.version, assignee: item.hasAssignee ? item.assignee : nil,
+                                   projectId: project) { assignFailure = $0 } assigned: {
+                            Task { await load() }
+                        }
+                        .labelStyle(.iconOnly)
+                        .accessibilityIdentifier("item-assign")
+                    }
+                }
             }
         }
         .sheet(item: $moving, onDismiss: { Task { await load() } }) { target in
             MoveSheet(model: MoveModel(card: target.card, service: store), columns: target.columns)
         }
         .errorAlert("Couldn’t check the columns.", $moveFailure)
+        .errorAlert("Couldn’t assign the card.", $assignFailure)
         .navigationDestination(item: $chatting) { botId in
             DraftChatView(botId: botId, itemId: itemId, title: detail?.item.title ?? "", discussion: discussion, projectId: project)
         }
@@ -148,7 +160,7 @@ struct ItemView: View {
     }
 
     /// The card's board, then the Move sheet on it.
-    private func openMove(_ item: Hermes_Board_V1_Item) {
+    private func openMove(_ item: Flotilla_Board_V1_Item) {
         guard let project else { return }
         Task {
             do {
