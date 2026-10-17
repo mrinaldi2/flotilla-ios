@@ -25,6 +25,7 @@ struct ColumnSheet: View {
     let openBoard: () -> Void
     @State private var model: BoardModel?
     @State private var moving: Moving?
+    @State private var assignFailure: String?
 
     /// A card on its way out of the column, with where it should go.
     private struct Moving: Identifiable {
@@ -114,6 +115,8 @@ struct ColumnSheet: View {
                     .contextMenu {
                         if canMove {
                             Button { moving = Moving(card: card, target: nil) } label: { Label("Move to…", systemImage: "arrow.right.square") }
+                            AssignMenu(itemId: card.id, version: card.version, assignee: card.hasAssignee ? card.assignee : nil,
+                                       projectId: link.projectId) { assignFailure = $0 }
                         }
                     }
                 }
@@ -129,6 +132,7 @@ struct ColumnSheet: View {
             }
         }
         .listStyle(.insetGrouped)
+        .errorAlert("Couldn’t assign the card.", $assignFailure)
     }
 
     private static func move(_ card: BoardCard, to target: String?, service: BoardService) -> MoveModel {

@@ -117,7 +117,8 @@ private struct BoardContent: View {
                     let groups = state.labelGroups()
                     ForEach(state.columns, id: \.key) { column in
                         ColumnList(cards: state.cards(in: column.key, matching: model.filter), computerId: computer.id, bots: store.bots,
-                                   groups: groups, filtering: model.filter.isOn, canMove: store.canControl) { moving = $0 }
+                                   groups: groups, filtering: model.filter.isOn, canMove: store.canControl,
+                                   projectId: model.projectId) { moving = $0 }
                             .tag(column.key)
                     }
                     if state.hasBoards {
@@ -230,7 +231,10 @@ struct ColumnList: View {
     /// A label filter hides some of the column's cards.
     var filtering = false
     var canMove = false
+    /// The project, so a card can be given to one of its bots.
+    var projectId: String?
     var move: (BoardCard) -> Void = { _ in }
+    @State private var assignFailure: String?
 
     var body: some View {
         List {
@@ -247,6 +251,10 @@ struct ColumnList: View {
                 .contextMenu {
                     if canMove {
                         Button { move(card) } label: { Label("Move to…", systemImage: "arrow.right.square") }
+                        if let projectId {
+                            AssignMenu(itemId: card.id, version: card.version, assignee: card.hasAssignee ? card.assignee : nil,
+                                       projectId: projectId) { assignFailure = $0 }
+                        }
                     }
                 }
                 .accessibilityActions {
@@ -255,6 +263,7 @@ struct ColumnList: View {
             }
         }
         .listStyle(.insetGrouped)
+        .errorAlert("Couldn’t assign the card.", $assignFailure)
     }
 
     /// "ios · desktop": the values of its labels in the board's groups.
