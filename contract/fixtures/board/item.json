@@ -64,5 +64,6 @@
   "stateEnteredAt": "2026-10-04T09:12:33Z",
   "version": "7",
   "state": "live",
-  "boardId": "p1/main"
+  "boardId": "p1/main",
+  "planNodeId": "PL-6"
 }

@@ -163,6 +163,14 @@ final class PlanTests: XCTestCase {
                                                        + "Attach the spike's research document, or ask the owner to skip research."]))
     }
 
+    func testACardAndAnItemNameTheirPlanNode() throws {
+        let card = try BoardCard(jsonString: String(contentsOf: Self.fixtures.appendingPathComponent("board/card.json"), encoding: .utf8))
+        XCTAssertEqual(card.planNodeID, "PL-6")
+        let item = try Flotilla_Board_V1_Item(jsonString: String(contentsOf: Self.fixtures.appendingPathComponent("board/item.json"),
+                                                                 encoding: .utf8))
+        XCTAssertEqual(item.planNodeID, "PL-6")
+    }
+
     func testThePlanGateRowOfNeedsYouDecodes() throws {
         let json = try JSONSerialization.jsonObject(with: Data(contentsOf: Self.fixtures.appendingPathComponent("home/attention_rows.json")))
         let rows = try HomeJSON.decode(Flotilla_Home_V1_AttentionRows.self, json).rows

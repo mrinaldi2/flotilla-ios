@@ -490,7 +490,8 @@ nonisolated struct Flotilla_Board_V1_PlanGate: Sendable {
 
   var children: [Flotilla_Board_V1_PlanChild] = []
 
-  /// The decision it is raised as, for Needs you.
+  /// Unused, always unset: a gate waits in Needs you as its own row
+  /// (`AttentionKind.PLAN_GATE`, targeting the node), not as a decision.
   var decisionID: String {
     get {_decisionID ?? String()}
     set {_decisionID = newValue}

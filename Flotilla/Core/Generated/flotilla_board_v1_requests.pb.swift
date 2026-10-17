@@ -1292,9 +1292,11 @@ nonisolated struct Flotilla_Board_V1_BoardEnable: Sendable {
   /// column has none of them. The new items' inbox is the first OPEN column.
   ///
   /// release_gated: its guards key on the columns, so only names may change.
-  /// The list is exactly its eight visible columns in order (inbox, ready,
-  /// doing, review, verify, approval, deploying, done), each entry's `key`
-  /// left out or that column's, its `kind` UNSPECIFIED or that column's.
+  /// The list is exactly its nine visible columns in order (inbox, ready,
+  /// research, doing, review, verify, approval, deploying, done), each
+  /// entry's `key` left out or that column's, its `kind` UNSPECIFIED or that
+  /// column's. From 0.21.0 (`column_research`) the eight without research
+  /// are also taken, Research keeping its name.
   ///
   /// Anything else is `invalid_request`, and no board is started.
   var columns: [Flotilla_Board_V1_ColumnSpec] = []

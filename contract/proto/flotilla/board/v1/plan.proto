@@ -139,7 +139,8 @@ message PlanGate {
   // The lead's note: what changed, or why research can be skipped.
   optional string note = 7;
   repeated PlanChild children = 8;
-  // The decision it is raised as, for Needs you.
+  // Unused, always unset: a gate waits in Needs you as its own row
+  // (`AttentionKind.PLAN_GATE`, targeting the node), not as a decision.
   optional string decision_id = 9;
   // 1 for the first submission of this stage, 2 after a send-back, ...
   uint32 round = 10;
