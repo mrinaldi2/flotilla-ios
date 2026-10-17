@@ -80,10 +80,17 @@ extension AppStore: BoardService, DraftService {
         }
     }
 
-    /// A binary push: a board event goes to the screens watching its project.
+    /// A binary push: a board event or a plan change goes to the screens watching its project.
     func envelopePushed(_ envelope: Flotilla_Wire_V1_Envelope) {
-        guard case .boardPush(let push)? = envelope.body, case .boardEvent(let event)? = push.push else { return }
-        for handler in (boardListeners[event.projectID] ?? [:]).values { handler(event) }
+        guard case .boardPush(let push)? = envelope.body else { return }
+        switch push.push {
+        case .boardEvent(let event)?:
+            for handler in (boardListeners[event.projectID] ?? [:]).values { handler(event) }
+        case .planChange(let change)?:
+            planPushed(change)
+        case nil:
+            break
+        }
     }
 
     // MARK: Moves

@@ -208,9 +208,14 @@ final class HomeFeed {
     /// A card's asks: its loaded rows, or until they load the one row the
     /// row says comes first (`top_attention`, 0.20).
     func asks(for card: HomeCard) -> [HomeAttentionRow] {
-        if let rows = attention[card.id] { return rows }
-        return card.row.hasTopAttention ? [card.row.topAttention] : []
+        let rows = attention[card.id] ?? (card.row.hasTopAttention ? [card.row.topAttention] : [])
+        return later.isEmpty ? rows : rows.filter { !later.contains($0.id) }
     }
+
+    /// Plan gates the owner answered Later (0.21): off the list on this phone
+    /// until the app starts again. The gate still waits on the computer.
+    private(set) var later: Set<String> = []
+    func putOff(_ rowId: String) { later.insert(rowId) }
     private(set) var failures: [String: String] = [:]
     /// A card id the Needs you filter should show, its list open: set by
     /// "See all in Needs you"; empty for the filter alone.

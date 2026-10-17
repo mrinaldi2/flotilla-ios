@@ -198,6 +198,8 @@ struct CardPreview: Equatable {
 
     static func words(_ type: Flotilla_Board_V1_ItemType) -> String? {
         switch type {
+        case .task: "Task"
+        case .design: "Design"
         case .epic: "Epic"
         case .feature: "Feature"
         case .bug: "Bug"

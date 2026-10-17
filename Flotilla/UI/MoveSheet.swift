@@ -36,7 +36,7 @@ struct MoveSheet: View {
                             Label(line, systemImage: "xmark.octagon").foregroundStyle(Color.errorText)
                         }
                     } header: {
-                        SectionTitle("Not moved")
+                        SectionTitle(model.heldForResearch ? "Can’t start yet" : "Not moved")
                     }
                 }
             }

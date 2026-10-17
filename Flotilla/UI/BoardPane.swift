@@ -150,7 +150,8 @@ private struct BoardContent: View {
                 .computerEnvironment(computer)
         }
         .sheet(isPresented: $adding) {
-            QuickAddSheet(model: QuickAddModel(projectId: model.projectId, boardId: state.selected, service: store),
+            QuickAddSheet(model: QuickAddModel(projectId: model.projectId, boardId: state.selected, service: store,
+                                               itemTypesV2: store.hasItemTypesV2, plan: store.hasPlan ? store : nil),
                           boards: state.boards, groups: { state.labelGroups(for: $0) }) { saved in
                 saveNotice = saved.missing.isEmpty ? nil
                     : "\(saved.itemId) was saved without: " + saved.missing.joined(separator: "; ")

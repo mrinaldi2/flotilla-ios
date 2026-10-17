@@ -112,6 +112,8 @@ final class AppStore {
     @ObservationIgnored let client = DaemonClient()
     /// Screens following a project's board, by project: its `board_event` pushes go to them (K7).
     @ObservationIgnored var boardListeners: [String: [UUID: (BoardEvent) -> Void]] = [:]
+    /// Screens following a project's plan (0.21): its `plan_change` pushes go to them.
+    @ObservationIgnored var planListeners: [String: [UUID: (PlanChange) -> Void]] = [:]
     @ObservationIgnored private let defaults: ComputerDefaults
     @ObservationIgnored private var sinks: [String: TerminalSink] = [:]
     @ObservationIgnored private var troubleTask: Task<Void, Never>?
@@ -239,6 +241,12 @@ final class AppStore {
     private func helloReceived(_ hello: JSONDict) {
         grants = Set(hello.strings("grants"))
         capabilities = Set(hello.strings("capabilities"))
+        #if DEBUG
+        // Screenshots of 0.21 screens before a home serves them: -extraCapabilities "item_types_v2,column_research".
+        if let extra = UserDefaults.standard.string(forKey: "extraCapabilities") {
+            capabilities.formUnion(extra.split(separator: ",").map { String($0).trimmed })
+        }
+        #endif
         encodings = Set(hello.strings("encodings"))
         serverVersion = hello.str("server_version")
         deviceId = hello.optStr("device_id")

@@ -149,6 +149,8 @@ final class MoveModel {
     var overrideReason = ""
     /// The daemon's answer to the last try, when it refused.
     private(set) var refusal: [String] = []
+    /// The last try was refused for want of code research (0.21, `start.research`).
+    private(set) var heldForResearch = false
 
     @ObservationIgnored private let service: BoardService
 
@@ -192,9 +194,11 @@ final class MoveModel {
             switch MoveOutcome(try await service.move(move)) {
             case .done:
                 refusal = []
+                heldForResearch = false
                 phase = .moved(to: chosen.name)
             case .refused(let unmet):
                 refusal = MoveOutcome.lines(unmet)
+                heldForResearch = unmet.contains { $0.code == CodeResearch.unmetCode }
                 phase = .ready
             case .conflict:
                 refusal = ["\(card.id) changed meanwhile. The columns are checked again."]
@@ -235,8 +239,15 @@ final class QuickAddModel {
 
     let projectId: String
     var title = ""
-    var type = Flotilla_Board_V1_ItemType.feature
+    /// Task on a 0.21 home (`item_types_v2`); Feature on an older one.
+    var type: Flotilla_Board_V1_ItemType
+    /// The types this home takes, in the picker's order.
+    let types: [(Flotilla_Board_V1_ItemType, String)]
     var boardId: String
+    /// The plan node the card belongs to (0.21, "Belongs to"); empty for none.
+    var planNodeId = ""
+    /// The project's plan, when it has one: the nodes a card can belong to.
+    private(set) var planNodes: [PlanNode] = []
     var description = ""
     /// Labels picked from the board's groups (`platform:ios`); never platforms.
     private(set) var labels: [String] = []
@@ -247,11 +258,42 @@ final class QuickAddModel {
     private(set) var failure: String?
 
     @ObservationIgnored private let service: DraftService
+    @ObservationIgnored private let plan: PlanService?
 
-    init(projectId: String, boardId: String, service: DraftService) {
+    /// `itemTypesV2`: the home takes the 0.21 card types. `plan`: the home
+    /// serves the plan (`plan_v1`), so a card can belong to a node.
+    init(projectId: String, boardId: String, service: DraftService, itemTypesV2: Bool = false, plan: PlanService? = nil) {
         self.projectId = projectId
         self.boardId = boardId
         self.service = service
+        self.plan = plan
+        types = CardTypes.offered(v2: itemTypesV2)
+        type = CardTypes.defaultType(v2: itemTypesV2)
+    }
+
+    /// Reads the plan for "Belongs to"; a project without one shows no row.
+    func loadPlan() async {
+        guard let plan, let tree = try? await plan.planTree(projectId: projectId), tree.enabled else { return }
+        planNodes = tree.nodes
+    }
+
+    /// Whether "Belongs to" shows: the project plans, and has nodes to pick.
+    var plans: Bool { !planNodes.isEmpty }
+
+    /// The nodes a card can belong to, on any board: picking one picks its board.
+    var homes: [PlanRow] { PlanOutline.homes(in: planNodes) }
+
+    var planNode: PlanNode? { planNodes.first { $0.id == planNodeId } }
+
+    /// A node picked: its board goes with it.
+    func belong(to nodeId: String) {
+        planNodeId = nodeId
+        if let node = planNode, node.hasBoardID, !node.boardID.isEmpty { boardId = node.boardID }
+    }
+
+    /// Another board picked: a node of another board no longer applies.
+    func boardChanged() {
+        if let node = planNode, node.boardID != boardId { planNodeId = "" }
     }
 
     func add(name: String, data: Data) { files.append(File(name: name, data: data)) }
@@ -288,6 +330,7 @@ final class QuickAddModel {
         if !description.trimmed.isEmpty { create.description_p = description }
         if !boardId.isEmpty { create.boardID = boardId }
         create.labels = labels
+        if !planNodeId.isEmpty { create.planNodeID = planNodeId }
         create.draft = true
         let itemId: String
         do {
