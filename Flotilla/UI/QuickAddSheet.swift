@@ -137,7 +137,7 @@ struct QuickAddSheet: View {
                 Picker("Belongs to", selection: Binding(get: { model.planNodeId }, set: { model.belong(to: $0) })) {
                     Text("Nothing in the plan").tag("")
                     ForEach(model.homes) { row in
-                        Text(String(repeating: "  ", count: max(row.depth - 1, 0)) + row.node.title).tag(row.node.id)
+                        Label(row.node.title, systemImage: PlanKindSymbol.of(row.node.kind)).tag(row.node.id)
                     }
                 }
                 .accessibilityIdentifier("quick-add-belongs")

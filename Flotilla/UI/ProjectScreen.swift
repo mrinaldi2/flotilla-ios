@@ -167,6 +167,8 @@ struct ProjectScreen: View {
             if !planning, segment == .plan { segment = .board }
         }
         .onDisappear { plan?.stop() }
+        // Back from the project's settings, where planning may have been switched.
+        .onAppear { if let plan { Task { await plan.reload() } } }
         .onChange(of: planning) { _, on in
             if !on, segment == .plan { segment = .board }
         }

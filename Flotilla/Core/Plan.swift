@@ -61,6 +61,12 @@ protocol PlanService: AnyObject {
     func planCreate(_ create: Flotilla_Board_V1_PlanCreate) async throws -> PlanResult
     func planRule(_ rule: Flotilla_Board_V1_PlanRule) async throws -> PlanResult
     func planDocRead(_ read: Flotilla_Board_V1_PlanDocRead) async throws -> Flotilla_Board_V1_PlanDocContent
+    /// The owner turning planning on or off (`plan_enable`); the tree after it.
+    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree
+    /// A goal's stage, by the owner (`plan_update`).
+    func planUpdate(_ update: Flotilla_Board_V1_PlanUpdate) async throws -> PlanResult
+    /// The owner stopping a node and what is under it (`plan_drop`).
+    func planDrop(_ drop: Flotilla_Board_V1_PlanDrop) async throws -> PlanResult
     /// `plan_change` pushes for a project reach `handler` while it follows
     /// (the home sends them to connections that watch the project's board).
     func followPlan(projectId: String, _ handler: @escaping (PlanChange) -> Void) async -> UUID
@@ -114,6 +120,26 @@ extension AppStore: PlanService {
             throw unexpectedPlan("plan_doc_read")
         }
         return content
+    }
+
+    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree {
+        var enable = Flotilla_Board_V1_PlanEnable()
+        enable.projectID = projectId
+        enable.enabled = enabled
+        guard case .plan(let tree) = try await boardCall(.planEnable(enable), name: "plan_enable") else { throw unexpectedPlan("plan_enable") }
+        return tree
+    }
+
+    func planUpdate(_ update: Flotilla_Board_V1_PlanUpdate) async throws -> PlanResult {
+        guard case .planned(let result) = try await boardCall(.planUpdate(update), name: "plan_update") else {
+            throw unexpectedPlan("plan_update")
+        }
+        return result
+    }
+
+    func planDrop(_ drop: Flotilla_Board_V1_PlanDrop) async throws -> PlanResult {
+        guard case .planned(let result) = try await boardCall(.planDrop(drop), name: "plan_drop") else { throw unexpectedPlan("plan_drop") }
+        return result
     }
 
     func followPlan(projectId: String, _ handler: @escaping (PlanChange) -> Void) async -> UUID {
@@ -251,8 +277,11 @@ enum PlanWords {
     static func stepStates(_ node: PlanNode) -> [(stage: PlanStage, state: StepState)] {
         let steps = steps(node.kind)
         let index = steps.firstIndex(of: node.stage)
+        // A finished node (met, released, done) has every step behind it.
+        let finished = [.met, .released, .done].contains(node.stage)
         return steps.enumerated().map { offset, stage in
             guard let index else { return (stage, .next) }
+            if finished { return (stage, .done) }
             return (stage, offset < index ? .done : offset == index ? .now : .next)
         }
     }
@@ -519,6 +548,131 @@ final class PlanNodeModel {
         } catch {
             if detail == nil { failure = error.localizedDescription }
         }
+    }
+
+    /// Sends one change; done or conflicting, the node is read again.
+    fileprivate func apply(_ send: (PlanService) async throws -> PlanResult) async -> [String] {
+        do {
+            let outcome = PlanOutcome(try await send(service))
+            await reload()
+            switch outcome {
+            case .done: return []
+            case .refused(let lines): return lines
+            case .conflict(let node): return ["\(node.title) changed meanwhile. Look again, then try once more."]
+            }
+        } catch {
+            return [error.localizedDescription]
+        }
+    }
+}
+
+// MARK: The owner's switch and controls
+
+/// Planning on or off for a project (project settings): on needs the
+/// project's repository; off hides the plan and keeps it.
+@MainActor @Observable
+final class PlanSwitchModel {
+    let projectId: String
+    private(set) var tree: PlanTree?
+    private(set) var busy = false
+    /// The home's refusal, said in place.
+    private(set) var failure: String?
+
+    @ObservationIgnored private let service: PlanService
+
+    init(projectId: String, service: PlanService) {
+        self.projectId = projectId
+        self.service = service
+    }
+
+    var enabled: Bool { tree?.enabled ?? false }
+    /// Turning on waits for the repository; turning off never does.
+    var canTurnOn: Bool { tree?.hasRepo_p ?? false }
+    var title: String { enabled ? "Turn planning off" : "Turn planning on" }
+
+    func load() async {
+        do {
+            tree = try await service.planTree(projectId: projectId)
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+
+    func toggle() async {
+        guard let tree, !busy, tree.enabled || tree.hasRepo_p else { return }
+        busy = true
+        failure = nil
+        defer { busy = false }
+        do {
+            self.tree = try await service.planEnable(projectId: projectId, enabled: !tree.enabled)
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+}
+
+/// The owner's controls on a node: a goal's stage by hand (define → active
+/// → met, `plan_update`) and Drop (`plan_drop`, with Face ID).
+enum PlanControls {
+    /// "Make active" or "Mark met" for a goal, with the stage it moves to.
+    static func goalStep(_ node: PlanNode) -> (title: String, stage: PlanStage)? {
+        guard node.kind == .goal else { return nil }
+        switch node.stage {
+        case .define: return ("Make active", .active)
+        case .active: return ("Mark met", .met)
+        default: return nil
+        }
+    }
+
+    /// A node can be dropped while it isn't finished or dropped already.
+    static func canDrop(_ node: PlanNode) -> Bool {
+        ![.dropped, .met, .released, .done].contains(node.stage)
+    }
+
+    /// What dropping says before it happens.
+    static func dropWarning(_ node: PlanNode) -> String {
+        let under = node.kind == .feature ? "" : " Everything under it that isn't finished stops with it."
+        return "\(node.title) stops.\(under) Its cards stay on the board. You can't undo this here."
+    }
+
+    /// The owner's reason, from the node's last `dropped` event.
+    static func dropReason(_ history: [Flotilla_Board_V1_PlanEvent]) -> String? {
+        history.last { $0.kind == "dropped" && $0.hasNote && !$0.note.trimmed.isEmpty }?.note
+    }
+
+    static func update(_ node: PlanNode, to stage: PlanStage) -> Flotilla_Board_V1_PlanUpdate {
+        var update = Flotilla_Board_V1_PlanUpdate()
+        update.id = node.id
+        update.expectedVersion = node.version
+        update.stage = stage
+        return update
+    }
+
+    static func drop(_ node: PlanNode, reason: String) -> Flotilla_Board_V1_PlanDrop {
+        var drop = Flotilla_Board_V1_PlanDrop()
+        drop.id = node.id
+        drop.expectedVersion = node.version
+        if !reason.trimmed.isEmpty { drop.reason = reason.trimmed }
+        return drop
+    }
+}
+
+extension PlanNodeModel {
+    /// Moves a goal on by hand; the failure lines, empty when it moved.
+    func moveGoal(to stage: PlanStage) async -> [String] {
+        guard let node else { return [] }
+        return await apply { try await $0.planUpdate(PlanControls.update(node, to: stage)) }
+    }
+
+    /// Drops the node after `confirm` (Face ID); the failure lines, empty when dropped.
+    func drop(reason: String, confirm: (String) async throws -> Void) async -> [String] {
+        guard let node else { return [] }
+        do {
+            try await confirm("Drop \(node.title)?")
+        } catch {
+            return [error.localizedDescription]
+        }
+        return await apply { try await $0.planDrop(PlanControls.drop(node, reason: reason)) }
     }
 }
 
@@ -832,6 +986,35 @@ enum CodeResearch {
     /// Whether any column the card could move to waits for its research.
     static func blocks(_ check: Flotilla_Board_V1_MoveCheck) -> BoardUnmet? {
         check.columns.lazy.flatMap(\.unmet).first { $0.code == unmetCode }
+    }
+}
+
+/// A 0.21 card starts from its type's template, five headings with nothing
+/// under them: on screen the empty ones are left out until a bot fills them.
+enum TemplateSections {
+    static func droppingEmpty(_ description: String) -> String {
+        var kept: [String] = []
+        var heading: String?
+        var body: [String] = []
+        func flush() {
+            let filled = body.contains { line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                return !trimmed.isEmpty && !(trimmed.hasPrefix("<!--") && trimmed.hasSuffix("-->"))
+            }
+            if let heading, filled { kept.append(heading) }
+            if heading == nil || filled { kept += body }
+            body = []
+        }
+        for line in description.components(separatedBy: .newlines) {
+            if line.hasPrefix("#") {
+                flush()
+                heading = line
+            } else {
+                body.append(line)
+            }
+        }
+        flush()
+        return kept.joined(separator: "\n").trimmed
     }
 }
 

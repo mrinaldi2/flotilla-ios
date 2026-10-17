@@ -87,8 +87,7 @@ struct ItemView: View {
                     if !live, item.hasAssignee { Text("Assignee: \(store.bot(item.assignee)?.name ?? "a bot")").font(.subheadline) }
                     if let flags = facts.flagsLine { Text(flags).font(.subheadline).foregroundStyle(Color.warningText) }
                     if let planNode {
-                        Text("\(PlanWords.kind(planNode.kind)): \(planNode.title)").font(.subheadline).foregroundStyle(Color.secondaryText)
-                            .accessibilityIdentifier("item-plan-node")
+                        PlanNodeChip(node: planNode, showsKind: true).accessibilityIdentifier("item-plan-node")
                     }
                     // Every label in full (`platform:ios`); a 0.18 home's platforms as `platform:` labels.
                     if !item.allLabels.isEmpty {
@@ -96,7 +95,8 @@ struct ItemView: View {
                             .accessibilityIdentifier("item-labels")
                     }
                     // Code research has its own section below, so it shows once.
-                    let description = codeResearch(item) == nil ? item.description_p : CodeResearch.removing(from: item.description_p)
+                    let full = codeResearch(item) == nil ? item.description_p : CodeResearch.removing(from: item.description_p)
+                    let description = store.hasItemTypesV2 ? TemplateSections.droppingEmpty(full) : full
                     if !description.isEmpty {
                         LinkedText(markdown: AttachmentText.inline(description, attachments: detail.attachments))
                     }

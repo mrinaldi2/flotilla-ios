@@ -262,8 +262,10 @@ final class CardDirectory {
             for project in store.projects where project.deletedAt == nil {
                 var prefix = project.itemPrefix
                 var others: [String] = []
-                if prefix == nil, store.speaksProto, let snapshot = try? await snapshot(computer, projectId: project.id) {
-                    prefix = snapshot.settings.key.isEmpty ? nil : snapshot.settings.key
+                // A planning home (0.21) gives each initiative its own board and
+                // key ("CAC-4"): read the boards for theirs, as without a prefix.
+                if prefix == nil || store.hasPlan, store.speaksProto, let snapshot = try? await snapshot(computer, projectId: project.id) {
+                    prefix = prefix ?? (snapshot.settings.key.isEmpty ? nil : snapshot.settings.key)
                     others = snapshot.boards.map(\.key)
                 }
                 guard let prefix else { continue }

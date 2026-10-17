@@ -37,6 +37,28 @@ final class FakePlan: PlanService {
         return docs["\(read.offset)"] ?? Flotilla_Board_V1_PlanDocContent()
     }
 
+    var enableError: Error?
+    private(set) var enables: [Bool] = []
+    private(set) var updates: [Flotilla_Board_V1_PlanUpdate] = []
+    private(set) var drops: [Flotilla_Board_V1_PlanDrop] = []
+
+    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree {
+        enables.append(enabled)
+        if let enableError { throw enableError }
+        tree.enabled = enabled
+        return tree
+    }
+
+    func planUpdate(_ update: Flotilla_Board_V1_PlanUpdate) async throws -> PlanResult {
+        updates.append(update)
+        return result
+    }
+
+    func planDrop(_ drop: Flotilla_Board_V1_PlanDrop) async throws -> PlanResult {
+        drops.append(drop)
+        return result
+    }
+
     func followPlan(projectId: String, _ handler: @escaping (PlanChange) -> Void) async -> UUID {
         let token = UUID()
         handlers[token] = handler
@@ -198,6 +220,11 @@ final class PlanTests: XCTestCase {
         XCTAssertEqual(states.map(\.state), [.done, .now, .next, .next, .next])
         XCTAssertEqual(PlanWords.stepStates(node("I", kind: .initiative, stage: .proposed)).map(\.state), [.next, .next, .next, .next],
                        "a proposal has no stage yet")
+        XCTAssertEqual(PlanWords.stepStates(node("I", kind: .initiative, stage: .done)).map(\.state), [.done, .done, .done, .done],
+                       "a finished node has nothing now")
+        XCTAssertEqual(Release.PlanItem.column("cr-done"), "Done", "an initiative board's column")
+        XCTAssertEqual(Release.PlanItem.column("cr-research"), "Research")
+        XCTAssertEqual(Release.PlanItem.column("my-custom"), "My-custom")
     }
 
     func testPlanChangesKeepTheTreeLiveAndIgnoreOlderCopies() async throws {
@@ -352,6 +379,103 @@ final class PlanTests: XCTestCase {
         XCTAssertEqual(PlanOutline.openGoals(nodes).map(\.id), ["G1", "G3"])
     }
 
+    // MARK: The owner's switch and controls
+
+    func testPlanningTurnsOnOnlyWithARepositoryAndSaysARefusal() async throws {
+        let fake = FakePlan()
+        var tree = try tree()
+        tree.enabled = false
+        tree.hasRepo_p = false
+        fake.tree = tree
+        let model = PlanSwitchModel(projectId: "p1", service: fake)
+        await model.load()
+        XCTAssertEqual(model.title, "Turn planning on")
+        XCTAssertFalse(model.canTurnOn, "no repository: the switch waits")
+        await model.toggle()
+        XCTAssertTrue(fake.enables.isEmpty, "nothing sent")
+
+        fake.tree.hasRepo_p = true
+        await model.load()
+        fake.enableError = DaemonError(code: "plan.no_board", message: "This project is linked with another computer and has no board yet.")
+        await model.toggle()
+        XCTAssertEqual(fake.enables, [true])
+        XCTAssertEqual(model.failure, "This project is linked with another computer and has no board yet.")
+        XCTAssertFalse(model.enabled)
+
+        fake.enableError = nil
+        await model.toggle()
+        XCTAssertTrue(model.enabled)
+        XCTAssertNil(model.failure)
+        XCTAssertEqual(model.title, "Turn planning off")
+        fake.tree.hasRepo_p = false
+        await model.load()
+        await model.toggle()
+        XCTAssertEqual(fake.enables, [true, true, false], "turning off never waits for the repository")
+    }
+
+    func testAGoalMovesByHandFromDefineToActiveToMet() async throws {
+        XCTAssertEqual(PlanControls.goalStep(node("G", kind: .goal, stage: .define))?.title, "Make active")
+        XCTAssertEqual(PlanControls.goalStep(node("G", kind: .goal, stage: .active))?.stage, .met)
+        XCTAssertEqual(PlanControls.goalStep(node("G", kind: .goal, stage: .active))?.title, "Mark met")
+        XCTAssertNil(PlanControls.goalStep(node("G", kind: .goal, stage: .met)))
+        XCTAssertNil(PlanControls.goalStep(node("I", kind: .initiative, stage: .research)), "only goals move by hand")
+
+        let fake = FakePlan()
+        var goal = node("PL-1", kind: .goal, stage: .define, version: 2)
+        var detail = PlanNodeDetail()
+        detail.node = goal
+        fake.details["PL-1"] = detail
+        goal.stage = .active
+        fake.result.outcome = .done(goal)
+        let model = PlanNodeModel(projectId: "p1", nodeId: "PL-1", service: fake)
+        await model.reload()
+        let failure = await model.moveGoal(to: .active)
+        XCTAssertEqual(failure, [])
+        XCTAssertEqual(fake.updates.first?.id, "PL-1")
+        XCTAssertEqual(fake.updates.first?.stage, .active)
+        XCTAssertEqual(fake.updates.first?.expectedVersion, 2)
+        XCTAssertFalse(fake.updates.first?.hasTitle ?? true, "the stage alone")
+    }
+
+    func testDropAsksFaceIDAndSaysWhatStaysAndWhatStops() async throws {
+        let fake = FakePlan()
+        var detail = PlanNodeDetail()
+        detail.node = node("PL-2", kind: .initiative, stage: .running, version: 5)
+        detail.node.title = "Combat readability"
+        fake.details["PL-2"] = detail
+        let model = PlanNodeModel(projectId: "p1", nodeId: "PL-2", service: fake)
+        await model.reload()
+        XCTAssertEqual(PlanControls.dropWarning(detail.node), "Combat readability stops. Everything under it that isn't finished "
+                       + "stops with it. Its cards stay on the board. You can't undo this here.")
+        XCTAssertTrue(PlanControls.canDrop(detail.node))
+        XCTAssertFalse(PlanControls.canDrop(node("D", stage: .dropped)))
+        XCTAssertFalse(PlanControls.canDrop(node("M", kind: .goal, stage: .met)))
+
+        let cancelled = await model.drop(reason: "x") { _ in throw OwnerAuth.Failure.cancelled(.dropPlan) }
+        XCTAssertEqual(cancelled, ["Not dropped. Nothing was sent."])
+        XCTAssertTrue(fake.drops.isEmpty)
+
+        fake.result.outcome = .done(detail.node)
+        var asked: [String] = []
+        let failure = await model.drop(reason: "  Folded into onboarding. ") { asked.append($0) }
+        XCTAssertEqual(failure, [])
+        XCTAssertEqual(asked, ["Drop Combat readability?"])
+        XCTAssertEqual(fake.drops.first?.reason, "Folded into onboarding.")
+        XCTAssertEqual(fake.drops.first?.expectedVersion, 5)
+        _ = await model.drop(reason: " ") { _ in }
+        XCTAssertFalse(fake.drops.last?.hasReason ?? true, "the reason is optional")
+
+        var stage = Flotilla_Board_V1_PlanEvent()
+        stage.kind = "stage"
+        stage.note = "not this one"
+        var dropped = Flotilla_Board_V1_PlanEvent()
+        dropped.kind = "dropped"
+        dropped.note = "Folded into onboarding."
+        XCTAssertEqual(PlanControls.dropReason([stage, dropped]), "Folded into onboarding.")
+        XCTAssertNil(PlanControls.dropReason([stage]))
+        XCTAssertEqual(PlanNodeScreen.designStatus(node("E", stage: .dropped)), "dropped")
+    }
+
     // MARK: Documents
 
     func testADocumentIsReadAtTheCommitItsFirstChunkCameFrom() async throws {
@@ -479,6 +603,27 @@ final class PlanTests: XCTestCase {
         XCTAssertTrue(CodeResearch.applies(to: .bug))
         XCTAssertFalse(CodeResearch.applies(to: .spike))
         XCTAssertFalse(CodeResearch.applies(to: .design))
+    }
+
+    func testTheOverviewListsEachColumnOnceAcrossBoards() {
+        let column: (String, String, Int, Int?) -> JSONDict = { key, name, count, limit in
+            var row: JSONDict = ["key": key, "name": name, "category": name.lowercased(), "count": count]
+            if let limit { row["wip_limit"] = limit }
+            return row
+        }
+        let dashboard = Dashboard(["board": ["columns": [column("research", "Research", 0, nil), column("doing", "Doing", 1, 3),
+                                                         column("cr-research", "Research", 1, nil), column("cr-doing", "Doing", 2, 3),
+                                                         column("review", "Review", 1, 2)]]])
+        XCTAssertEqual(dashboard.strip.map(\.name), ["Research", "Doing", "Review"])
+        XCTAssertEqual(dashboard.strip.map(\.count), [1, 3, 1])
+        XCTAssertEqual(dashboard.strip.map(\.wipLimit), [nil, nil, 2], "a limit is one board's")
+    }
+
+    func testEmptyTemplateSectionsAreLeftOut() {
+        let fresh = "## What and why\n\n## Plan\n<!-- steps -->\n\n## Risk\n\n## Rollback\n\n"
+        XCTAssertEqual(TemplateSections.droppingEmpty(fresh), "")
+        let filled = "Intro line.\n\n## What and why\nFaster hits.\n\n## Plan\n\n## Risk\nNone."
+        XCTAssertEqual(TemplateSections.droppingEmpty(filled), "Intro line.\n\n## What and why\nFaster hits.\n\n## Risk\nNone.")
     }
 
     func testAMoveHeldForResearchSaysCantStartYet() {

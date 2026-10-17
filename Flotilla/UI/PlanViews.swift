@@ -52,6 +52,19 @@ struct PlanGlyph: View {
     }
 }
 
+/// A kind as a system symbol, where a menu can't draw a tile.
+enum PlanKindSymbol {
+    static func of(_ kind: PlanKind) -> String {
+        switch kind {
+        case .goal: "scope"
+        case .initiative: "square.stack.3d.up"
+        case .epic: "square.stack"
+        case .feature: "puzzlepiece"
+        default: "circle"
+        }
+    }
+}
+
 extension PlanWords.PillTone {
     var tone: Tone {
         switch self {
@@ -292,6 +305,9 @@ struct PlanNodeScreen: View {
                 if node.stage == .dropped || node.stage == .proposed {
                     Pill(text: PlanWords.stage(node.stage), tone: node.stage == .dropped ? .quiet : .needsYou)
                 }
+                if node.stage == .dropped, let why = PlanControls.dropReason(detail?.history ?? []) {
+                    Text("Dropped: “\(why)”").font(.callout).foregroundStyle(Color.secondaryText)
+                }
                 if !node.summary.isEmpty { LinkedText(markdown: node.summary).font(.callout) }
                 if node.hasDue, !node.due.isEmpty { LabeledContent("By", value: node.due) }
                 if node.hasLead, !node.lead.isEmpty { LabeledContent("Lead", value: store.bot(node.lead)?.name ?? node.lead) }
@@ -301,17 +317,89 @@ struct PlanNodeScreen: View {
                     NavigationLink(value: PlanRoute.gate(node.id)) { PlanWaitingRow(node: node) }
                 }
             }
-            if node.hasResearch { research(node) }
-            if node.kind == .epic { design(node, cards: detail?.cards ?? []) }
+            // A dropped node's open research and design stopped with it.
+            if node.hasResearch, node.stage != .dropped || node.research.state != .open { research(node) }
+            if node.kind == .epic, node.stage != .dropped || !node.docs.filter({ $0.kind == .design }).isEmpty {
+                design(node, cards: detail?.cards ?? [])
+            }
             let docs = node.docs.filter { $0.kind != .research && !(node.kind == .epic && $0.kind == .design) }
             if !docs.isEmpty { PlanDocsSection(title: "Documents", docs: docs, projectId: projectId) }
             children(node)
             cards(node, detail?.cards ?? [])
+            controls(node)
         }
         .listStyle(.insetGrouped)
         .refreshable {
             await model?.reload()
             await loadTree()
+        }
+    }
+
+    /// The owner's own moves: a goal's stage, and Drop.
+    @ViewBuilder private func controls(_ node: PlanNode) -> some View {
+        let step = PlanControls.goalStep(node)
+        let canStep = step != nil && store.canControl
+        let canDrop = PlanControls.canDrop(node) && store.canApprove
+        if canStep || canDrop || !controlFailure.isEmpty {
+            Section {
+                if let step, store.canControl {
+                    Button {
+                        if step.stage == .met { confirmingMet = true } else { moveGoal(step.stage) }
+                    } label: {
+                        Label(step.title, systemImage: step.stage == .met ? "checkmark.seal" : "play.circle")
+                    }
+                    .disabled(acting)
+                    .accessibilityIdentifier("plan-goal-step")
+                }
+                if canDrop {
+                    Button(role: .destructive) { dropping = true } label: { Label("Drop…", systemImage: "xmark.circle") }
+                        .disabled(acting)
+                        .accessibilityIdentifier("plan-drop")
+                }
+                ForEach(controlFailure, id: \.self) { line in
+                    Label(line, systemImage: "xmark.octagon").font(.footnote).foregroundStyle(Color.errorText)
+                }
+            }
+            .confirmationDialog("Mark \(node.title) met?", isPresented: $confirmingMet, titleVisibility: .visible) {
+                Button("Mark met") { moveGoal(.met) }
+            } message: {
+                Text("The goal is done. Add another goal when there is more to do.")
+            }
+            .sheet(isPresented: $dropping) {
+                PlanDropSheet(node: node) { reason in
+                    dropping = false
+                    drop(reason)
+                }
+            }
+        }
+    }
+
+    @State private var acting = false
+    @State private var confirmingMet = false
+    @State private var dropping = false
+    @State private var controlFailure: [String] = []
+
+    private func moveGoal(_ stage: PlanStage) {
+        acting = true
+        Task {
+            controlFailure = await model?.moveGoal(to: stage) ?? []
+            if controlFailure.isEmpty { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+            acting = false
+        }
+    }
+
+    private func drop(_ reason: String) {
+        acting = true
+        let computer = store.computerName
+        Task {
+            controlFailure = await model?.drop(reason: reason) { question in
+                try await OwnerAuth.confirm(question, action: .dropPlan, computer: computer)
+            } ?? []
+            if controlFailure.isEmpty {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                await loadTree()
+            }
+            acting = false
         }
     }
 
@@ -372,6 +460,7 @@ struct PlanNodeScreen: View {
         if node.hasGate, node.gate.stage == .design { return "waits for you" }
         if node.docs.contains(where: { $0.kind == .design && $0.hasApprovedSha }) { return "approved" }
         switch node.stage {
+        case .dropped: return "dropped"
         case .design: return "in progress"
         case .research, .proposed: return "not started"
         default: return "done"
@@ -400,7 +489,7 @@ struct PlanNodeScreen: View {
                 ForEach(shown, id: \.id) { card in
                     NavigationLink { ItemView(itemId: card.id, projectId: projectId) } label: {
                         ItemRow(title: "\(card.id) · \(card.title)", subtitle: Release.PlanItem.column(card.columnKey)) {
-                            IconTile(systemImage: card.columnKey == "done" ? "checkmark.circle" : "square.stack")
+                            IconTile(systemImage: Release.PlanItem.column(card.columnKey) == "Done" ? "checkmark.circle" : "square.stack")
                         }
                     }
                 }
@@ -504,10 +593,13 @@ private struct GateContent: View {
                         .font(.title3.bold())
                         .accessibilityAddTraits(.isHeader)
                 }
-                if gate.round > 1 || gate.hasNote {
+                if gate.round > 1 || (gate.hasNote && gate.note.trimmed != node.summary.trimmed) {
                     VStack(alignment: .leading, spacing: 4) {
                         if gate.round > 1 { Text("Round \(gate.round)").font(.caption.weight(.semibold)).foregroundStyle(Color.secondaryText) }
-                        if gate.hasNote, !gate.note.isEmpty { Text("“\(gate.note)”").font(.callout) }
+                        // A proposal's note is its why, shown below.
+                        if gate.hasNote, !gate.note.isEmpty, gate.note.trimmed != node.summary.trimmed {
+                            Text("“\(gate.note)”").font(.callout)
+                        }
                     }
                 }
                 if gate.hasPrNumber { LabeledContent("Pull request", value: "#\(gate.prNumber)") }
@@ -716,6 +808,42 @@ struct PlanNoteSheet: View {
     }
 }
 
+/// Drop: what stops and what stays, an optional reason, then Face ID.
+struct PlanDropSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let node: PlanNode
+    let drop: (String) -> Void
+    @State private var reason = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(PlanControls.dropWarning(node))
+                }
+                Section {
+                    TextField("Reason", text: $reason, prompt: .placeholder("Why it stops (optional)"), axis: .vertical)
+                        .lineLimit(2...6)
+                } footer: {
+                    Text("The lead is told, with your reason.").foregroundStyle(Color.secondaryText)
+                }
+                Section {
+                    Button(role: .destructive) { drop(reason) } label: {
+                        Text("Drop with Face ID").frame(maxWidth: .infinity)
+                    }
+                    .accessibilityIdentifier("plan-drop-confirm")
+                }
+            }
+            .navigationTitle("Drop \(PlanWords.kind(node.kind).lowercased())")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
 // MARK: New goal, new initiative
 
 /// + on the Plan: "Add to the plan of <project>".
@@ -860,6 +988,78 @@ struct PlanCreateSheet: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             created(node)
             dismiss()
+        }
+    }
+}
+
+// MARK: Chips and the planning switch
+
+/// The node a card belongs to: its kind's tile and its title.
+struct PlanNodeChip: View {
+    let node: PlanNode
+    var showsKind = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            PlanGlyph(kind: node.kind, size: 16)
+            Text(showsKind ? "\(PlanWords.kind(node.kind)): \(node.title)" : node.title)
+                .font(.footnote)
+                .foregroundStyle(Color.secondaryText)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(PlanWords.kind(node.kind)): \(node.title)")
+    }
+}
+
+/// Planning on or off, in the project's settings (the owner's, `approve`).
+struct PlanningSection: View {
+    @Environment(AppStore.self) private var store
+    let projectId: String
+    @State private var model: PlanSwitchModel?
+    @State private var confirmingOff = false
+
+    var body: some View {
+        Section {
+            if let model, model.tree != nil {
+                Button(role: model.enabled ? .destructive : nil) {
+                    if model.enabled { confirmingOff = true } else { Task { await model.toggle() } }
+                } label: {
+                    HStack {
+                        Label(model.title, systemImage: model.enabled ? "scope" : "plus.circle")
+                        Spacer()
+                        if model.busy { ProgressView() }
+                    }
+                }
+                .disabled(!store.canApprove || model.busy || (!model.enabled && !model.canTurnOn))
+                .accessibilityIdentifier("plan-switch")
+                if !model.enabled && !model.canTurnOn {
+                    Text("Set the project’s repository first: the plan’s documents live there.")
+                        .font(.footnote).foregroundStyle(Color.secondaryText)
+                } else if !store.canApprove {
+                    Text("This device can’t turn planning on or off.").font(.footnote).foregroundStyle(Color.secondaryText)
+                }
+            } else if model?.failure == nil {
+                ProgressView()
+            }
+            if let failure = model?.failure {
+                Label(failure, systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(Color.errorText)
+            }
+        } header: {
+            SectionTitle("Planning")
+        } footer: {
+            Text("Goals, initiatives, epics and features, each with its documents in the project’s repository and approved by you. "
+                 + "Each initiative gets its own board. Turning it off hides the plan and keeps it.")
+                .foregroundStyle(Color.secondaryText)
+        }
+        .task {
+            if model == nil { model = PlanSwitchModel(projectId: projectId, service: store) }
+            await model?.load()
+        }
+        .confirmationDialog("Turn planning off?", isPresented: $confirmingOff, titleVisibility: .visible) {
+            Button("Turn planning off", role: .destructive) { Task { await model?.toggle() } }
+        } message: {
+            Text("The Plan is hidden and kept: turning it on again brings it back. The bots are told.")
         }
     }
 }
