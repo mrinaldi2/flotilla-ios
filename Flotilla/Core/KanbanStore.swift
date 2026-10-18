@@ -88,6 +88,8 @@ extension AppStore: BoardService, DraftService {
             for handler in (boardListeners[event.projectID] ?? [:]).values { handler(event) }
         case .planChange(let change)?:
             planPushed(change)
+        case .questionChange(let change)?:
+            questionPushed(change)
         case nil:
             break
         }

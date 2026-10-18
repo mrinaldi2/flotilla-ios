@@ -39,6 +39,8 @@ struct ItemView: View {
     @State private var designs: [BoardItemDetail] = []
     /// The plan node the card belongs to: "Feature: Hitstop on heavy hits".
     @State private var planNode: PlanNode?
+    /// The card's questions for the owner (0.22, `questions_v1`), kept live while on screen.
+    @State private var questions: QuestionsModel?
 
     /// The home keeps a "Code research" section on tasks and bugs (0.21).
     private func codeResearch(_ item: Flotilla_Board_V1_Item) -> String? {
@@ -158,6 +160,7 @@ struct ItemView: View {
                     DraftSections(detail: detail, projectId: project, board: board, model: draftModel,
                                   discussion: discussion, chatting: $chatting) { await load() }
                 }
+                if let questions { QuestionsSection(model: questions) }
                 if live {
                     Section {
                         if groups.isEmpty { EmptyNote(text: "No comments yet", systemImage: "text.bubble") }
@@ -182,7 +185,12 @@ struct ItemView: View {
         .refreshable { await load() }
         .task { await load() }
         .reloadsOnReconnect { await load() }
-        .onDisappear { stopFollowing() }
+        .onDisappear {
+            stopFollowing()
+            // Back on screen, the card is read again and its questions followed anew.
+            questions?.stop()
+            questions = nil
+        }
         .toolbar {
             if let item = detail?.item, item.state.isEmpty || item.state == "live", store.canControl, store.speaksProto, project != nil {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -352,6 +360,7 @@ struct ItemView: View {
             pending = CommentThread.stillPending(pending, comments: fresh.comments)
             failure = nil
             if fresh.item.state == "draft" { await followDraft(fresh) }
+            await loadQuestions(fresh)
             await loadPlanParts(fresh)
             if let answering, !openedReply,
                let row = CommentThread.rows(comments: fresh.comments, history: fresh.history, pending: []).first(where: { $0.id == answering }) {
@@ -360,6 +369,18 @@ struct ItemView: View {
             }
         } catch {
             if detail == nil { failure = error.localizedDescription }
+        }
+    }
+
+    /// The card's questions, open first, from its detail; then followed so
+    /// an answer from another device or a new question shows at once.
+    private func loadQuestions(_ fresh: BoardItemDetail) async {
+        guard store.hasQuestions, let project else { return }
+        let model = questions ?? QuestionsModel(projectId: project, scope: .item(itemId), service: store)
+        model.seed(fresh.questions)
+        if questions == nil {
+            questions = model
+            await model.start()
         }
     }
 

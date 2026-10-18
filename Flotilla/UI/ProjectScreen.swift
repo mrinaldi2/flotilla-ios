@@ -11,6 +11,14 @@ struct ProjectScreen: View {
     let projectId: String
     @State private var segment: Segment
     @State private var showingArtifacts = false
+    /// Questions and the artifacts by kind (0.22), opened from the ⋯ menu:
+    /// the screen's own state, not the stack's path (see `Pushes`).
+    @State private var page: MenuPage?
+
+    enum MenuPage: Hashable, Identifiable {
+        case questions, artifacts
+        var id: Self { self }
+    }
     /// The project's plan (0.21), read from the board's home when it serves one.
     @State private var plan: PlanModel?
     /// New goal or New initiative, from + on the Plan.
@@ -129,7 +137,14 @@ struct ProjectScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Artifacts", systemImage: "doc.on.doc") { showingArtifacts = true }
+                    if let home, home.computer.store.hasQuestions {
+                        Button("Questions", systemImage: "questionmark.bubble") { page = .questions }
+                    }
+                    if let home, home.computer.store.hasArtifactsV2 {
+                        Button("Artifacts", systemImage: "doc.on.doc") { page = .artifacts }
+                    } else {
+                        Button("Artifacts", systemImage: "doc.on.doc") { showingArtifacts = true }
+                    }
                     NavigationLink { ConversationsView(projectId: projectId) } label: {
                         Label("Conversations", systemImage: "bubble.left.and.bubble.right")
                     }
@@ -143,6 +158,15 @@ struct ProjectScreen: View {
             }
         }
         .sheet(isPresented: $showingArtifacts) { ReportsView() }
+        .navigationDestination(item: $page) { page in
+            // On the board's home, which keeps the questions and the artifacts.
+            if let home {
+                switch page {
+                case .questions: QuestionsScreen(projectId: home.projectId).computerEnvironment(home.computer)
+                case .artifacts: ProjectArtifactsScreen(projectId: home.projectId).computerEnvironment(home.computer)
+                }
+            }
+        }
         .sheet(item: $creating) { kind in
             if let plan, let home {
                 let goals = PlanOutline.openGoals(plan.nodes)

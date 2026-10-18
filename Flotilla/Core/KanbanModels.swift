@@ -32,15 +32,20 @@ final class BoardModel {
     @ObservationIgnored private let service: BoardService
     @ObservationIgnored private let memory: BoardMemory
     @ObservationIgnored private var token: UUID?
+    /// A home with questions (0.22): their pushes don't carry the card, so a
+    /// card's open count is read again from the board when one changes.
+    @ObservationIgnored private let questions: QuestionService?
+    @ObservationIgnored private var questionToken: UUID?
     /// Pushes that arrived while the snapshot was on its way.
     @ObservationIgnored private var early: [BoardEvent] = []
     @ObservationIgnored private var loading = false
     @ObservationIgnored private var again = false
 
-    init(projectId: String, service: BoardService, memory: BoardMemory = BoardMemory()) {
+    init(projectId: String, service: BoardService, memory: BoardMemory = BoardMemory(), questions: QuestionService? = nil) {
         self.projectId = projectId
         self.service = service
         self.memory = memory
+        self.questions = questions
     }
 
     /// Starts following the board: listens, then watches.
@@ -48,12 +53,24 @@ final class BoardModel {
         if token == nil {
             token = service.listen(projectId: projectId) { [weak self] event in self?.received(event) }
         }
+        if let questions, questionToken == nil {
+            questionToken = await questions.followQuestions(projectId: projectId) { [weak self] change in self?.questionChanged(change) }
+        }
         await reload()
     }
 
     func stop() {
         if let token { service.stopListening(projectId: projectId, token) }
         token = nil
+        if let questionToken { questions?.unfollowQuestions(projectId: projectId, questionToken) }
+        questionToken = nil
+    }
+
+    /// A question on one of the board's cards was asked, answered or dismissed: its count is read again.
+    func questionChanged(_ change: QuestionChange) {
+        guard change.hasQuestion, change.question.hasItemID,
+              state?.snapshot.cards.contains(where: { $0.id == change.question.itemID }) ?? false else { return }
+        Task { await reload() }
     }
 
     /// Reads the board again (`board_watch`, so pushes continue from it). A

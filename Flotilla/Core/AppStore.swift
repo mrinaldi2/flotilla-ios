@@ -114,6 +114,8 @@ final class AppStore {
     @ObservationIgnored var boardListeners: [String: [UUID: (BoardEvent) -> Void]] = [:]
     /// Screens following a project's plan (0.21): its `plan_change` pushes go to them.
     @ObservationIgnored var planListeners: [String: [UUID: (PlanChange) -> Void]] = [:]
+    /// Screens following a project's questions (0.22): its `question_change` pushes go to them.
+    @ObservationIgnored var questionListeners: [String: [UUID: (QuestionChange) -> Void]] = [:]
     @ObservationIgnored private let defaults: ComputerDefaults
     @ObservationIgnored private var sinks: [String: TerminalSink] = [:]
     @ObservationIgnored private var troubleTask: Task<Void, Never>?
@@ -804,8 +806,10 @@ final class AppStore {
     /// A page of the project's files, newest first. `before` is the previous
     /// page's `nextBefore`. A daemon that does not page them sends every file
     /// and no `has_more`, which reads as nothing more to load.
-    func listArtifacts(projectId: String, before: String? = nil) async throws -> ArtifactPage {
+    /// `group` (0.22, `artifacts_v2`): shared, uploads or checks only.
+    func listArtifacts(projectId: String, group: String? = nil, before: String? = nil) async throws -> ArtifactPage {
         var fields: JSONDict = ["project_id": projectId, "limit": Page.size]
+        if let group { fields["group"] = group }
         if let before { fields["before"] = before }
         let reply = try await client.request("list_artifacts", fields)
         return ArtifactPage(files: reply.list("artifacts").map(ArtifactFile.init),

@@ -90,13 +90,18 @@ struct PlanTreeRow: View {
                 .font(.subheadline.weight(depth < 2 ? .bold : .medium))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // Open questions for the owner on it and its cards (0.22).
+            if let badge = QuestionWords.badge(node.questionsOpen) {
+                Pill(text: badge.text, tone: node.questionsBlocking > 0 ? .needsYou : .working)
+            }
             Pill(text: pill.text, tone: pill.tone.tone)
         }
         .padding(.leading, CGFloat(depth) * 16)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(PlanWords.kind(node.kind)): \(node.title), \(pill.tone == .you ? "waits for you" : pill.text)")
+        .accessibilityLabel("\(PlanWords.kind(node.kind)): \(node.title), \(pill.tone == .you ? "waits for you" : pill.text)"
+                            + (QuestionWords.badge(node.questionsOpen).map { ", \($0.label)" } ?? ""))
     }
 }
 
@@ -266,6 +271,8 @@ struct PlanNodeScreen: View {
     @State private var model: PlanNodeModel?
     /// The whole tree, for the node's parent and children.
     @State private var tree: [PlanNode] = []
+    /// Its questions and its cards' (0.22), answered in place.
+    @State private var questions: QuestionsModel?
 
     private var parent: PlanNode? {
         guard let node = model?.node, node.hasParentID else { return nil }
@@ -289,7 +296,24 @@ struct PlanNodeScreen: View {
             await model?.start()
             await loadTree()
         }
-        .onDisappear { model?.stop() }
+        .task(id: model?.detail?.questions) { await takeQuestions() }
+        .onDisappear {
+            model?.stop()
+            questions?.stop()
+            questions = nil
+        }
+    }
+
+    /// The node's detail lists its questions; a `question_change` keeps them live between reads.
+    private func takeQuestions() async {
+        guard store.hasQuestions, let detail = model?.detail else { return }
+        let fresh = questions ?? QuestionsModel(projectId: projectId, scope: .node(nodeId), service: store)
+        fresh.nodeCards = Set(detail.cards.map(\.id))
+        fresh.seed(detail.questions)
+        if questions == nil {
+            questions = fresh
+            await fresh.start()
+        }
     }
 
     private func content(_ node: PlanNode, detail: PlanNodeDetail?) -> some View {
@@ -319,6 +343,17 @@ struct PlanNodeScreen: View {
             }
             // A dropped node's open research and design stopped with it.
             if node.hasResearch, node.stage != .dropped || node.research.state != .open { research(node) }
+            // Under Research: what the bots asked, the ones holding the gate marked.
+            if let questions {
+                QuestionsSection(model: questions, title: "Questions", showsAnchor: true)
+                if !questions.blocking.isEmpty {
+                    Section {
+                        Label(QuestionWords.holdsLine(questions.blocking.count), systemImage: "hand.raised")
+                            .font(.footnote).foregroundStyle(Color.warningText)
+                            .accessibilityIdentifier("plan-questions-hold")
+                    }
+                }
+            }
             if node.kind == .epic, node.stage != .dropped || !node.docs.filter({ $0.kind == .design }).isEmpty {
                 design(node, cards: detail?.cards ?? [])
             }
