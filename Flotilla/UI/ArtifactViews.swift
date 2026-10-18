@@ -226,7 +226,8 @@ struct TidyUpScreen: View {
             HStack(spacing: 8) {
                 Button("Keep") { Task { await model.keep(file) } }
                     .accessibilityIdentifier("tidy-keep")
-                Button("Attach to a card…") { attaching = file }
+                Button("Attach…") { attaching = file }
+                    .accessibilityLabel("Attach to a card")
                     .accessibilityIdentifier("tidy-attach")
                 Spacer(minLength: 0)
                 Button("Remove…", role: .destructive) { removing = file }

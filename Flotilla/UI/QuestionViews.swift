@@ -15,6 +15,8 @@ struct QuestionCard: View {
     var showsAnchor = false
     /// The card's or node's id, opened from the anchor line.
     var openCard: ((String) -> Void)? = nil
+    /// Under a row that already says the question (Needs you): only why, the options and the reply.
+    var compact = false
     @State private var picked: String?
     @State private var reply = ""
     @State private var dismissing = false
@@ -27,11 +29,13 @@ struct QuestionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(QuestionWords.asked(question)).font(.caption).foregroundStyle(Color.secondaryText)
-                Spacer(minLength: 4)
-                if open, question.blocking { Pill(text: QuestionWords.holds, tone: .needsYou).accessibilityIdentifier("question-blocking") }
-                if !open { Pill(text: question.state == .answered ? "Answered" : "Dismissed", tone: .quiet) }
+            if !compact {
+                HStack(spacing: 6) {
+                    Text(QuestionWords.asked(question)).font(.caption).foregroundStyle(Color.secondaryText)
+                    Spacer(minLength: 4)
+                    if open, question.blocking { Pill(text: QuestionWords.holds, tone: .needsYou).accessibilityIdentifier("question-blocking-\(id)") }
+                    if !open { Pill(text: question.state == .answered ? "Answered" : "Dismissed", tone: .quiet) }
+                }
             }
             if showsAnchor, let anchor = QuestionWords.anchor(question) {
                 if let openCard, question.hasItemID, !question.itemID.isEmpty {
@@ -44,19 +48,20 @@ struct QuestionCard: View {
                     Label(anchor, systemImage: "flag").font(.caption).foregroundStyle(Color.secondaryText)
                 }
             }
-            Text(question.text).font(.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+            if !compact {
+                Text(question.text).font(.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+            }
             if !question.why.isEmpty {
                 Text(question.why).font(.footnote).foregroundStyle(Color.secondaryText)
             }
             if open { answering } else { answered }
             if let failure = model.failures[id] {
                 Label(failure, systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(Color.errorText)
-                    .accessibilityIdentifier("question-failure")
+                    .accessibilityIdentifier("question-failure-\(id)")
             }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("question-\(id)")
         .sheet(isPresented: $dismissing) {
             QuestionDismissSheet(question: question) { reason in
                 dismissing = false
@@ -77,18 +82,21 @@ struct QuestionCard: View {
                 TextField("Reply", text: $reply, prompt: .placeholder(options.isEmpty ? "Your answer" : "Add a note (optional)"), axis: .vertical)
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityIdentifier("question-reply")
+                    .accessibilityIdentifier("question-reply-\(id)")
+                // Borderless: in a list row, a plain-styled button would take the whole row's taps.
                 Button(sending ? "Sending…" : "Send") { send() }
                     .fontWeight(.semibold)
+                    .buttonStyle(.borderless)
                     .disabled(!canSend)
                     .frame(minHeight: 44)
-                    .accessibilityIdentifier("question-send")
+                    .accessibilityIdentifier("question-send-\(id)")
             }
             Button("Dismiss…", role: .destructive) { dismissing = true }
                 .font(.footnote)
+                .buttonStyle(.borderless)
                 .disabled(sending)
                 .frame(minHeight: 44)
-                .accessibilityIdentifier("question-dismiss")
+                .accessibilityIdentifier("question-dismiss-\(id)")
         } else {
             Text(store.status == .connected ? "This device can’t answer questions." : "Not connected.")
                 .font(.footnote).foregroundStyle(Color.secondaryText)
@@ -123,7 +131,7 @@ struct QuestionCard: View {
         .disabled(!canAnswer || sending)
         .accessibilityLabel(row.recommended ? "\(row.option.label), recommended" : row.option.label)
         .accessibilityAddTraits(on ? .isSelected : [])
-        .accessibilityIdentifier("question-option-\(row.id)")
+        .accessibilityIdentifier("question-option-\(id)-\(row.id)")
     }
 
     @ViewBuilder private var answered: some View {
@@ -140,7 +148,7 @@ struct QuestionCard: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("question-answer")
+            .accessibilityIdentifier("question-answer-\(id)")
         } else {
             Text(question.hasDismissedReason && !question.dismissedReason.isEmpty ? "Dismissed: “\(question.dismissedReason)”" : "Dismissed.")
                 .font(.callout).foregroundStyle(Color.secondaryText)
@@ -380,7 +388,7 @@ struct QuestionAskRow: View {
             }
             .buttonStyle(GlanceButtonStyle())
             if let model, let question = model.questions.first(where: { $0.id == questionId }) {
-                QuestionCard(question: question, model: model)
+                QuestionCard(question: question, model: model, compact: true)
                     .computerEnvironment(computer)
             } else if lookupFailed {
                 Text("Open the card to answer it.").font(.footnote).foregroundStyle(Color.secondaryText)

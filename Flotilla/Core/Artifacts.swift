@@ -203,6 +203,13 @@ enum CardDocuments {
     /// A doc the daemon lists for an artifact link has an id starting `link:`.
     static func isLink(_ attachment: ItemAttachment) -> Bool { attachment.id.hasPrefix("link:") }
 
+    /// A document's path as the owner reads it: inside the artifacts folder
+    /// ("refs/saints.csv"), not where the folder is on the computer.
+    static func shownPath(_ path: String) -> String {
+        guard let range = path.range(of: "/artifacts/", options: .backwards) else { return path }
+        return String(path[range.upperBound...])
+    }
+
     /// Attachments first, then links; a link to a file already attached as a doc is left out.
     static func merged(_ attachments: [ItemAttachment]) -> [ItemAttachment] {
         var seen: Set<String> = []

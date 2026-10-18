@@ -134,6 +134,8 @@ final class ArtifactsTests: XCTestCase {
         let merged = CardDocuments.merged([link, image, attached, other])
         XCTAssertEqual(merged.map(\.id), ["att-2", "att-1", "link:notes/plan.md"])
         XCTAssertTrue(CardDocuments.isLink(other))
+        XCTAssertEqual(CardDocuments.shownPath("/Users/me/.flotilla/projects/lab/artifacts/refs/saints.csv"), "refs/saints.csv")
+        XCTAssertEqual(CardDocuments.shownPath("refs/saints.csv"), "refs/saints.csv")
         XCTAssertFalse(CardDocuments.isLink(attached))
     }
 }

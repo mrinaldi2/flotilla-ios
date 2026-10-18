@@ -57,12 +57,12 @@ struct AttachmentsSection: View {
                     } else if let projectId, !doc.path.isEmpty {
                         Button { document = DocumentSheet(source: .artifact(projectId: projectId, path: doc.path, name: doc.name)) } label: {
                             ItemRow(title: doc.name.isEmpty ? (doc.path as NSString).lastPathComponent : doc.name,
-                                    subtitle: "\(CardDocuments.isLink(doc) ? "Linked artifact" : "Project document") · \(doc.path)") {
+                                    subtitle: "\(CardDocuments.isLink(doc) ? "Linked artifact" : "Project document") · \(CardDocuments.shownPath(doc.path))") {
                                 IconTile(systemImage: Self.symbol(doc.path))
                             }
                         }
                         .buttonStyle(.plain)
-                        .accessibilityIdentifier("item-document-\(doc.path)")
+                        .accessibilityIdentifier("item-document-\(CardDocuments.shownPath(doc.path))")
                         .accessibilityHint("Opens the document")
                     } else {
                         ItemRow(title: doc.name, subtitle: "Project document · \(doc.path)") { IconTile(systemImage: "doc.on.doc") }
