@@ -32,6 +32,16 @@
       "priority": "urgent"
     },
     {
+      "id": "plan_gate:d-mac:PL-4",
+      "kind": "PLAN_GATE",
+      "daemon_id": "d-mac",
+      "project_id": "p-gravity",
+      "title": "Approve the HLD of Enemy attack telegraphing?",
+      "created_at": "2026-10-06T10:20:00Z",
+      "weight": 3,
+      "plan_node_id": "PL-4"
+    },
+    {
       "id": "bot_stopped:d-mac:b-tester",
       "kind": "BOT_STOPPED",
       "daemon_id": "d-mac",

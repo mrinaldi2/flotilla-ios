@@ -1,6 +1,6 @@
 {
   "id": "H-017",
-  "type": "ITEM_TYPE_FEATURE",
+  "type": "ITEM_TYPE_TASK",
   "title": "Board and dashboard",
   "priority": "PRIORITY_P1",
   "size": "SIZE_M",
@@ -21,5 +21,6 @@
   "acChecked": 1,
   "acTotal": 2,
   "version": "7",
-  "draft": false
+  "draft": false,
+  "planNodeId": "PL-6"
 }

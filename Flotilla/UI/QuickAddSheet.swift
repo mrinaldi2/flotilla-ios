@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 /// PNG, JPEG, WebP, GIF, PDF, Markdown, text and log files.
 struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppStore.self) private var store
     @State var model: QuickAddModel
     let boards: [KanbanBoard]
     /// A board's label groups, to pick labels from.
@@ -20,9 +21,6 @@ struct QuickAddSheet: View {
     @State private var readFailure: String?
     @FocusState private var titleFocused: Bool
 
-    private static let types: [(Flotilla_Board_V1_ItemType, String)] = [
-        (.feature, "Feature"), (.bug, "Bug"), (.chore, "Chore"), (.spike, "Spike"), (.epic, "Epic"),
-    ]
     private static let fileTypes: [UTType] = [.image, .pdf, .plainText, .text, UTType(filenameExtension: "md"),
                                                UTType(filenameExtension: "log")].compactMap { $0 }
 
@@ -34,17 +32,29 @@ struct QuickAddSheet: View {
                         .lineLimit(1...3)
                         .focused($titleFocused)
                         .accessibilityIdentifier("quick-add-title")
-                    Picker("Type", selection: $model.type) {
-                        ForEach(Self.types, id: \.0) { Text($0.1).tag($0.0) }
-                    }
-                    if boards.count > 1 {
-                        Picker("Board", selection: $model.boardId) {
-                            ForEach(boards, id: \.id) { Text($0.name).tag($0.id) }
+                    if store.hasItemTypesV2 {
+                        // The 0.21 four, side by side (flotilla#43).
+                        Picker("Type", selection: $model.type) {
+                            ForEach(model.types, id: \.0) { Text($0.1).tag($0.0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("quick-add-type")
+                    } else {
+                        Picker("Type", selection: $model.type) {
+                            ForEach(model.types, id: \.0) { Text($0.1).tag($0.0) }
                         }
                     }
+                    if !store.hasItemTypesV2, boards.count > 1 { boardPicker }
                 } footer: {
-                    Text("Saved as a draft: it reaches the board when you finalize it.").foregroundStyle(Color.secondaryText)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if store.hasResearchColumn, CodeResearch.applies(to: model.type) {
+                            Text("Tasks and bugs start in Research: the bot reads the code first.")
+                        }
+                        Text("Saved as a draft: it reaches the board when you finalize it.")
+                    }
+                    .foregroundStyle(Color.secondaryText)
                 }
+                if store.hasItemTypesV2 { placement }
                 labels
                 Section {
                     TextField("Description", text: $model.description, prompt: .placeholder("Left empty, the type’s template fills it"),
@@ -89,7 +99,11 @@ struct QuickAddSheet: View {
                 }
                 #endif
             }
-            .onChange(of: model.boardId) { _, board in model.keepLabels(offered: groups(board)) }
+            .onChange(of: model.boardId) { _, board in
+                model.keepLabels(offered: groups(board))
+                model.boardChanged()
+            }
+            .task { await model.loadPlan() }
             .onChange(of: photos) { _, items in
                 guard !items.isEmpty else { return }
                 photos = []
@@ -106,6 +120,37 @@ struct QuickAddSheet: View {
             }
         }
         .interactiveDismissDisabled(model.progress != nil)
+    }
+
+    private var boardPicker: some View {
+        Picker("Board", selection: $model.boardId) {
+            ForEach(boards, id: \.id) { Text($0.name).tag($0.id) }
+        }
+        .accessibilityIdentifier("quick-add-board")
+    }
+
+    /// Where the card goes (0.21): the plan node it belongs to, when the
+    /// project plans, and its board. Features and epics aren't cards.
+    @ViewBuilder private var placement: some View {
+        Section {
+            if model.plans {
+                Picker("Belongs to", selection: Binding(get: { model.planNodeId }, set: { model.belong(to: $0) })) {
+                    Text("Nothing in the plan").tag("")
+                    ForEach(model.homes) { row in
+                        Label(row.node.title, systemImage: PlanKindSymbol.of(row.node.kind)).tag(row.node.id)
+                    }
+                }
+                .accessibilityIdentifier("quick-add-belongs")
+            }
+            if boards.count > 1 {
+                boardPicker
+            } else if let board = boards.first {
+                LabeledContent("Board", value: board.name)
+            }
+        } footer: {
+            Text("Features and epics come from the Plan, when you approve their parent’s document.")
+                .foregroundStyle(Color.secondaryText)
+        }
     }
 
     /// A row of chips per label group of the chosen board; none, no section.

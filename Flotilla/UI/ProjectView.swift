@@ -88,6 +88,7 @@ struct ProjectView: View {
                         SectionTitle("Work")
                     }
                 }
+                if store.hasPlan { PlanningSection(projectId: project.id) }
                 Section {
                     ItemRow(title: store.computerName, subtitle: "This project's home") {
                         IconTile(systemImage: store.kind.symbol, tone: .ready)

@@ -22,7 +22,7 @@ extension Flotilla_Board_V1_BoardColumn {
         case .inbox, .ready: return .open
         case .done: return .done
         case .cancelled: return .cancelled
-        case .doing, .review, .verify, .approval, .deploying: return .active
+        case .research, .doing, .review, .verify, .approval, .deploying: return .active
         case .unspecified, .UNRECOGNIZED: return .open
         }
     }
@@ -212,7 +212,11 @@ struct MoveOption: Identifiable, Equatable {
     }
 
     /// "✓ Can move", "✎ Needs a reason", "⛔ 2 rules not met": a glyph and words.
+    /// Held in Research (0.21): the card's bot hasn't written its code research yet.
+    var waitsForResearch: Bool { refusals.contains { $0.code == CodeResearch.unmetCode } }
+
     var verdict: String {
+        if waitsForResearch, refusals.count == 1 { return "⏳ Can’t start yet" }
         if !allowed { return refusals.count == 1 ? "⛔ Not allowed" : "⛔ \(refusals.count) rules not met" }
         switch (needsReason, needsOverride) {
         case (true, true): return "✎ Needs a reason and an override"

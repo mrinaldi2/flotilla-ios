@@ -1,0 +1,8 @@
+{
+  "reqId": "40",
+  "boardRequest": {
+    "planGet": {
+      "projectId": "p1"
+    }
+  }
+}

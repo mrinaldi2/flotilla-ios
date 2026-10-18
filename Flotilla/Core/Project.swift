@@ -95,7 +95,22 @@ struct Dashboard {
     }
 
     /// "Doing 3 · Review 2/3 · Verify 3/3 full": the in-progress columns.
-    var strip: [Column] { columns.filter { !["inbox", "ready", "done", "cancelled"].contains($0.category) } }
+    /// A project with several boards (an initiative's own, 0.21) lists one
+    /// per name, counts added up; a limit only says something on one board.
+    var strip: [Column] {
+        let shown = columns.filter { !["inbox", "ready", "done", "cancelled"].contains($0.category) }
+        var merged: [Column] = []
+        for column in shown {
+            if let index = merged.firstIndex(where: { $0.name == column.name }) {
+                let first = merged[index]
+                merged[index] = Column(key: first.key, name: first.name, category: first.category, count: first.count + column.count,
+                                       wipLimit: nil)
+            } else {
+                merged.append(column)
+            }
+        }
+        return merged
+    }
 }
 
 /// A release package as the review lists it (B7).
@@ -139,9 +154,12 @@ struct Release: Identifiable {
 
         /// Column names when the board gives none (UX-025 §2, as desktop).
         static func column(_ key: String) -> String {
-            let names = ["inbox": "Inbox", "ready": "Ready", "doing": "Doing", "review": "Review", "verify": "Verify",
+            let names = ["inbox": "Inbox", "ready": "Ready", "research": "Research", "doing": "Doing", "review": "Review", "verify": "Verify",
                          "approval": "Awaiting owner", "deploying": "Deploying", "done": "Done", "cancelled": "Cancelled"]
-            return names[key] ?? key.capitalizedFirst
+            if let name = names[key] { return name }
+            // Another board's column carries its board's key (0.19): "cr-done" is Done.
+            if let dash = key.firstIndex(of: "-"), let name = names[String(key[key.index(after: dash)...])] { return name }
+            return key.capitalizedFirst
         }
     }
 

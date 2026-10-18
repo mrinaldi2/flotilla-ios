@@ -69,6 +69,8 @@ private struct BoardContent: View {
     /// A draft just saved, opened at once.
     @State private var opened: String?
     @State private var saveNotice: String?
+    /// The plan's nodes by id, read when the home serves a plan (0.21).
+    @State private var planNodes: [String: PlanNode] = [:]
 
     private var store: AppStore { computer.store }
 
@@ -118,7 +120,7 @@ private struct BoardContent: View {
                     ForEach(state.columns, id: \.key) { column in
                         ColumnList(cards: state.cards(in: column.key, matching: model.filter), computerId: computer.id, bots: store.bots,
                                    groups: groups, filtering: model.filter.isOn, canMove: store.canControl,
-                                   projectId: model.projectId) { moving = $0 }
+                                   projectId: model.projectId, planNodes: planNodes) { moving = $0 }
                             .tag(column.key)
                     }
                     if state.hasBoards {
@@ -145,12 +147,17 @@ private struct BoardContent: View {
                 .accessibilityIdentifier("board-new-item")
             }
         }
+        .task(id: store.reconnects) {
+            guard store.hasPlan, let tree = try? await store.planTree(projectId: model.projectId), tree.enabled else { return }
+            planNodes = Dictionary(tree.nodes.map { ($0.id, $0) }) { first, _ in first }
+        }
         .sheet(item: $moving) { card in
             MoveSheet(model: MoveModel(card: card, service: store), columns: state.allColumns)
                 .computerEnvironment(computer)
         }
         .sheet(isPresented: $adding) {
-            QuickAddSheet(model: QuickAddModel(projectId: model.projectId, boardId: state.selected, service: store),
+            QuickAddSheet(model: QuickAddModel(projectId: model.projectId, boardId: state.selected, service: store,
+                                               itemTypesV2: store.hasItemTypesV2, plan: store.hasPlan ? store : nil),
                           boards: state.boards, groups: { state.labelGroups(for: $0) }) { saved in
                 saveNotice = saved.missing.isEmpty ? nil
                     : "\(saved.itemId) was saved without: " + saved.missing.joined(separator: "; ")
@@ -233,6 +240,8 @@ struct ColumnList: View {
     var canMove = false
     /// The project, so a card can be given to one of its bots.
     var projectId: String?
+    /// The project's plan nodes by id, for each card's node chip (0.21).
+    var planNodes: [String: PlanNode] = [:]
     var move: (BoardCard) -> Void = { _ in }
     @State private var assignFailure: String?
 
@@ -243,9 +252,16 @@ struct ColumnList: View {
             }
             ForEach(cards, id: \.id) { card in
                 NavigationLink(value: NeedsDestination.item(computerId: computerId, itemId: card.id)) {
-                    ItemRow(title: card.title, subtitle: subtitle(card), detail: labels(card), titleLines: 2) {
-                        IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
+                    VStack(alignment: .leading, spacing: 2) {
+                        ItemRow(title: card.title, subtitle: subtitle(card), detail: labels(card), titleLines: 2) {
+                            IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
+                        }
+                        // The plan node it belongs to (0.21), under the title.
+                        if card.hasPlanNodeID, let node = planNodes[card.planNodeID] {
+                            PlanNodeChip(node: node).padding(.leading, 44).padding(.bottom, 4)
+                        }
                     }
+                    .accessibilityElement(children: .combine)
                 }
                 // Its menu, not a swipe: a sideways swipe pages to the next column.
                 .contextMenu {

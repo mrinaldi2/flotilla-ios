@@ -11,6 +11,10 @@ struct ProjectScreen: View {
     let projectId: String
     @State private var segment: Segment
     @State private var showingArtifacts = false
+    /// The project's plan (0.21), read from the board's home when it serves one.
+    @State private var plan: PlanModel?
+    /// New goal or New initiative, from + on the Plan.
+    @State private var creating: PlanKind?
     /// Opens the Board with a new card's sheet (a card's Add a card, 0.20).
     private let addCard: Bool
 
@@ -22,8 +26,17 @@ struct ProjectScreen: View {
     }
 
     enum Segment: String, CaseIterable {
-        case overview = "Overview", board = "Board", team = "Team", releases = "Releases", meetings = "Meetings"
+        case overview = "Overview", board = "Board", plan = "Plan", team = "Team", releases = "Releases", meetings = "Meetings"
+
+        /// With a plan the project has a board per initiative: "Boards".
+        func title(planning: Bool) -> String { self == .board && planning ? "Boards" : rawValue }
     }
+
+    /// The Plan shows only when the board's home serves it (`plan_v1`) and
+    /// the owner turned planning on for this project.
+    private var planning: Bool { plan?.enabled ?? false }
+
+    private var segments: [Segment] { Segment.allCases.filter { $0 != .plan || planning } }
 
     private var project: Project? { store.projects.first { $0.id == projectId } }
     private var name: String { project?.name ?? card?.row.name ?? "Project" }
@@ -77,7 +90,7 @@ struct ProjectScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Picker("Section", selection: $segment) {
-                ForEach(Segment.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                ForEach(segments, id: \.self) { Text($0.title(planning: planning)).tag($0) }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
@@ -86,6 +99,8 @@ struct ProjectScreen: View {
                 switch segment {
                 case .overview: OverviewPane(projectId: projectId, card: card, home: home)
                 case .board: BoardPane(home: home, homeName: boardHomeName, addCard: addCard)
+                case .plan:
+                    if let plan, let home { PlanPane(model: plan, computer: home.computer) } else { ProgressView() }
                 case .team: TeamPane(projectId: projectId)
                 case .releases: ReleasesPane(home: home)
                 case .meetings: MeetingsPane(home: home)
@@ -96,8 +111,8 @@ struct ProjectScreen: View {
         .background(Color(.systemGroupedBackground))
         // iPad keyboard (UX-023 §2.7): ⌘1–5 pick a segment.
         .background {
-            ForEach(Array(Segment.allCases.enumerated()), id: \.offset) { index, choice in
-                Button(choice.rawValue) { segment = choice }
+            ForEach(Array(segments.enumerated()), id: \.offset) { index, choice in
+                Button(choice.title(planning: planning)) { segment = choice }
                     .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
                     .opacity(0)
                     .accessibilityHidden(true)
@@ -107,6 +122,11 @@ struct ProjectScreen: View {
         // iPad's detail column draws no large title, so the header carries the name (UX-029).
         .navigationBarTitleDisplayMode(sizeClass == .regular ? .inline : .large)
         .toolbar {
+            if segment == .plan, let plan, let home, home.computer.store.canControl {
+                ToolbarItem(placement: .topBarTrailing) {
+                    PlanAddMenu(projectName: name, hasGoals: !PlanOutline.openGoals(plan.nodes).isEmpty) { creating = $0 }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Artifacts", systemImage: "doc.on.doc") { showingArtifacts = true }
@@ -123,6 +143,35 @@ struct ProjectScreen: View {
             }
         }
         .sheet(isPresented: $showingArtifacts) { ReportsView() }
+        .sheet(item: $creating) { kind in
+            if let plan, let home {
+                let goals = PlanOutline.openGoals(plan.nodes)
+                PlanCreateSheet(model: PlanCreateModel(projectId: plan.projectId, kind: kind, goalId: goals.first?.id ?? "",
+                                                       service: home.computer.store),
+                                goals: goals) { plan.take($0) }
+                    .computerEnvironment(home.computer)
+            }
+        }
+        // The plan, from the board's home: read while the project is open.
+        .task(id: "\(home?.computer.id ?? "")/\(home?.projectId ?? "")/\(home?.computer.store.reconnects ?? 0)") {
+            guard let home, home.computer.store.speaksProto || PlanFixture.isOn, home.computer.store.hasPlan else {
+                plan?.stop()
+                plan = nil
+                return
+            }
+            if plan?.projectId != home.projectId {
+                plan?.stop()
+                plan = PlanModel(projectId: home.projectId, service: home.computer.store)
+            }
+            await plan?.start()
+            if !planning, segment == .plan { segment = .board }
+        }
+        .onDisappear { plan?.stop() }
+        // Back from the project's settings, where planning may have been switched.
+        .onAppear { if let plan { Task { await plan.reload() } } }
+        .onChange(of: planning) { _, on in
+            if !on, segment == .plan { segment = .board }
+        }
         #if DEBUG
         .task {
             if let name = UserDefaults.standard.string(forKey: "openSegment"),

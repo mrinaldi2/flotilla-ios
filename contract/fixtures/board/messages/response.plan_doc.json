@@ -1,0 +1,14 @@
+{
+  "reqId": "50",
+  "boardResponse": {
+    "planDoc": {
+      "path": "docs/initiatives/combat-readability/prd.md",
+      "sha": "a8d3e55",
+      "offset": "0",
+      "data": "IyBDb21iYXQgcmVhZGFiaWxpdHkK",
+      "total": "21",
+      "mime": "text/markdown",
+      "diff": "@@ -1 +1 @@\n-# Readability\n+# Combat readability\n"
+    }
+  }
+}

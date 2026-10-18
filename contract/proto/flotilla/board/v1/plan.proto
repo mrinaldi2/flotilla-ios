@@ -1,0 +1,371 @@
+// The plan (0.21.0, #43): a project's goals, initiatives, epics and
+// features, each with its stage and its documents in the project's repo.
+// Board cards (task, design, bug, spike) belong to a node through
+// `plan_node_id`; a feature or an epic is never a card.
+//
+// A node moves through its kind's stages; the ones in [brackets] are gates
+// the owner approves:
+//   goal        define → active → met | dropped
+//   initiative  (proposed) → research → [prd] → running → done
+//   epic        research → [design] → [hld] → running → done
+//   feature     [lld] → build → released
+// Any node can be dropped. An initiative the lead proposes waits in
+// `proposed` until the owner accepts it. Epics are created when the owner
+// approves their initiative's PRD, features when the owner approves their
+// epic's HLD: the submission proposes them as `children`.
+//
+// Research is a tracked stage: a gate can't be submitted while it is open.
+// It closes when every spike of the node is done with a document, or when
+// the owner skips it with a reason.
+//
+// Planning is the owner's choice per project (`plan_enable`) and needs the
+// project's repository, where the documents live. Requests travel as board
+// requests; grants: reads need `read`; `plan_create`, `plan_update` and
+// `plan_submit` need `control`; `plan_enable`, `plan_rule`,
+// `plan_research_skip` and `plan_drop` need `approve`. Bots send
+// `plan_get`, `plan_node_get`, `plan_doc_read`, `plan_propose`,
+// `plan_submit` and `plan_research_skip` (which then asks the owner) as MCP
+// tools.
+syntax = "proto3";
+
+package flotilla.board.v1;
+
+import "google/protobuf/timestamp.proto";
+import "flotilla/board/v1/board.proto";
+
+enum PlanKind {
+  PLAN_KIND_UNSPECIFIED = 0;
+  PLAN_KIND_GOAL = 1;
+  PLAN_KIND_INITIATIVE = 2;
+  PLAN_KIND_EPIC = 3;
+  PLAN_KIND_FEATURE = 4;
+}
+
+enum PlanStage {
+  PLAN_STAGE_UNSPECIFIED = 0;
+  // Goals.
+  PLAN_STAGE_DEFINE = 1;
+  PLAN_STAGE_ACTIVE = 2;
+  PLAN_STAGE_MET = 3;
+  // Any node the owner stopped, and a proposal the owner declined.
+  PLAN_STAGE_DROPPED = 4;
+  // An initiative the lead proposed, waiting for the owner.
+  PLAN_STAGE_PROPOSED = 5;
+  PLAN_STAGE_RESEARCH = 6;
+  // Gates: the document is being written, then submitted.
+  PLAN_STAGE_PRD = 7;
+  PLAN_STAGE_DESIGN = 8;
+  PLAN_STAGE_HLD = 9;
+  PLAN_STAGE_LLD = 10;
+  // An initiative or epic whose children are under way.
+  PLAN_STAGE_RUNNING = 11;
+  // A feature whose tasks are under way.
+  PLAN_STAGE_BUILD = 12;
+  // A feature whose release shipped.
+  PLAN_STAGE_RELEASED = 13;
+  PLAN_STAGE_DONE = 14;
+}
+
+enum PlanDocKind {
+  PLAN_DOC_KIND_UNSPECIFIED = 0;
+  PLAN_DOC_KIND_GOAL = 1;
+  PLAN_DOC_KIND_RESEARCH = 2;
+  PLAN_DOC_KIND_PRD = 3;
+  PLAN_DOC_KIND_DESIGN = 4;
+  PLAN_DOC_KIND_HLD = 5;
+  PLAN_DOC_KIND_LLD = 6;
+  // Project-wide: `docs/guidelines/`. Every bot reads them before working.
+  PLAN_DOC_KIND_GUIDELINE = 7;
+}
+
+enum PlanResearchState {
+  PLAN_RESEARCH_STATE_UNSPECIFIED = 0;
+  // Spikes are running, or none has been opened yet.
+  PLAN_RESEARCH_STATE_OPEN = 1;
+  // Every spike is done with a document.
+  PLAN_RESEARCH_STATE_CLOSED = 2;
+  // The owner skipped it, with a reason.
+  PLAN_RESEARCH_STATE_SKIPPED = 3;
+}
+
+// A document in the project's repository.
+message PlanDoc {
+  PlanDocKind kind = 1;
+  // Relative to the repository root: "docs/initiatives/x/prd.md".
+  string path = 2;
+  // The commit the owner approved it at; unset until then.
+  optional string approved_sha = 3;
+  optional google.protobuf.Timestamp approved_at = 4;
+  // The file differs on the default branch from `approved_sha`: the lead
+  // resubmits it. Children already created are kept.
+  bool changed_since_approval = 5;
+  // A research document's spike, e.g. "CR-12".
+  optional string item_id = 6;
+}
+
+// A node's research: its spikes and how it closed.
+message PlanResearch {
+  PlanResearchState state = 1;
+  // The node's spikes, by item id.
+  repeated string spikes = 2;
+  optional google.protobuf.Timestamp closed_at = 3;
+  // The owner's reason, when skipped.
+  optional string skipped_reason = 4;
+}
+
+// A child the submission proposes: an epic with a PRD, a feature with an
+// HLD, a task with an LLD (a card on the initiative's board, created in its
+// first open column when the owner approves).
+message PlanChild {
+  string title = 1;
+  // One or two lines of Markdown.
+  optional string summary = 2;
+}
+
+// What waits for the owner's ruling on a node.
+message PlanGate {
+  // The stage being approved: PRD, DESIGN, HLD or LLD; PROPOSED for a
+  // proposed initiative; RESEARCH for the lead's request to skip research.
+  PlanStage stage = 1;
+  // The document at the commit it was submitted at. Unset for a proposal
+  // and a skip request.
+  optional string doc_path = 2;
+  optional string sha = 3;
+  // The repository's pull request carrying the document, when there is one.
+  optional uint32 pr_number = 4;
+  // `bot:<id>`.
+  string submitted_by = 5;
+  google.protobuf.Timestamp submitted_at = 6;
+  // The lead's note: what changed, or why research can be skipped.
+  optional string note = 7;
+  repeated PlanChild children = 8;
+  // Unused, always unset: a gate waits in Needs you as its own row
+  // (`AttentionKind.PLAN_GATE`, targeting the node), not as a decision.
+  optional string decision_id = 9;
+  // 1 for the first submission of this stage, 2 after a send-back, ...
+  uint32 round = 10;
+}
+
+message PlanNode {
+  // "PL-7": the project's plan key and a number; immutable.
+  string id = 1;
+  string project_id = 2;
+  PlanKind kind = 3;
+  // The goal of an initiative, the initiative of an epic, the epic of a
+  // feature. Unset on a goal.
+  optional string parent_id = 4;
+  string title = 5;
+  // Markdown: a goal's outcome and measure, an initiative's why.
+  string summary = 6;
+  PlanStage stage = 7;
+  // A goal's deadline in the owner's words: "Playtest round 2".
+  optional string due = 8;
+  // The bot that writes its documents and submits its gates; the project's
+  // lead when unset.
+  optional string lead = 9;
+  // The initiative's board, where the cards of its subtree go. Set on
+  // initiatives (and on their epics and features, inherited).
+  optional string board_id = 10;
+  repeated PlanDoc docs = 11;
+  // Initiatives and epics; unset on goals and features.
+  optional PlanResearch research = 12;
+  // Waiting for the owner.
+  optional PlanGate gate = 13;
+  // The cards of a feature (or of a node's research) and how many are done.
+  uint32 cards_total = 14;
+  uint32 cards_done = 15;
+  string created_by = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  // Optimistic concurrency, as on items.
+  uint64 version = 19;
+  // Rank among its siblings (fractional index).
+  string rank = 20;
+}
+
+// One line of a node's history.
+message PlanEvent {
+  google.protobuf.Timestamp at = 1;
+  // `user`, `device:<id>`, `bot:<id>` or `daemon`.
+  string actor = 2;
+  // created | proposed | accepted | declined | submitted | approved |
+  // sent_back | research_closed | research_skipped | stage | edited |
+  // doc_changed | dropped. Text, so a newer daemon's kinds still read.
+  string kind = 3;
+  optional PlanStage stage = 4;
+  optional string note = 5;
+}
+
+// --- Requests ---------------------------------------------------------------
+
+// The project's whole plan: every node, flat, parents before children.
+message PlanGet {
+  string project_id = 1;
+}
+
+// One node with its history and its cards.
+message PlanNodeGet {
+  string id = 1;
+}
+
+// The owner turning planning on or off for a project. Turning it on needs
+// the project's repository; turning it off keeps the nodes and hides them.
+message PlanEnable {
+  string project_id = 1;
+  bool enabled = 2;
+}
+
+// The owner starting a goal or an initiative. An initiative creates its
+// board and starts in research.
+message PlanCreate {
+  string project_id = 1;
+  // GOAL or INITIATIVE.
+  PlanKind kind = 2;
+  string title = 3;
+  // An initiative's goal.
+  optional string parent_id = 4;
+  optional string summary = 5;
+  optional string due = 6;
+  optional string lead = 7;
+}
+
+// The lead proposing an initiative under a goal; it waits in `proposed`
+// for the owner (`plan_rule`).
+message PlanPropose {
+  string project_id = 1;
+  string parent_id = 2;
+  string title = 3;
+  string summary = 4;
+}
+
+message PlanUpdate {
+  string id = 1;
+  uint64 expected_version = 2;
+  optional string title = 3;
+  optional string summary = 4;
+  optional string due = 5;
+  optional string lead = 6;
+  // Moves a goal from define to active, or an active goal to met. Other
+  // stages move through gates and facts only.
+  optional PlanStage stage = 7;
+}
+
+// The lead submitting the document of the node's current gate stage for
+// the owner's approval.
+message PlanSubmit {
+  string id = 1;
+  uint64 expected_version = 2;
+  // Relative to the repository root.
+  string doc_path = 3;
+  // The commit; left out, the default branch's head.
+  optional string sha = 4;
+  optional uint32 pr_number = 5;
+  optional string note = 6;
+  repeated PlanChild children = 7;
+}
+
+// The owner's ruling on a node's gate: approve (the node moves on and its
+// children are created) or send back with a note. On a proposed initiative,
+// accept or decline; on a skip request, skip or keep research.
+message PlanRule {
+  string id = 1;
+  uint64 expected_version = 2;
+  bool approve = 3;
+  // Needed to send back or decline.
+  optional string note = 4;
+  // Children the owner leaves out, by their index in the gate's list.
+  repeated uint32 leave_out = 5;
+}
+
+// Skip a node's research. The owner's skips it at once; the lead's asks the
+// owner (a gate at stage RESEARCH).
+message PlanResearchSkip {
+  string id = 1;
+  uint64 expected_version = 2;
+  string reason = 3;
+}
+
+// The owner stopping a node; its children stop with it. Its cards stay.
+message PlanDrop {
+  string id = 1;
+  uint64 expected_version = 2;
+  optional string reason = 3;
+}
+
+// A file of the project's repository, for reading a document in place. A
+// document's relative images and pages are read the same way.
+message PlanDocRead {
+  string project_id = 1;
+  string path = 2;
+  // A commit; left out, the default branch's head.
+  optional string sha = 3;
+  // Also return a unified diff from this commit (a document's approved one).
+  optional string diff_from = 4;
+  uint64 offset = 5;
+  // At most this many bytes; 0 means 512 KiB, which is also the most.
+  uint32 limit = 6;
+}
+
+// --- Responses --------------------------------------------------------------
+
+// To `plan_get` and `plan_enable`.
+message PlanTree {
+  string project_id = 1;
+  bool enabled = 2;
+  // The project has a repository: planning can be turned on.
+  bool has_repo = 3;
+  repeated PlanNode nodes = 4;
+  // `docs/guidelines/*`.
+  repeated PlanDoc guidelines = 5;
+}
+
+// To `plan_node_get`.
+message PlanNodeDetail {
+  PlanNode node = 1;
+  repeated PlanEvent history = 2;
+  // Its own cards: research spikes and design tickets, or a feature's tasks.
+  repeated ItemCard cards = 3;
+}
+
+// To the plan edits.
+message PlanResult {
+  oneof outcome {
+    // The node as it is after the change.
+    PlanNode done = 1;
+    // Not allowed now (research open, wrong stage, no repository); nothing
+    // was written.
+    PlanRefused refused = 2;
+    // The node changed since `expected_version`; the node as it is now.
+    PlanNode conflict = 3;
+  }
+  // Nodes and cards the change created: an approval's children.
+  repeated string created = 4;
+}
+
+// Why a plan change was refused, in the guards' shape.
+message PlanRefused {
+  repeated Unmet unmet = 1;
+}
+
+// To `plan_doc_read`.
+message PlanDocContent {
+  string path = 1;
+  // The commit it was read at.
+  string sha = 2;
+  uint64 offset = 3;
+  bytes data = 4;
+  // The file's whole size.
+  uint64 total = 5;
+  string mime = 6;
+  // With `diff_from`, on the first chunk: the unified diff.
+  optional string diff = 7;
+}
+
+// --- Pushes -----------------------------------------------------------------
+
+// To connections watching the project: a node changed or appeared.
+message PlanChange {
+  string project_id = 1;
+  PlanNode node = 2;
+  optional string actor = 3;
+}

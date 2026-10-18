@@ -33,6 +33,19 @@ struct ItemView: View {
     @State private var moving: MoveTarget?
     @State private var moveFailure: String?
     @State private var assignFailure: String?
+    /// The home holds the card in Research (0.21, `start.research`): its next move waits for code research.
+    @State private var researchBlock: BoardUnmet?
+    /// The Design cards this task builds (`LINK_KIND_DESIGN`).
+    @State private var designs: [BoardItemDetail] = []
+    /// The plan node the card belongs to: "Feature: Hitstop on heavy hits".
+    @State private var planNode: PlanNode?
+
+    /// The home keeps a "Code research" section on tasks and bugs (0.21).
+    private func codeResearch(_ item: Flotilla_Board_V1_Item) -> String? {
+        guard store.hasResearchColumn else { return nil }
+        if let section = CodeResearch.section(in: item.description_p) { return section }
+        return CodeResearch.applies(to: item.type) ? "" : nil
+    }
 
     private struct MoveTarget: Identifiable {
         let card: BoardCard
@@ -73,17 +86,62 @@ struct ItemView: View {
                     if live, let place = facts.placeLine { Text(place).font(.subheadline) }
                     if !live, item.hasAssignee { Text("Assignee: \(store.bot(item.assignee)?.name ?? "a bot")").font(.subheadline) }
                     if let flags = facts.flagsLine { Text(flags).font(.subheadline).foregroundStyle(Color.warningText) }
+                    if let planNode {
+                        PlanNodeChip(node: planNode, showsKind: true).accessibilityIdentifier("item-plan-node")
+                    }
                     // Every label in full (`platform:ios`); a 0.18 home's platforms as `platform:` labels.
                     if !item.allLabels.isEmpty {
                         Text("Labels: \(item.allLabels.joined(separator: ", "))").font(.subheadline).foregroundStyle(Color.secondaryText)
                             .accessibilityIdentifier("item-labels")
                     }
-                    if !item.description_p.isEmpty {
-                        LinkedText(markdown: AttachmentText.inline(item.description_p, attachments: detail.attachments))
+                    // Code research has its own section below, so it shows once.
+                    let full = codeResearch(item) == nil ? item.description_p : CodeResearch.removing(from: item.description_p)
+                    let description = store.hasItemTypesV2 ? TemplateSections.droppingEmpty(full) : full
+                    if !description.isEmpty {
+                        LinkedText(markdown: AttachmentText.inline(description, attachments: detail.attachments))
                     }
                 } header: {
                     // The id is the navigation title; the header says what kind of card it is.
                     if let kind = CardPreview.of(item, botName: { _ in nil }).kindLine { SectionTitle(kind) }
+                }
+                if live, let researchBlock {
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Can’t start yet").font(.headline).foregroundStyle(Color.warningText)
+                            Text("Waiting for the bot’s code research findings.").font(.subheadline)
+                            Text(MoveOutcome.lines([researchBlock]).joined(separator: " "))
+                                .font(.footnote).foregroundStyle(Color.secondaryText)
+                        }
+                        .padding(.vertical, 2)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("item-research-block")
+                    }
+                }
+                if let research = codeResearch(item) {
+                    Section {
+                        if research.isEmpty {
+                            Text("Not written yet.").foregroundStyle(Color.secondaryText)
+                        } else {
+                            LinkedText(markdown: research)
+                        }
+                    } header: {
+                        SectionTitle(CodeResearch.heading)
+                    }
+                    .accessibilityIdentifier("item-code-research")
+                }
+                if !designs.isEmpty {
+                    Section {
+                        ForEach(designs, id: \.item.id) { design in
+                            NavigationLink { DesignDocsView(detail: design, projectId: project) } label: {
+                                ItemRow(title: design.item.title, subtitle: DesignWords.line(design.attachments)) {
+                                    IconTile(systemImage: "paintbrush.pointed", tone: .working)
+                                }
+                            }
+                            .accessibilityIdentifier("item-design-\(design.item.id)")
+                        }
+                    } header: {
+                        SectionTitle("Design")
+                    }
                 }
                 if !item.acceptanceCriteria.isEmpty {
                     Section {
@@ -294,6 +352,7 @@ struct ItemView: View {
             pending = CommentThread.stillPending(pending, comments: fresh.comments)
             failure = nil
             if fresh.item.state == "draft" { await followDraft(fresh) }
+            await loadPlanParts(fresh)
             if let answering, !openedReply,
                let row = CommentThread.rows(comments: fresh.comments, history: fresh.history, pending: []).first(where: { $0.id == answering }) {
                 openedReply = true
@@ -301,6 +360,27 @@ struct ItemView: View {
             }
         } catch {
             if detail == nil { failure = error.localizedDescription }
+        }
+    }
+
+    /// The 0.21 parts, each on a home that serves it: the Research hold, the
+    /// attached designs and the plan node.
+    private func loadPlanParts(_ fresh: BoardItemDetail) async {
+        let item = fresh.item
+        let live = item.state.isEmpty || item.state == "live"
+        if store.hasResearchColumn, live, CodeResearch.applies(to: item.type), store.speaksProto,
+           let check = try? await store.moveCheck(itemId: item.id) {
+            researchBlock = CodeResearch.blocks(check)
+        } else {
+            researchBlock = nil
+        }
+        if store.hasResearchColumn {
+            var found: [BoardItemDetail] = []
+            for id in fresh.designIds { if let design = try? await store.item(id) { found.append(design) } }
+            designs = found
+        }
+        if store.hasPlan, item.hasPlanNodeID, !item.planNodeID.isEmpty {
+            planNode = try? await store.planNode(item.planNodeID).node
         }
     }
 
@@ -359,6 +439,31 @@ struct ItemView: View {
                 }
             }
         }
+    }
+}
+
+/// A Design card a task builds (0.21): its documents and mockups, read in place.
+struct DesignDocsView: View {
+    let detail: BoardItemDetail
+    let projectId: String?
+
+    var body: some View {
+        List {
+            Section {
+                Text(detail.item.title).font(.headline)
+                Text("Design · \(Release.PlanItem.column(detail.item.columnKey))").font(.subheadline).foregroundStyle(Color.secondaryText)
+            }
+            if detail.attachments.allSatisfy(\.removed) {
+                Section { EmptyNote(text: "No documents on this design yet", systemImage: "doc") }
+            }
+            AttachmentsSection(attachments: detail.attachments, projectId: projectId)
+            Section {
+                NavigationLink("Open \(detail.item.id)") { ItemView(itemId: detail.item.id, projectId: projectId) }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(detail.item.id)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

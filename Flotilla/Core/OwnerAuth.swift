@@ -12,6 +12,11 @@ enum OwnerAuth {
         case approve, reject
         /// Approving a lead's board-structure proposal (K7, as release rulings).
         case approveBoardChange
+        /// Approving a plan gate, accepting a proposed initiative or skipping
+        /// research (0.21: the owner approves every gate).
+        case approvePlan
+        /// Dropping a plan node and what is under it (0.21).
+        case dropPlan
 
         var question: String {
             switch self {
@@ -20,6 +25,8 @@ enum OwnerAuth {
             case .approve: "Approve this release?"
             case .reject: "Reject this release?"
             case .approveBoardChange: "Approve this board change?"
+            case .approvePlan: "Approve this step of the plan?"
+            case .dropPlan: "Drop this from the plan?"
             }
         }
 
@@ -30,6 +37,8 @@ enum OwnerAuth {
             case .approve: "Not approved. Nothing was sent."
             case .reject: "Not rejected. Nothing was sent."
             case .approveBoardChange: "Not approved. Nothing was sent."
+            case .approvePlan: "Not approved. Nothing was sent."
+            case .dropPlan: "Not dropped. Nothing was sent."
             }
         }
     }

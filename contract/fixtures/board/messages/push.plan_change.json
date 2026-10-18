@@ -1,0 +1,36 @@
+{
+  "boardPush": {
+    "planChange": {
+      "projectId": "p1",
+      "node": {
+        "id": "PL-2",
+        "projectId": "p1",
+        "kind": "PLAN_KIND_INITIATIVE",
+        "parentId": "PL-1",
+        "title": "Combat readability",
+        "summary": "Players lose track of what hits them.",
+        "stage": "PLAN_STAGE_RUNNING",
+        "boardId": "p1/combat-readability",
+        "docs": [
+          {
+            "kind": "PLAN_DOC_KIND_PRD",
+            "path": "docs/initiatives/combat-readability/prd.md",
+            "approvedSha": "77ad310",
+            "approvedAt": "2026-10-11T08:00:00Z",
+            "changedSinceApproval": true
+          }
+        ],
+        "research": {
+          "state": "PLAN_RESEARCH_STATE_SKIPPED",
+          "skippedReason": "Playtest notes already cover it."
+        },
+        "createdBy": "user",
+        "createdAt": "2026-10-10T09:00:00Z",
+        "updatedAt": "2026-10-12T09:00:00Z",
+        "version": "5",
+        "rank": "a0"
+      },
+      "actor": "bot:b-lead"
+    }
+  }
+}

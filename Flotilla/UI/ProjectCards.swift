@@ -375,13 +375,15 @@ struct AskButtonLabel: View {
     let text: String
     var primary = false
     var enabled = true
+    /// Fills its row, beside another answer (a plan gate's two, 0.21).
+    var wide = false
 
     var body: some View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .lineLimit(1)
             .padding(.horizontal, 12)
-            .frame(minHeight: 32)
+            .frame(maxWidth: wide ? .infinity : nil, minHeight: wide ? 40 : 32)
             .foregroundStyle(enabled ? (primary ? Color.onAskButton : Color.primary) : Color.secondaryText)
             .background {
                 let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
