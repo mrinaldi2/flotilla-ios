@@ -8,7 +8,17 @@ struct ProjectView: View {
     @State private var creatingBot = false
     @State private var linking = false
     @State private var editingRepo = false
-    @State private var openBot: String?
+    /// What the page opened. Its own state, not the stack's path: the page
+    /// is pushed by value from the Bots tab but by a view link from a
+    /// project's ⋯ menu, where a value pushed onto the path lands under it
+    /// (or nowhere, in a stack that doesn't know the value).
+    @State private var opened: Opened?
+
+    enum Opened: Hashable {
+        case bot(String)
+        case workers
+        case conversations
+    }
 
     private var project: Project? { store.projects.first { $0.id == projectId } }
 
@@ -31,7 +41,8 @@ struct ProjectView: View {
                 }
                 Section {
                     ForEach(bots) { bot in
-                        NavigationLink(value: bot.id) { BotRow(bot: bot) }
+                        Button { opened = .bot(bot.id) } label: { Pushes { BotRow(bot: bot) } }
+                            .buttonStyle(.plain)
                     }
                     if store.canControl, store.status == .connected {
                         Button { creatingBot = true } label: { Label("New bot in \(project.name)", systemImage: "plus") }
@@ -42,18 +53,24 @@ struct ProjectView: View {
                 if store.hasWorkers || store.hasConversations {
                     Section {
                         if store.hasWorkers {
-                            NavigationLink(value: WorkersLink(projectId: project.id)) {
-                                ItemRow(title: "Temporary workers", subtitle: "Bots spawned for one task each") {
-                                    IconTile(systemImage: "person.badge.clock", tone: .worker)
+                            Button { opened = .workers } label: {
+                                Pushes {
+                                    ItemRow(title: "Temporary workers", subtitle: "Bots spawned for one task each") {
+                                        IconTile(systemImage: "person.badge.clock", tone: .worker)
+                                    }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                         if store.hasConversations {
-                            NavigationLink(value: ConversationsLink(projectId: project.id)) {
-                                ItemRow(title: "Conversations", subtitle: "What the bots say to each other") {
-                                    IconTile(systemImage: "bubble.left.and.bubble.right")
+                            Button { opened = .conversations } label: {
+                                Pushes {
+                                    ItemRow(title: "Conversations", subtitle: "What the bots say to each other") {
+                                        IconTile(systemImage: "bubble.left.and.bubble.right")
+                                    }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                         if store.hasWorkers {
                             Button { editingRepo = true } label: {
@@ -102,12 +119,18 @@ struct ProjectView: View {
         .sheet(isPresented: $creatingBot) {
             NewBotSheet(projectId: projectId) { bot in
                 creatingBot = false
-                openBot = bot.id
+                opened = .bot(bot.id)
             }
         }
         .sheet(isPresented: $linking) { LinkProjectSheet(projectId: projectId) }
         .sheet(isPresented: $editingRepo) { RepoSheet(projectId: projectId) }
-        .navigationDestination(item: $openBot) { BotDetailView(botId: $0) }
+        .navigationDestination(item: $opened) { page in
+            switch page {
+            case .bot(let id): BotDetailView(botId: id)
+            case .workers: WorkersView(projectId: projectId)
+            case .conversations: ConversationsView(projectId: projectId)
+            }
+        }
     }
 
     private func summary(_ bots: [Bot]) -> String {

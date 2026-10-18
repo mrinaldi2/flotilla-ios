@@ -15,6 +15,12 @@ struct BotFilesPane: View {
     @State private var next: String?
     @State private var error: String?
     @State private var loaded = false
+    /// The file being read. The pane's own state, not the stack's path: the
+    /// pane is pushed by a view link (the bot's More › Artifacts), and a
+    /// value pushed onto the path from inside it lands under it, so the
+    /// file showed for a moment, the list came back on top, and each tap
+    /// left one more file to go back through.
+    @State private var opened: ArtifactFile?
 
     var body: some View {
         List {
@@ -27,7 +33,9 @@ struct BotFilesPane: View {
             if !files.isEmpty {
                 Section {
                     ForEach(files.prefix(shown)) { file in
-                        NavigationLink(value: file) { FileRow(file: file) }
+                        Button { opened = file } label: { Pushes { FileRow(file: file) } }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("artifact-row")
                     }
                     ListEnd(hasMore: files.count > shown || next != nil, noun: "files", loaded: min(shown, files.count)) {
                         if files.count <= shown { try await loadMore() }
@@ -48,7 +56,7 @@ struct BotFilesPane: View {
             guard !Task.isCancelled else { return }
             await load()
         }
-        .navigationDestination(for: ArtifactFile.self) { FilePreview(botId: botId, file: $0) }
+        .navigationDestination(item: $opened) { FilePreview(botId: botId, file: $0) }
     }
 
     /// The newest page. Fresh, it replaces the list; otherwise (bus traffic)
@@ -201,4 +209,20 @@ private struct PDFPreview: UIViewRepresentable {
     }
 
     func updateUIView(_ view: PDFView, context: Context) {}
+}
+
+/// A row that opens a screen from its view's own state, drawn as a
+/// NavigationLink row is: the content, then a chevron.
+struct Pushes<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack {
+            content
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+    }
 }

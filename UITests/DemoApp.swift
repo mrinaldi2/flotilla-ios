@@ -158,7 +158,9 @@ extension XCUIApplication {
         let card = projectCard(name)
         _ = card.waitForExistence(timeout: 10)
         scroll(to: card)
-        card.tap()
+        // The title row: the card's middle holds its column chips (0.20),
+        // which open a column's sheet instead.
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12)).tap()
         _ = navigationBars[name].waitForExistence(timeout: 10)
     }
 
