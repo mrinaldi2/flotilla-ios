@@ -1421,6 +1421,12 @@ nonisolated struct Flotilla_Board_V1_ItemCard: @unchecked Sendable {
   /// Clears the value of `planNodeID`. Subsequent reads from it will return its default value.
   mutating func clearPlanNodeID() {_uniqueStorage()._planNodeID = nil}
 
+  /// Open questions for the owner on the card (0.22.0).
+  var questionsOpen: UInt32 {
+    get {_storage._questionsOpen}
+    set {_uniqueStorage()._questionsOpen = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -2644,7 +2650,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCard"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0\u{3}plan_node_id\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0\u{3}plan_node_id\0\u{3}questions_open\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2668,6 +2674,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
     var _invited: [String] = []
     var _moveBlock: Flotilla_Board_V1_MoveBlock? = nil
     var _planNodeID: String? = nil
+    var _questionsOpen: UInt32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2699,6 +2706,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       _invited = source._invited
       _moveBlock = source._moveBlock
       _planNodeID = source._planNodeID
+      _questionsOpen = source._questionsOpen
     }
   }
 
@@ -2738,6 +2746,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         case 19: try { try decoder.decodeRepeatedStringField(value: &_storage._invited) }()
         case 20: try { try decoder.decodeSingularMessageField(value: &_storage._moveBlock) }()
         case 21: try { try decoder.decodeSingularStringField(value: &_storage._planNodeID) }()
+        case 22: try { try decoder.decodeSingularUInt32Field(value: &_storage._questionsOpen) }()
         default: break
         }
       }
@@ -2813,6 +2822,9 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       try { if let v = _storage._planNodeID {
         try visitor.visitSingularStringField(value: v, fieldNumber: 21)
       } }()
+      if _storage._questionsOpen != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._questionsOpen, fieldNumber: 22)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2843,6 +2855,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         if _storage._invited != rhs_storage._invited {return false}
         if _storage._moveBlock != rhs_storage._moveBlock {return false}
         if _storage._planNodeID != rhs_storage._planNodeID {return false}
+        if _storage._questionsOpen != rhs_storage._questionsOpen {return false}
         return true
       }
       if !storagesAreEqual {return false}

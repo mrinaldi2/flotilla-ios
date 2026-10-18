@@ -1,0 +1,10 @@
+{
+  "reqId": "63",
+  "boardRequest": {
+    "questionDismiss": {
+      "id": "d-7f3b",
+      "expectedVersion": "1",
+      "reason": "Already settled in the PRD."
+    }
+  }
+}

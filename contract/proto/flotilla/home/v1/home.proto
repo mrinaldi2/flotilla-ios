@@ -177,6 +177,7 @@ enum AttentionKind {
   CARD_WAITING = 18;                        // the board keeper: a card waits for the owner's review, went quiet, or can't move (0.19.0)
   BOT_STOPPED = 19;                         // a bot stopped, crashed, or can't run: `bot`, `bot_state` (0.20.0, capability `attention_bot_stopped`)
   PLAN_GATE = 20;                           // a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
+  QUESTION = 21;                            // a bot's question for the owner, one row each; `decision_id` is the question's id, `item_id` its card when it has one (0.22.0, capability `questions_v1`)
 }
 
 message AttentionRow {
@@ -210,6 +211,7 @@ message AttentionRow {
   // first, and rate_limited clears by itself: a client offers Restart for
   // crashed and stopped, and words the other two as what to do.
   string bot_state = 24;
+  bool question_blocking = 25;              // question: it holds its node's research or gate (0.22.0)
 }
 
 // A held or failed cleanup, in fields: the app composes the words (UX-055).

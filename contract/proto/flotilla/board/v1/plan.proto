@@ -32,6 +32,7 @@ package flotilla.board.v1;
 
 import "google/protobuf/timestamp.proto";
 import "flotilla/board/v1/board.proto";
+import "flotilla/board/v1/questions.proto";
 
 enum PlanKind {
   PLAN_KIND_UNSPECIFIED = 0;
@@ -181,6 +182,10 @@ message PlanNode {
   uint64 version = 19;
   // Rank among its siblings (fractional index).
   string rank = 20;
+  // Open questions for the owner on it and its cards; those blocking it
+  // (0.22.0).
+  uint32 questions_open = 21;
+  uint32 questions_blocking = 22;
 }
 
 // One line of a node's history.
@@ -325,6 +330,8 @@ message PlanNodeDetail {
   repeated PlanEvent history = 2;
   // Its own cards: research spikes and design tickets, or a feature's tasks.
   repeated ItemCard cards = 3;
+  // Its questions and its cards', open ones first (0.22.0).
+  repeated Question questions = 4;
 }
 
 // To the plan edits.

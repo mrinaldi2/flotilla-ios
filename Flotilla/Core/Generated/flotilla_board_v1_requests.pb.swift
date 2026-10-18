@@ -538,6 +538,39 @@ nonisolated struct Flotilla_Board_V1_BoardRequest: Sendable {
     set {request = .planDocRead(newValue)}
   }
 
+  /// Questions for the owner (0.22.0, capability `questions_v1`).
+  var askOwner: Flotilla_Board_V1_AskOwner {
+    get {
+      if case .askOwner(let v)? = request {return v}
+      return Flotilla_Board_V1_AskOwner()
+    }
+    set {request = .askOwner(newValue)}
+  }
+
+  var questionList: Flotilla_Board_V1_QuestionList {
+    get {
+      if case .questionList(let v)? = request {return v}
+      return Flotilla_Board_V1_QuestionList()
+    }
+    set {request = .questionList(newValue)}
+  }
+
+  var questionAnswer: Flotilla_Board_V1_QuestionAnswer {
+    get {
+      if case .questionAnswer(let v)? = request {return v}
+      return Flotilla_Board_V1_QuestionAnswer()
+    }
+    set {request = .questionAnswer(newValue)}
+  }
+
+  var questionDismiss: Flotilla_Board_V1_QuestionDismiss {
+    get {
+      if case .questionDismiss(let v)? = request {return v}
+      return Flotilla_Board_V1_QuestionDismiss()
+    }
+    set {request = .questionDismiss(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Request: Equatable, Sendable {
@@ -606,6 +639,11 @@ nonisolated struct Flotilla_Board_V1_BoardRequest: Sendable {
     case planResearchSkip(Flotilla_Board_V1_PlanResearchSkip)
     case planDrop(Flotilla_Board_V1_PlanDrop)
     case planDocRead(Flotilla_Board_V1_PlanDocRead)
+    /// Questions for the owner (0.22.0, capability `questions_v1`).
+    case askOwner(Flotilla_Board_V1_AskOwner)
+    case questionList(Flotilla_Board_V1_QuestionList)
+    case questionAnswer(Flotilla_Board_V1_QuestionAnswer)
+    case questionDismiss(Flotilla_Board_V1_QuestionDismiss)
 
   }
 
@@ -764,6 +802,24 @@ nonisolated struct Flotilla_Board_V1_BoardResponse: Sendable {
     set {response = .planDoc(newValue)}
   }
 
+  /// To `question_list` (0.22.0).
+  var questions: Flotilla_Board_V1_QuestionPage {
+    get {
+      if case .questions(let v)? = response {return v}
+      return Flotilla_Board_V1_QuestionPage()
+    }
+    set {response = .questions(newValue)}
+  }
+
+  /// To `ask_owner`, `question_answer` and `question_dismiss` (0.22.0).
+  var questioned: Flotilla_Board_V1_QuestionResult {
+    get {
+      if case .questioned(let v)? = response {return v}
+      return Flotilla_Board_V1_QuestionResult()
+    }
+    set {response = .questioned(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Response: Equatable, Sendable {
@@ -800,6 +856,10 @@ nonisolated struct Flotilla_Board_V1_BoardResponse: Sendable {
     case planned(Flotilla_Board_V1_PlanResult)
     /// To `plan_doc_read`.
     case planDoc(Flotilla_Board_V1_PlanDocContent)
+    /// To `question_list` (0.22.0).
+    case questions(Flotilla_Board_V1_QuestionPage)
+    /// To `ask_owner`, `question_answer` and `question_dismiss` (0.22.0).
+    case questioned(Flotilla_Board_V1_QuestionResult)
 
   }
 
@@ -831,12 +891,23 @@ nonisolated struct Flotilla_Board_V1_BoardPush: Sendable {
     set {push = .planChange(newValue)}
   }
 
+  /// A question was asked, answered or dismissed (0.22.0).
+  var questionChange: Flotilla_Board_V1_QuestionChange {
+    get {
+      if case .questionChange(let v)? = push {return v}
+      return Flotilla_Board_V1_QuestionChange()
+    }
+    set {push = .questionChange(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   nonisolated enum OneOf_Push: Equatable, Sendable {
     case boardEvent(Flotilla_Board_V1_BoardEvent)
     /// A plan node changed (0.21.0).
     case planChange(Flotilla_Board_V1_PlanChange)
+    /// A question was asked, answered or dismissed (0.22.0).
+    case questionChange(Flotilla_Board_V1_QuestionChange)
 
   }
 
@@ -2670,6 +2741,9 @@ nonisolated struct Flotilla_Board_V1_ItemDetail: Sendable {
   /// A draft's invited bots, by id.
   var invited: [String] = []
 
+  /// The card's questions for the owner, open ones first (0.22.0).
+  var questions: [Flotilla_Board_V1_Question] = []
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -3009,7 +3083,7 @@ nonisolated extension Flotilla_Board_V1_BoardEventKind: SwiftProtobuf._ProtoName
 
 nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_get\0\u{3}item_get\0\u{3}item_history\0\u{3}item_query\0\u{3}item_move_check\0\u{3}item_move\0\u{3}board_watch\0\u{3}board_unwatch\0\u{3}item_create\0\u{3}item_update\0\u{3}item_comment\0\u{3}item_link\0\u{3}item_unlink\0\u{3}item_block\0\u{3}item_unblock\0\u{3}item_assign\0\u{3}item_rank\0\u{3}item_check_ac\0\u{3}board_enable\0\u{3}column_set_limit\0\u{3}role_set\0\u{3}item_flag_ac\0\u{3}board_list\0\u{3}board_create\0\u{3}board_update\0\u{3}column_add\0\u{3}column_update\0\u{3}column_remove\0\u{3}automation_set\0\u{3}board_proposal_rule\0\u{3}item_attach\0\u{3}item_detach\0\u{3}attachment_upload\0\u{3}attachment_read\0\u{3}item_invite\0\u{3}item_finalize\0\u{3}item_discard\0\u{3}item_draft_changes\0\u{3}item_draft_undo\0\u{3}plan_get\0\u{3}plan_node_get\0\u{3}plan_enable\0\u{3}plan_create\0\u{3}plan_propose\0\u{3}plan_update\0\u{3}plan_submit\0\u{3}plan_rule\0\u{3}plan_research_skip\0\u{3}plan_drop\0\u{3}plan_doc_read\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_get\0\u{3}item_get\0\u{3}item_history\0\u{3}item_query\0\u{3}item_move_check\0\u{3}item_move\0\u{3}board_watch\0\u{3}board_unwatch\0\u{3}item_create\0\u{3}item_update\0\u{3}item_comment\0\u{3}item_link\0\u{3}item_unlink\0\u{3}item_block\0\u{3}item_unblock\0\u{3}item_assign\0\u{3}item_rank\0\u{3}item_check_ac\0\u{3}board_enable\0\u{3}column_set_limit\0\u{3}role_set\0\u{3}item_flag_ac\0\u{3}board_list\0\u{3}board_create\0\u{3}board_update\0\u{3}column_add\0\u{3}column_update\0\u{3}column_remove\0\u{3}automation_set\0\u{3}board_proposal_rule\0\u{3}item_attach\0\u{3}item_detach\0\u{3}attachment_upload\0\u{3}attachment_read\0\u{3}item_invite\0\u{3}item_finalize\0\u{3}item_discard\0\u{3}item_draft_changes\0\u{3}item_draft_undo\0\u{3}plan_get\0\u{3}plan_node_get\0\u{3}plan_enable\0\u{3}plan_create\0\u{3}plan_propose\0\u{3}plan_update\0\u{3}plan_submit\0\u{3}plan_rule\0\u{3}plan_research_skip\0\u{3}plan_drop\0\u{3}plan_doc_read\0\u{3}ask_owner\0\u{3}question_list\0\u{3}question_answer\0\u{3}question_dismiss\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3667,6 +3741,58 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
           self.request = .planDocRead(v)
         }
       }()
+      case 51: try {
+        var v: Flotilla_Board_V1_AskOwner?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .askOwner(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .askOwner(v)
+        }
+      }()
+      case 52: try {
+        var v: Flotilla_Board_V1_QuestionList?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .questionList(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .questionList(v)
+        }
+      }()
+      case 53: try {
+        var v: Flotilla_Board_V1_QuestionAnswer?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .questionAnswer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .questionAnswer(v)
+        }
+      }()
+      case 54: try {
+        var v: Flotilla_Board_V1_QuestionDismiss?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .questionDismiss(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .questionDismiss(v)
+        }
+      }()
       default: break
       }
     }
@@ -3878,6 +4004,22 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
       guard case .planDocRead(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 50)
     }()
+    case .askOwner?: try {
+      guard case .askOwner(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 51)
+    }()
+    case .questionList?: try {
+      guard case .questionList(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 52)
+    }()
+    case .questionAnswer?: try {
+      guard case .questionAnswer(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 53)
+    }()
+    case .questionDismiss?: try {
+      guard case .questionDismiss(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 54)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3892,7 +4034,7 @@ nonisolated extension Flotilla_Board_V1_BoardRequest: SwiftProtobuf.Message, Swi
 
 nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}board\0\u{1}item\0\u{1}history\0\u{1}items\0\u{3}move_check\0\u{1}moved\0\u{1}unwatched\0\u{1}edited\0\u{1}structure\0\u{1}upload\0\u{1}attachment\0\u{3}draft_changes\0\u{1}plan\0\u{3}plan_node\0\u{1}planned\0\u{3}plan_doc\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}board\0\u{1}item\0\u{1}history\0\u{1}items\0\u{3}move_check\0\u{1}moved\0\u{1}unwatched\0\u{1}edited\0\u{1}structure\0\u{1}upload\0\u{1}attachment\0\u{3}draft_changes\0\u{1}plan\0\u{3}plan_node\0\u{1}planned\0\u{3}plan_doc\0\u{1}questions\0\u{1}questioned\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4108,6 +4250,32 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
           self.response = .planDoc(v)
         }
       }()
+      case 17: try {
+        var v: Flotilla_Board_V1_QuestionPage?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .questions(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .questions(v)
+        }
+      }()
+      case 18: try {
+        var v: Flotilla_Board_V1_QuestionResult?
+        var hadOneofValue = false
+        if let current = self.response {
+          hadOneofValue = true
+          if case .questioned(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.response = .questioned(v)
+        }
+      }()
       default: break
       }
     }
@@ -4183,6 +4351,14 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
       guard case .planDoc(let v)? = self.response else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
+    case .questions?: try {
+      guard case .questions(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .questioned?: try {
+      guard case .questioned(let v)? = self.response else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -4197,7 +4373,7 @@ nonisolated extension Flotilla_Board_V1_BoardResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardPush"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_event\0\u{3}plan_change\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_event\0\u{3}plan_change\0\u{3}question_change\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4231,6 +4407,19 @@ nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftP
           self.push = .planChange(v)
         }
       }()
+      case 3: try {
+        var v: Flotilla_Board_V1_QuestionChange?
+        var hadOneofValue = false
+        if let current = self.push {
+          hadOneofValue = true
+          if case .questionChange(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.push = .questionChange(v)
+        }
+      }()
       default: break
       }
     }
@@ -4249,6 +4438,10 @@ nonisolated extension Flotilla_Board_V1_BoardPush: SwiftProtobuf.Message, SwiftP
     case .planChange?: try {
       guard case .planChange(let v)? = self.push else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .questionChange?: try {
+      guard case .questionChange(let v)? = self.push else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
     case nil: break
     }
@@ -6761,7 +6954,7 @@ nonisolated extension Flotilla_Board_V1_StructureResult: SwiftProtobuf.Message, 
 
 nonisolated extension Flotilla_Board_V1_ItemDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemDetail"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}item\0\u{1}links\0\u{1}comments\0\u{1}history\0\u{3}history_next\0\u{1}attachments\0\u{1}invited\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}item\0\u{1}links\0\u{1}comments\0\u{1}history\0\u{3}history_next\0\u{1}attachments\0\u{1}invited\0\u{1}questions\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6776,6 +6969,7 @@ nonisolated extension Flotilla_Board_V1_ItemDetail: SwiftProtobuf.Message, Swift
       case 5: try { try decoder.decodeSingularInt64Field(value: &self._historyNext) }()
       case 6: try { try decoder.decodeRepeatedMessageField(value: &self.attachments) }()
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.invited) }()
+      case 8: try { try decoder.decodeRepeatedMessageField(value: &self.questions) }()
       default: break
       }
     }
@@ -6807,6 +7001,9 @@ nonisolated extension Flotilla_Board_V1_ItemDetail: SwiftProtobuf.Message, Swift
     if !self.invited.isEmpty {
       try visitor.visitRepeatedStringField(value: self.invited, fieldNumber: 7)
     }
+    if !self.questions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.questions, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6818,6 +7015,7 @@ nonisolated extension Flotilla_Board_V1_ItemDetail: SwiftProtobuf.Message, Swift
     if lhs._historyNext != rhs._historyNext {return false}
     if lhs.attachments != rhs.attachments {return false}
     if lhs.invited != rhs.invited {return false}
+    if lhs.questions != rhs.questions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

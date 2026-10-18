@@ -21,6 +21,7 @@ package flotilla.board.v1;
 import "google/protobuf/timestamp.proto";
 import "flotilla/board/v1/board.proto";
 import "flotilla/board/v1/plan.proto";
+import "flotilla/board/v1/questions.proto";
 
 message BoardRequest {
   oneof request {
@@ -89,6 +90,11 @@ message BoardRequest {
     PlanResearchSkip plan_research_skip = 48;
     PlanDrop plan_drop = 49;
     PlanDocRead plan_doc_read = 50;
+    // Questions for the owner (0.22.0, capability `questions_v1`).
+    AskOwner ask_owner = 51;
+    QuestionList question_list = 52;
+    QuestionAnswer question_answer = 53;
+    QuestionDismiss question_dismiss = 54;
   }
 }
 
@@ -127,6 +133,10 @@ message BoardResponse {
     PlanResult planned = 15;
     // To `plan_doc_read`.
     PlanDocContent plan_doc = 16;
+    // To `question_list` (0.22.0).
+    QuestionPage questions = 17;
+    // To `ask_owner`, `question_answer` and `question_dismiss` (0.22.0).
+    QuestionResult questioned = 18;
   }
 }
 
@@ -136,6 +146,8 @@ message BoardPush {
     BoardEvent board_event = 1;
     // A plan node changed (0.21.0).
     PlanChange plan_change = 2;
+    // A question was asked, answered or dismissed (0.22.0).
+    QuestionChange question_change = 3;
   }
 }
 
@@ -706,6 +718,8 @@ message ItemDetail {
   repeated ItemAttachment attachments = 6;
   // A draft's invited bots, by id.
   repeated string invited = 7;
+  // The card's questions for the owner, open ones first (0.22.0).
+  repeated Question questions = 8;
 }
 
 // How much of an upload has arrived.
