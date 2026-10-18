@@ -155,6 +155,67 @@ final class H134Tests: XCTestCase {
         screenshot("QA-004-i2-bot-reports")
     }
 
+    /// More › Artifacts opens a file and stays on it; Back goes to the list,
+    /// then the bot. The list is pushed by a view link, and its rows once
+    /// pushed onto the stack's path, so a file showed for a moment and the
+    /// list came back over it, one more file to go back through per tap.
+    func testBotArtifactOpensOnce() throws {
+        let app = try DemoApp.launch()
+        allowSystemAlerts()
+        dismissLateAlert()
+        app.openBot("Architect")
+        dismissLateAlert()
+        app.pane("More").tap()
+        waitFor(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Artifacts'")).firstMatch).tap()
+        let list = waitFor(app.navigationBars["Artifacts"])
+        let row = waitFor(app.buttons["artifact-row"].firstMatch)
+        for _ in 0..<2 {
+            row.tap()
+            XCTAssertTrue(list.waitForNonExistence(timeout: 5), "The file did not open")
+            sleep(2)
+            XCTAssertFalse(list.exists, "The list came back over the file")
+            app.navigationBars.buttons["BackButton"].firstMatch.tap()
+            XCTAssertTrue(list.waitForExistence(timeout: 5), "Back did not return to the list")
+        }
+        screenshot("QA-004-i2-bot-artifact-back")
+        app.navigationBars.buttons["BackButton"].firstMatch.tap()
+        XCTAssertTrue(app.pane("More").waitForExistence(timeout: 5), "Back went to another file, not the bot")
+        XCTAssertFalse(list.exists)
+    }
+
+    /// Project settings, from the project's More menu, opens a bot and stays
+    /// on it (its rows push from the page, not the stack's path).
+    func testProjectSettingsOpensABot() throws {
+        let app = try DemoApp.launch()
+        allowSystemAlerts()
+        dismissLateAlert()
+        app.openProject("Aurora Notes")
+        dismissLateAlert()
+        waitFor(app.navigationBars["Aurora Notes"].buttons["More"]).tap()
+        waitFor(app.buttons["Project settings"]).tap()
+        let bot = waitFor(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Architect'")).firstMatch)
+        bot.tap()
+        XCTAssertTrue(waitFor(app.pane("Reports")).exists, "The bot did not open")
+        sleep(2)
+        XCTAssertTrue(app.pane("Reports").exists, "The bot page did not stay")
+        app.navigationBars.buttons["BackButton"].firstMatch.tap()
+        XCTAssertTrue(bot.waitForExistence(timeout: 5), "Back did not return to Project settings")
+    }
+
+    /// The notifications prompt can come after `allowSystemAlerts` stopped
+    /// waiting, over the first screen; answer it before tapping through.
+    private func dismissLateAlert() {
+        _ = XCUIApplication().navigationBars.firstMatch.waitForExistence(timeout: 10)
+        let alerts = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts
+        for label in ["Allow", "Don’t Allow"] {
+            let button = alerts.buttons[label]
+            if button.waitForExistence(timeout: 4) {
+                button.tap()
+                return
+            }
+        }
+    }
+
     // MARK: I3 Main chat (iPhone)
 
     func testMainChat() throws {
