@@ -406,7 +406,8 @@ final class AppStore {
         bots[index].state = state
         bots[index].stateReason = frame.str("reason")
         if !inBackground, let notice = turns.notice(botId: id, state: state, itemId: frame.optStr("item_id"),
-                                                    itemTitle: frame.optStr("item_title"), bot: bots[index], computerId: defaults.id) {
+                                                    itemTitle: frame.optStr("item_title"), cause: frame.optStr("cause"),
+                                                    bot: bots[index], computerId: defaults.id) {
             onActivity?(notice)
         }
         if state != .waitingForApproval { approvals[id] = nil }
