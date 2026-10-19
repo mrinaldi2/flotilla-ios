@@ -38,6 +38,10 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 ///   STOPPED   stopping, stopped
 ///   FAILED    crashed, auth_failed, rate_limited
 ///   OFFLINE   its computer isn't answering; `state` is the last one known
+///   ASLEEP    asleep or queued for a slot (0.23.0, capability
+///             `team_on_demand_v1`): an on-demand bot with nothing to do, or
+///             one waiting for a running slot. Not an error. A caller from
+///             before 0.23 is sent STOPPED instead.
 nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
   typealias RawValue = Int
   case unspecified // = 0
@@ -47,6 +51,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
   case stopped // = 4
   case failed // = 5
   case offline // = 6
+  case asleep // = 7
   case UNRECOGNIZED(Int)
 
   init() {
@@ -62,6 +67,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     case 4: self = .stopped
     case 5: self = .failed
     case 6: self = .offline
+    case 7: self = .asleep
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -75,6 +81,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     case .stopped: return 4
     case .failed: return 5
     case .offline: return 6
+    case .asleep: return 7
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -88,6 +95,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     .stopped,
     .failed,
     .offline,
+    .asleep,
   ]
 
 }
@@ -136,7 +144,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
   /// a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
   case planGate // = 20
 
-  /// a bot's question for the owner, one row each; `decision_id` is the question's id, `item_id` its card when it has one (0.22.0, capability `questions_v1`)
+  /// a bot's question for the owner, one row each; `decision_id` is the question's id (0.22.0, capability `questions_v1`)
   case question // = 21
   case UNRECOGNIZED(Int)
 
@@ -588,7 +596,7 @@ nonisolated struct Flotilla_Home_V1_ProjectRow: @unchecked Sendable {
   /// every bot of the project across its computers, this computer's own and
   /// each linked computer's (`ProjectAttention.Part.bots`), a linked bot
   /// once. Order: the lead first, then WAITING, WORKING, FAILED and STOPPED,
-  /// IDLE, OFFLINE; within a group by name, case-insensitively. At most 24:
+  /// IDLE, ASLEEP (0.23.0), OFFLINE; within a group by name, case-insensitively. At most 24:
   /// `bots` and the counts above stay the totals. Empty from an older daemon.
   var botList: [Flotilla_Home_V1_BotBrief] {
     get {_storage._botList}
@@ -2186,7 +2194,7 @@ nonisolated struct Flotilla_Home_V1_InstallOfferDismissRequest: Sendable {
 fileprivate nonisolated let _protobuf_package = "flotilla.home.v1"
 
 nonisolated extension Flotilla_Home_V1_BotStatus: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0BOT_STATUS_UNSPECIFIED\0\u{1}BOT_STATUS_WORKING\0\u{1}BOT_STATUS_IDLE\0\u{1}BOT_STATUS_WAITING\0\u{1}BOT_STATUS_STOPPED\0\u{1}BOT_STATUS_FAILED\0\u{1}BOT_STATUS_OFFLINE\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0BOT_STATUS_UNSPECIFIED\0\u{1}BOT_STATUS_WORKING\0\u{1}BOT_STATUS_IDLE\0\u{1}BOT_STATUS_WAITING\0\u{1}BOT_STATUS_STOPPED\0\u{1}BOT_STATUS_FAILED\0\u{1}BOT_STATUS_OFFLINE\0\u{1}BOT_STATUS_ASLEEP\0")
 }
 
 nonisolated extension Flotilla_Home_V1_AttentionKind: SwiftProtobuf._ProtoNameProviding {
