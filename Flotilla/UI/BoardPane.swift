@@ -121,7 +121,7 @@ private struct BoardContent: View {
                     ForEach(state.columns, id: \.key) { column in
                         ColumnList(cards: state.cards(in: column.key, matching: model.filter), computerId: computer.id, bots: store.bots,
                                    groups: groups, filtering: model.filter.isOn, canMove: store.canControl,
-                                   projectId: model.projectId, planNodes: planNodes) { moving = $0 }
+                                   projectId: model.projectId, roles: state.snapshot.roles, planNodes: planNodes) { moving = $0 }
                             .tag(column.key)
                     }
                     if state.hasBoards {
@@ -241,6 +241,8 @@ struct ColumnList: View {
     var canMove = false
     /// The project, so a card can be given to one of its bots.
     var projectId: String?
+    /// Who holds which board role, for Assign to role.
+    var roles: [ProjectRoleRow]? = nil
     /// The project's plan nodes by id, for each card's node chip (0.21).
     var planNodes: [String: PlanNode] = [:]
     var move: (BoardCard) -> Void = { _ in }
@@ -277,7 +279,7 @@ struct ColumnList: View {
                         Button { move(card) } label: { Label("Move to…", systemImage: "arrow.right.square") }
                         if let projectId {
                             AssignMenu(itemId: card.id, version: card.version, assignee: card.hasAssignee ? card.assignee : nil,
-                                       projectId: projectId) { assignFailure = $0 }
+                                       projectId: projectId, roles: roles) { assignFailure = $0 }
                         }
                     }
                 }

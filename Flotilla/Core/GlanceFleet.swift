@@ -18,6 +18,8 @@ struct FleetCounts: Equatable {
     var waiting = 0
     var stopped = 0
     var idle = 0
+    /// Asleep or waiting for a slot (0.23): not running, and nothing wrong.
+    var asleep = 0
     var offline = 0
 
     /// The list holds at most 24 bots; `total` is every bot, so the ones it
@@ -28,6 +30,7 @@ struct FleetCounts: Equatable {
             case .working: working += 1
             case .waiting: waiting += 1
             case .stopped, .failed: stopped += 1
+            case .asleep: asleep += 1
             case .offline: offline += 1
             case .idle, .unspecified, .UNRECOGNIZED: idle += 1
             }
@@ -35,14 +38,15 @@ struct FleetCounts: Equatable {
         idle += max(0, total - bots.count)
     }
 
-    /// "2 working · 1 waiting · 1 stopped · 3 idle · 2 offline"; "0 idle" when
-    /// nothing else applies.
+    /// "2 working · 1 waiting · 1 stopped · 3 idle · 4 asleep · 2 offline";
+    /// "0 idle" when nothing else applies.
     var words: String {
         var parts: [String] = []
         if working > 0 { parts.append("\(working) working") }
         if waiting > 0 { parts.append("\(waiting) waiting") }
         if stopped > 0 { parts.append("\(stopped) stopped") }
-        if idle > 0 || parts.isEmpty && offline == 0 { parts.append("\(idle) idle") }
+        if idle > 0 || parts.isEmpty && offline == 0 && asleep == 0 { parts.append("\(idle) idle") }
+        if asleep > 0 { parts.append("\(asleep) asleep") }
         if offline > 0 { parts.append("\(offline) offline") }
         return parts.joined(separator: " · ")
     }
@@ -50,12 +54,13 @@ struct FleetCounts: Equatable {
     /// "4 bots: 2 working, 1 stopped, 1 idle."
     func sentence(bots: Int) -> String {
         let all = "\(bots) bot\(bots == 1 ? "" : "s")"
-        if working + waiting + stopped + offline == 0 { return "\(all), all idle." }
+        if working + waiting + stopped + offline + asleep == 0 { return "\(all), all idle." }
         var parts: [String] = []
         if working > 0 { parts.append("\(working) working") }
         if waiting > 0 { parts.append("\(waiting) waiting") }
         if stopped > 0 { parts.append("\(stopped) stopped") }
         if idle > 0 { parts.append("\(idle) idle") }
+        if asleep > 0 { parts.append("\(asleep) asleep") }
         if offline > 0 { parts.append("\(offline) offline") }
         return "\(all): " + parts.joined(separator: ", ") + "."
     }

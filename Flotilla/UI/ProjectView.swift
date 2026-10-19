@@ -39,10 +39,12 @@ struct ProjectView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                TeamStatusSection(projectId: project.id)
                 Section {
                     ForEach(bots) { bot in
                         Button { opened = .bot(bot.id) } label: { Pushes { BotRow(bot: bot) } }
                             .buttonStyle(.plain)
+                            .botTeamActions(bot)
                     }
                     if store.canControl, store.status == .connected {
                         Button { creatingBot = true } label: { Label("New bot in \(project.name)", systemImage: "plus") }

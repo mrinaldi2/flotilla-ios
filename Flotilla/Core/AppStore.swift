@@ -62,6 +62,8 @@ final class AppStore {
     /// empty `projects` means none, not not-yet (H-216).
     private(set) var projectsLoaded = false
     var bots: [Bot] = []
+    /// This computer's running bots and the queue for a slot (0.23, `team_on_demand_v1`).
+    var team: TeamStatus?
     var activity: [String: BotActivity] = [:]
     /// bot id → its DM thread.
     var conversations: [String: Conversation] = [:]
@@ -192,6 +194,7 @@ final class AppStore {
         installOffer = nil
         projectsLoaded = false
         bots = []
+        team = nil
         activity = [:]
         conversations = [:]
         messages = [:]
@@ -277,6 +280,7 @@ final class AppStore {
                 reply.list("conversations").map { ($0.str("bot_id"), Conversation($0)) },
                 uniquingKeysWith: { _, newest in newest })
         }
+        await refreshTeam()
         await refreshDecisions()
         await refreshPermissions()
         await refreshInstallOffer()
@@ -364,6 +368,8 @@ final class AppStore {
             if let row = frame.dict("request") { permissionArrived(PermissionRequest(row)) }
         case "permission_resolved":
             resolvePermission(frame.str("request_id"))
+        case "team_updated":
+            if let row = frame.dict("team") { team = TeamStatus(row) }
         case "workers_updated":
             workersRevision[frame.str("project_id"), default: 0] += 1
         case "repo_clone":
@@ -662,6 +668,39 @@ final class AppStore {
         let bot = Bot(row)
         upsert(bot)
         return bot
+    }
+
+    // MARK: The team on demand (0.23)
+
+    func refreshTeam() async {
+        guard hasTeamOnDemand, let row = try? await client.request("team_status").dict("team") else { return }
+        team = TeamStatus(row)
+    }
+
+    /// Wakes the bot ahead of board work, or queues it first for a slot.
+    func wakeBot(_ botId: String) async throws {
+        _ = try await client.request("wake_bot", ["bot_id": botId])
+    }
+
+    /// The bot sleeps once its running turn ends.
+    func sleepBot(_ botId: String) async throws {
+        _ = try await client.request("sleep_bot", ["bot_id": botId])
+    }
+
+    func setBotPresence(_ botId: String, _ presence: BotPresence) async throws {
+        let reply = try await client.request("set_bot_presence", ["bot_id": botId, "presence": presence.rawValue])
+        if let bot = reply.dict("bot").map(Bot.init) { upsert(bot) }
+    }
+
+    /// The running cap and the idle time before an on-demand bot sleeps,
+    /// applied at once; nil leaves one as it is.
+    func setTeamLimits(maxRunning: Int?, idleMinutes: Int?) async throws {
+        var fields: JSONDict = [:]
+        if let maxRunning { fields["max_running_bots"] = maxRunning }
+        if let idleMinutes { fields["idle_sleep_minutes"] = idleMinutes }
+        guard !fields.isEmpty else { return }
+        _ = try await client.request("set_config", fields)
+        await refreshTeam()
     }
 
     // MARK: A bot's browser

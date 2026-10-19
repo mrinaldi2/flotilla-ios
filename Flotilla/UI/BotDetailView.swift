@@ -14,6 +14,8 @@ struct BotDetailView: View {
     @State private var failure: String?
     /// Says which action `failure` is about.
     @State private var failedAction = SessionAction.restart
+    /// Opening its chat woke it (0.23): sent once until it is up again.
+    @State private var woke = false
 
     /// Four panes at most (UX-024): what the bot reported, its chat and
     /// terminal on demand, and everything else (work, artifacts, browser,
@@ -65,6 +67,13 @@ struct BotDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             PaneSwitcher(panes: panes, selection: Binding(get: { pane }, set: { choice = $0 }), moreDot: browserOpen)
+
+            // Asleep or waiting for a slot (0.23): not an error, and one tap wakes it.
+            if let bot, store.hasTeamOnDemand, bot.state.isAsleep {
+                BotRestBanner(bot: bot)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+            }
 
             // Its tools waiting on the owner, answered right here.
             if store.hasPermissions, !store.permissions(for: botId).isEmpty {
@@ -159,6 +168,23 @@ struct BotDetailView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { watchBrowser() } else if store.watchedBrowser?.botId == botId { store.unwatchBrowser() }
         }
+        .task(id: "\(pane.rawValue)/\(bot?.state.rawValue ?? "")/\(store.status == .connected)") { wakeOnOpen() }
+    }
+
+    /// The panes that show its conversation: opening one wakes an asleep bot,
+    /// ahead of board work, as the desktop does.
+    private static let conversation: Set<Pane> = [.chat, .terminal, .messages]
+
+    private func wakeOnOpen() {
+        guard let bot, bot.state == .asleep else {
+            woke = false
+            return
+        }
+        guard !woke, Self.conversation.contains(pane), store.hasTeamOnDemand, store.canControl,
+              store.status == .connected else { return }
+        woke = true
+        // A refusal is left to the banner's Wake now.
+        Task { if (try? await store.wakeBot(botId)) == nil { woke = false } }
     }
 
     /// The bot, where it runs and which project it is in.
@@ -356,6 +382,9 @@ private struct BotMorePane: View {
                     }
                 } header: {
                     SectionTitle("Profile")
+                }
+                if store.hasTeamOnDemand, !bot.temporary {
+                    BotPresenceSection(bot: bot)
                 }
                 if store.capabilities.contains("bot_browser"), !bot.isLinked {
                     ChromeAccessSection(bot: bot)
