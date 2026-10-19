@@ -29,6 +29,7 @@ struct BotsView: View {
     var body: some View {
         NavigationStack(path: $path) {
             List {
+                TeamStatusSection()
                 ForEach(store.sortedProjects) { project in
                     Section {
                         let bots = store.bots(in: project)
@@ -37,6 +38,7 @@ struct BotsView: View {
                         }
                         ForEach(bots) { bot in
                             NavigationLink(value: bot.id) { BotRow(bot: bot) }
+                                .botTeamActions(bot)
                         }
                     } header: {
                         Button { path.append(ProjectPageLink(id: project.id)) } label: {

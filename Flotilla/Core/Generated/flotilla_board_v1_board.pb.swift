@@ -204,6 +204,12 @@ nonisolated enum Flotilla_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable 
 
   /// Reviews security work: permissions, identity, peers, confinement (H-261 §2.1).
   case reviewerCe // = 8
+
+  /// The on-demand team's SDLC roles (0.23.0, capability `team_on_demand_v1`):
+  /// Product shapes a card, Architect designs it; Dev builds and Tester
+  /// verifies. The lead may set both, as it sets Dev.
+  case product // = 9
+  case architect // = 10
   case UNRECOGNIZED(Int)
 
   init() {
@@ -221,6 +227,8 @@ nonisolated enum Flotilla_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable 
     case 6: self = .tester
     case 7: self = .dev
     case 8: self = .reviewerCe
+    case 9: self = .product
+    case 10: self = .architect
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -236,6 +244,8 @@ nonisolated enum Flotilla_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable 
     case .tester: return 6
     case .dev: return 7
     case .reviewerCe: return 8
+    case .product: return 9
+    case .architect: return 10
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -251,6 +261,8 @@ nonisolated enum Flotilla_Board_V1_Role: SwiftProtobuf.Enum, Swift.CaseIterable 
     .tester,
     .dev,
     .reviewerCe,
+    .product,
+    .architect,
   ]
 
 }
@@ -1790,7 +1802,7 @@ nonisolated extension Flotilla_Board_V1_WipScope: SwiftProtobuf._ProtoNameProvid
 }
 
 nonisolated extension Flotilla_Board_V1_Role: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ROLE_UNSPECIFIED\0\u{1}ROLE_LEAD\0\u{1}ROLE_COACH\0\u{1}ROLE_DEVOPS\0\u{1}ROLE_REVIEWER_ARCH\0\u{1}ROLE_REVIEWER_UX\0\u{1}ROLE_TESTER\0\u{1}ROLE_DEV\0\u{1}ROLE_REVIEWER_CE\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ROLE_UNSPECIFIED\0\u{1}ROLE_LEAD\0\u{1}ROLE_COACH\0\u{1}ROLE_DEVOPS\0\u{1}ROLE_REVIEWER_ARCH\0\u{1}ROLE_REVIEWER_UX\0\u{1}ROLE_TESTER\0\u{1}ROLE_DEV\0\u{1}ROLE_REVIEWER_CE\0\u{1}ROLE_PRODUCT\0\u{1}ROLE_ARCHITECT\0")
 }
 
 nonisolated extension Flotilla_Board_V1_ItemType: SwiftProtobuf._ProtoNameProviding {

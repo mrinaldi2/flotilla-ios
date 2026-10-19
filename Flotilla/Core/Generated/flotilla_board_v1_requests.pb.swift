@@ -2049,11 +2049,26 @@ nonisolated struct Flotilla_Board_V1_ItemAssign: Sendable {
   /// Clears the value of `bot`. Subsequent reads from it will return its default value.
   mutating func clearBot() {self._bot = nil}
 
+  /// Assign to whoever holds this role instead of a named bot (0.23.0,
+  /// capability `team_on_demand_v1`): a holder that is awake and free, else
+  /// one that is asleep, which wakes; `bot` is then ignored. When every holder
+  /// is busy, spawn a worker from the role to add hands. A role nobody holds
+  /// is refused with `role.unheld`.
+  var role: Flotilla_Board_V1_Role {
+    get {_role ?? .unspecified}
+    set {_role = newValue}
+  }
+  /// Returns true if `role` has been explicitly set.
+  var hasRole: Bool {self._role != nil}
+  /// Clears the value of `role`. Subsequent reads from it will return its default value.
+  mutating func clearRole() {self._role = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _bot: String? = nil
+  fileprivate var _role: Flotilla_Board_V1_Role? = nil
 }
 
 /// Lead: place an item between two others in its column.
@@ -5908,7 +5923,7 @@ nonisolated extension Flotilla_Board_V1_ItemUnblock: SwiftProtobuf.Message, Swif
 
 nonisolated extension Flotilla_Board_V1_ItemAssign: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemAssign"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}expected_version\0\u{1}bot\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}expected_version\0\u{1}bot\0\u{1}role\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5919,6 +5934,7 @@ nonisolated extension Flotilla_Board_V1_ItemAssign: SwiftProtobuf.Message, Swift
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.expectedVersion) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._bot) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self._role) }()
       default: break
       }
     }
@@ -5938,6 +5954,9 @@ nonisolated extension Flotilla_Board_V1_ItemAssign: SwiftProtobuf.Message, Swift
     try { if let v = self._bot {
       try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     } }()
+    try { if let v = self._role {
+      try visitor.visitSingularEnumField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5945,6 +5964,7 @@ nonisolated extension Flotilla_Board_V1_ItemAssign: SwiftProtobuf.Message, Swift
     if lhs.id != rhs.id {return false}
     if lhs.expectedVersion != rhs.expectedVersion {return false}
     if lhs._bot != rhs._bot {return false}
+    if lhs._role != rhs._role {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

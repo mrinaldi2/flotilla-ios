@@ -370,12 +370,14 @@ struct TeamPane: View {
 
     var body: some View {
         List {
+            TeamStatusSection(projectId: projectId)
             if bots.isEmpty { EmptyNote(text: "No bots yet", systemImage: "person") }
             ForEach(bots) { bot in
                 NavigationLink(value: NeedsDestination.bot(computerId: fleet.computers.first { $0.store === store }?.id ?? "", botId: bot.id, chat: false)) {
                     // With owner threads, the thread is the truth: no thread, nothing unread.
                     BotRow(bot: bot, unread: store.hasOwnerThreads ? (threadsLoaded ? (unread[bot.id] ?? 0) : 0) : nil)
                 }
+                .botTeamActions(bot)
             }
         }
         .listStyle(.insetGrouped)

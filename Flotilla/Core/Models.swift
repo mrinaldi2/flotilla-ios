@@ -39,6 +39,10 @@ enum BotState: String {
     case rateLimited = "rate_limited"
     case authFailed = "auth_failed"
     case crashed, stopping, stopped
+    /// An on-demand bot with nothing to do, no processes; not an error (0.23).
+    case asleep
+    /// Woken, waiting for a running slot on its computer (0.23).
+    case queued
     case unknown
 
     var label: String {
@@ -53,9 +57,14 @@ enum BotState: String {
         case .crashed: "Crashed"
         case .stopping: "Stopping"
         case .stopped: "Stopped"
+        case .asleep: "Asleep"
+        case .queued: "Waiting for a slot"
         case .unknown: "Unknown"
         }
     }
+
+    /// Asleep or waiting for a slot: no session, and nothing wrong.
+    var isAsleep: Bool { self == .asleep || self == .queued }
 
     /// The bot is blocked until the owner does something.
     var needsOwner: Bool { self == .waitingForUser || self == .waitingForApproval }
@@ -166,6 +175,8 @@ struct Bot: Identifiable, Equatable {
     /// stand-in's are its peer's). Nil from older daemons.
     var originDaemonId: String?
     var originBotId: String?
+    /// Always on or on demand (0.23); nil from an older daemon, where every bot is always on.
+    var presence: BotPresence?
 
     var isLinked: Bool { peerName != nil }
     var engine: BotEngine? { runtime.flatMap(BotEngine.init(rawValue:)) }
@@ -190,6 +201,7 @@ struct Bot: Identifiable, Equatable {
         workspacePath = d.str("workspace_path")
         createdByBotId = d.optStr("created_by_bot_id")
         deletedAt = d.date("deleted_at")
+        presence = d.optStr("presence").flatMap(BotPresence.init(rawValue:))
     }
 }
 

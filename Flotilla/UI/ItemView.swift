@@ -200,7 +200,7 @@ struct ItemView: View {
                 if let project {
                     ToolbarItem(placement: .topBarTrailing) {
                         AssignMenu(itemId: item.id, version: item.version, assignee: item.hasAssignee ? item.assignee : nil,
-                                   projectId: project) { assignFailure = $0 } assigned: {
+                                   projectId: project, roles: board?.snapshot.roles) { assignFailure = $0 } assigned: {
                             Task { await load() }
                         }
                         .labelStyle(.iconOnly)

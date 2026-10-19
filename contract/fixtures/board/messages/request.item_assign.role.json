@@ -1,0 +1,10 @@
+{
+  "reqId": "28",
+  "boardRequest": {
+    "itemAssign": {
+      "id": "H-018",
+      "expectedVersion": "3",
+      "role": "ROLE_ARCHITECT"
+    }
+  }
+}

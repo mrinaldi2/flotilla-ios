@@ -386,6 +386,12 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                                (both start the Lab's board when it has none)
     POST /artifacts            0.22 (artifacts_v2): files in each group of the lab's artifacts, one
                                attached to a new card; {"item_id", "loose": [paths], "used": path}
+    POST /team                 0.23 (team_on_demand_v1): Designer and QA Tester asleep, then every
+                               running slot taken and Tech Writer woken by the Architect's message,
+                               so it waits for a slot; {"running", "max_running", "asleep", "queued"}
+    POST /team/reset           every slot free again (cap 32), the bots put to sleep woken
+    POST /roles                0.23: Team Lead gives DevOps the Product role and files a card;
+                               {"item_id", "product": "DevOps"} (starts the Lab's board)
     POST /freeze, /thaw        pause and resume the demo daemon (SIGSTOP/SIGCONT), so a
                                request from the app fails as a connection error would
     """
@@ -435,6 +441,45 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
         ws.frame(0x82, b"\x08\x01" + field(2, field(7, field(1, project_id.encode()))))
         time.sleep(1)
         ws.sock.close()
+
+    def seed_team(seed: bool) -> Dict[str, Any]:
+        """The team on demand in a known state (0.23): `seed` puts two bots to sleep and has a
+        third wait for a slot; without it every slot is free and the sleepers are woken."""
+        ws = owner()
+        if "team_on_demand_v1" not in caps:
+            raise RuntimeError("the demo daemon predates 0.23 (no team_on_demand_v1)")
+        resting = ["Designer", "QA Tester", "Tech Writer"]
+
+        def states() -> Dict[str, str]:
+            return {b["name"]: b["state"] for b in ws.request("list_bots")["bots"] if not b.get("peer")}
+
+        def until(check: Any) -> None:
+            for _ in range(100):
+                if check(states()):
+                    return
+                time.sleep(0.2)
+            raise RuntimeError(f"the demo's bots didn't settle: {states()}")
+
+        ws.request("set_config", max_running_bots=32)
+        if not seed:
+            for name in resting:
+                if states().get(name) in ("asleep", "queued"):
+                    ws.request("wake_bot", bot_id=bots[name]["id"])
+            until(lambda now: all(now.get(n) not in ("asleep", "queued") for n in resting))
+            return {"team": ws.request("team_status")["team"]}
+        for name in resting:
+            ws.request("set_bot_presence", bot_id=bots[name]["id"], presence="on_demand")
+            ws.request("sleep_bot", bot_id=bots[name]["id"])
+        until(lambda now: all(now.get(n) == "asleep" for n in resting))
+        running = ws.request("team_status")["team"]["running"]
+        ws.request("set_config", max_running_bots=running)
+        # A wake with every slot taken waits: a bot's message, not the owner's (which would go first).
+        bot_tool(port, home, bots["Architect"]["id"], "send_message", to="Tech Writer",
+                 body="The sync chapter of the docs needs the new conflict banner.")
+        until(lambda now: now.get("Tech Writer") == "queued")
+        team = ws.request("team_status")["team"]
+        return {"running": team["running"], "max_running": team["max_running"],
+                "asleep": ["Designer", "QA Tester"], "queued": ["Tech Writer"]}
 
     def terminal_request(cwd: str) -> None:
         """What `hermesd peer …` does from a terminal: hermes/owner_request on the bus socket,
@@ -600,6 +645,23 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                         raise RuntimeError(f"item_attach: {attached}")
                     reply = {"item_id": item, "loose": ["refs/old-sources.md", "refs/scratch-notes.md", "refs/draft-table.md"],
                              "used": "refs/saints-calendar.md"}
+                elif url.path in ("/team", "/team/reset"):
+                    reply = seed_team(url.path == "/team")
+                elif url.path == "/roles":
+                    info = ensure_lab()
+                    ensure_board(info["project_id"])
+                    if "team_on_demand_v1" not in caps:
+                        raise RuntimeError("the demo daemon predates 0.23 (no team_on_demand_v1)")
+                    lead = info["bots"]["Team Lead"]["id"]
+                    given = bot_call(port, home, lead, "role_set", bot="DevOps", role="product")
+                    if not given.get("ok"):
+                        raise RuntimeError(f"role_set: {given}")
+                    made = bot_call(port, home, lead, "item_create", type="task", title="Shape the import flow",
+                                    description="What the owner sees when an import fails.")
+                    if not made.get("ok"):
+                        raise RuntimeError(f"item_create: {made}")
+                    reply = {"item_id": (made.get("data") or {}).get("item", made.get("data") or {}).get("id"),
+                             "product": "DevOps"}
                 elif url.path in ("/freeze", "/thaw"):
                     if not daemon_pid:
                         raise RuntimeError("no daemon pid")
@@ -1039,6 +1101,10 @@ def main() -> None:
     # It answers permission prompts, so the daemon holds them while the demo runs.
     hello = ws.request("hello", protocol_version=2, token=token, client="flotilla-demo",
                        features=["permission_cards"])
+    if "team_on_demand_v1" in hello.get("capabilities", []):
+        # 0.23 runs at most 6 bots and sleeps idle ones after 10 minutes: the demo keeps every
+        # bot running, as before, and POST /team seeds the team on demand for its tests.
+        ws.request("set_config", max_running_bots=32, idle_sleep_minutes=1440)
 
     bots: Dict[str, Dict[str, str]] = {}
     artifacts: Dict[str, str] = {}
