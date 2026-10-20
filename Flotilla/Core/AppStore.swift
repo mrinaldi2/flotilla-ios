@@ -9,6 +9,8 @@ protocol TerminalSink: AnyObject {
     func output(seq: Int, data: String)
     /// The connection came back: re-attach from the last seen cursor.
     func reattach()
+    /// Typing was refused, with the daemon's words.
+    func refused(_ message: String)
 }
 
 struct Notice: Identifiable, Equatable {
@@ -120,6 +122,9 @@ final class AppStore {
     @ObservationIgnored var questionListeners: [String: [UUID: (QuestionChange) -> Void]] = [:]
     @ObservationIgnored private let defaults: ComputerDefaults
     @ObservationIgnored private var sinks: [String: TerminalSink] = [:]
+    /// Typing sent, by `req_id`: the daemon answers only a refusal, as on the
+    /// owner token (H-195 D5) or for a linked bot whose computer takes none (H-303).
+    @ObservationIgnored private var terminalInputs: [String: String] = [:]
     @ObservationIgnored private var troubleTask: Task<Void, Never>?
     /// How long a drop lasts before `connectionTrouble` shows it.
     /// Eight seconds (H-217): retries on a loaded Mac over Tailscale often
@@ -341,6 +346,10 @@ final class AppStore {
             sinks[frame.str("bot_id")]?.output(seq: frame.int("seq"), data: frame.str("data"))
         case "attached":
             sinks[frame.str("bot_id")]?.attached(seq: frame.int("seq"), resumed: frame.bool("resumed"))
+        case "error":
+            if let botId = terminalInputs.removeValue(forKey: frame.str("req_id")) {
+                sinks[botId]?.refused(frame.str("message"))
+            }
         case "bot_state":
             botStateChanged(frame)
         case "bot_updated":
@@ -577,6 +586,14 @@ final class AppStore {
         guard sinks[botId] === sink else { return }
         sinks[botId] = nil
         client.send("detach", ["bot_id": botId])
+    }
+
+    /// Keystrokes typed into a bot's terminal, as the terminal encodes them.
+    func typeIntoTerminal(_ botId: String, data: String) {
+        guard canControl, let id = client.send("input", ["bot_id": botId, "data": data]) else { return }
+        // Only a refusal is answered, at once: the newest few are enough to match it against.
+        if terminalInputs.count >= 64 { terminalInputs.removeAll() }
+        terminalInputs[id] = botId
     }
 
     /// Type text into a bot's terminal, then press return.

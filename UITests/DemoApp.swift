@@ -13,6 +13,13 @@ enum DemoApp {
         return (try? String(contentsOfFile: path, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// The demo's paired phone (make_demo writes `phone.token`): it may type into a
+    /// bot's terminal, which the owner token may not.
+    static var phoneToken: String? {
+        guard let out = environment["DEMO_OUT"], !out.isEmpty else { return nil }
+        return (try? String(contentsOfFile: out + "/phone.token", encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     static var decisionId: String? { environment["DEMO_DECISION_ID"].flatMap { $0.isEmpty ? nil : $0 } }
     static var botId: String? { environment["DEMO_BOT_ID"].flatMap { $0.isEmpty ? nil : $0 } }
 
@@ -27,8 +34,10 @@ enum DemoApp {
     }
 
     /// `port`: another port for the same computer (a closed one shows what the app cached).
-    static func launch(_ extra: [String] = [], dark: Bool = false, port: String? = nil) throws -> XCUIApplication {
-        let token = try XCTUnwrap(token, "No demo token: run scripts/ui-tests.sh, or start `python3 demo/make_demo.py --serve --peer-port 49791`")
+    /// `asPhone`: connect as the demo's paired phone rather than with the owner token.
+    static func launch(_ extra: [String] = [], dark: Bool = false, port: String? = nil, asPhone: Bool = false) throws -> XCUIApplication {
+        let token = try XCTUnwrap(asPhone ? phoneToken : token,
+                                  "No demo token: run scripts/ui-tests.sh, or start `python3 demo/make_demo.py --serve --peer-port 49791`")
         let app = XCUIApplication()
         app.launchArguments = ["-gravHost", "127.0.0.1", "-gravPort", port ?? environment["GRAV_PORT"] ?? "49790",
                                "-lensPort", environment["LENS_PORT"] ?? "49788", "-gravToken", token] + extra
