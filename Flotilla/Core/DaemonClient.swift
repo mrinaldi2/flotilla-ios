@@ -213,14 +213,18 @@ final class DaemonClient {
         }
     }
 
-    /// Fire-and-forget frames (`input`, `resize`): the daemon sends no reply.
-    func send(_ type: String, _ fields: JSONDict) {
-        guard status == .connected, let task else { return }
+    /// Fire-and-forget frames (`input`, `resize`): the daemon sends no reply,
+    /// but for an `error` push carrying the returned `req_id`.
+    @discardableResult
+    func send(_ type: String, _ fields: JSONDict) -> String? {
+        guard status == .connected, let task else { return nil }
+        let id = newRequestId()
         var body = fields
         body["type"] = type
-        body["req_id"] = newRequestId()
-        guard let text = JSONText.encode(body) else { return }
+        body["req_id"] = id
+        guard let text = JSONText.encode(body) else { return nil }
         task.send(.string(text)) { _ in }
+        return id
     }
 
     // MARK: Connection

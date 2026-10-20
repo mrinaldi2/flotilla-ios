@@ -2,40 +2,290 @@ import SwiftTerm
 import SwiftUI
 import UIKit
 
-/// SwiftTerm's view without its own keyboard. Two keyboard owners on one
-/// screen (this and the compose field) left the compose field hidden under
-/// the keyboard, so all typing goes through the field and the key row.
-final class PassiveTerminalView: TerminalView {
-    override var canBecomeFirstResponder: Bool { false }
+/// The desktop's terminal colours (xterm.js theme in TerminalPane.tsx).
+enum TerminalTheme {
+    static let background = UIColor(red: 0x10 / 255, green: 0x11 / 255, blue: 0x16 / 255, alpha: 1)
+    static let foreground = UIColor(red: 0xd8 / 255, green: 0xda / 255, blue: 0xe2 / 255, alpha: 1)
+    static let cursor = UIColor(red: 0x7a / 255, green: 0xa2 / 255, blue: 0xf7 / 255, alpha: 1)
+    static let selection = UIColor(red: 0x33 / 255, green: 0x40 / 255, blue: 0x5e / 255, alpha: 1)
+    /// Lines kept above the screen, as on the desktop.
+    static let scrollback = 8000
+}
+
+/// SwiftTerm's view, typed into directly when this device may type.
+final class BotTerminalView: TerminalView, TerminalDisplay {
+    /// Off without the control grant, or once the bot's computer refused typing.
+    var typingAllowed = false {
+        didSet { if !typingAllowed, isFirstResponder { _ = resignFirstResponder() } }
+    }
+    var onFocusChange: ((Bool) -> Void)?
+
+    override var canBecomeFirstResponder: Bool { typingAllowed }
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became { onFocusChange?(true) }
+        return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { onFocusChange?(false) }
+        return resigned
+    }
+
+    /// A steady cursor whatever the runtime asks for: a blink is an animation
+    /// that never ends, on a phone's battery.
+    override func cursorStyleChanged(source: Terminal, newStyle: CursorStyle) {
+        let steady: CursorStyle = switch newStyle {
+        case .blinkBlock: .steadyBlock
+        case .blinkUnderline: .steadyUnderline
+        case .blinkBar: .steadyBar
+        default: newStyle
+        }
+        super.cursorStyleChanged(source: source, newStyle: steady)
+    }
+
+    // MARK: TerminalDisplay
+
+    func reset() { feed(text: "\u{1b}c") }
+    func write(_ data: String) { feed(text: data) }
+
+    // MARK: Accessibility
+
+    /// The rows on screen, so VoiceOver (and the UI tests) can read them.
+    override var accessibilityValue: String? {
+        get {
+            let terminal = getTerminal()
+            return (0..<terminal.rows)
+                .compactMap { terminal.getLine(row: $0)?.translateToString(trimRight: true) }
+                .joined(separator: "\n")
+                .trimmingCharacters(in: .newlines)
+        }
+        set {}
+    }
+}
+
+/// The keys a terminal needs that the iPhone keyboard lacks, above it.
+final class TerminalKeys: UIInputView {
+    private weak var terminal: BotTerminalView?
+    private var controlButton: UIButton?
+    private var repeatTimer: Timer?
+
+    private enum Key {
+        case text(String)
+        case arrow(Character)
+        case control
+    }
+
+    private static let keys: [(label: String, name: String, id: String, key: Key)] = [
+        ("esc", "Escape", "esc", .text("\u{1b}")),
+        ("ctrl", "Control", "ctrl", .control),
+        ("⇥", "Tab", "tab", .text("\t")),
+        ("⇧⇥", "Shift Tab", "shift-tab", .text("\u{1b}[Z")),
+        ("←", "Left", "left", .arrow("D")),
+        ("↓", "Down", "down", .arrow("B")),
+        ("↑", "Up", "up", .arrow("A")),
+        ("→", "Right", "right", .arrow("C")),
+        ("^C", "Control C", "ctrl-c", .text("\u{03}")),
+        ("|", "Pipe", "pipe", .text("|")),
+        ("/", "Slash", "slash", .text("/")),
+        ("-", "Dash", "dash", .text("-")),
+        ("~", "Tilde", "tilde", .text("~")),
+    ]
+
+    init(terminal: BotTerminalView) {
+        self.terminal = terminal
+        super.init(frame: CGRect(x: 0, y: 0, width: 0, height: 46), inputViewStyle: .keyboard)
+        autoresizingMask = .flexibleWidth
+        overrideUserInterfaceStyle = .dark
+        build()
+        NotificationCenter.default.addObserver(self, selector: #selector(controlWasReset),
+                                               name: .terminalViewControlModifierReset, object: terminal)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 46) }
+
+    private func build() {
+        let row = UIStackView()
+        row.axis = .horizontal
+        row.spacing = 6
+        for (index, entry) in Self.keys.enumerated() {
+            let button = makeButton(entry.label)
+            button.tag = index
+            button.accessibilityLabel = entry.name
+            button.accessibilityIdentifier = "terminal-key-\(entry.id)"
+            switch entry.key {
+            case .control:
+                button.changesSelectionAsPrimaryAction = true
+                button.addTarget(self, action: #selector(toggleControl), for: .primaryActionTriggered)
+                controlButton = button
+            case .arrow:
+                // Held, an arrow repeats the way a hardware key does.
+                button.addTarget(self, action: #selector(arrowDown), for: .touchDown)
+                button.addTarget(self, action: #selector(arrowUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            case .text:
+                button.addTarget(self, action: #selector(tapped), for: .touchUpInside)
+            }
+            row.addArrangedSubview(button)
+        }
+
+        let scroll = UIScrollView()
+        scroll.showsHorizontalScrollIndicator = false
+        scroll.addSubview(row)
+        row.translatesAutoresizingMaskIntoConstraints = false
+
+        let hide = makeButton(nil, symbol: "keyboard.chevron.compact.down")
+        hide.accessibilityLabel = "Hide keyboard"
+        hide.accessibilityIdentifier = "terminal-key-hide"
+        hide.addTarget(self, action: #selector(hideKeyboard), for: .touchUpInside)
+
+        let bar = UIStackView(arrangedSubviews: [scroll, hide])
+        bar.spacing = 6
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bar)
+        NSLayoutConstraint.activate([
+            bar.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 6),
+            bar.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -6),
+            bar.topAnchor.constraint(equalTo: topAnchor, constant: 5),
+            bar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -5),
+            row.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
+            row.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
+            row.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
+            row.heightAnchor.constraint(equalTo: scroll.frameLayoutGuide.heightAnchor),
+        ])
+    }
+
+    private func makeButton(_ title: String?, symbol: String? = nil) -> UIButton {
+        var config = UIButton.Configuration.filled()
+        config.baseBackgroundColor = UIColor(white: 0.24, alpha: 1)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .medium
+        config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 10)
+        if let symbol { config.image = UIImage(systemName: symbol) }
+        if let title {
+            var text = AttributedString(title)
+            text.font = UIFont.monospacedSystemFont(ofSize: 15, weight: .medium)
+            config.attributedTitle = text
+        }
+        let button = UIButton(configuration: config)
+        button.configurationUpdateHandler = { button in
+            guard var config = button.configuration else { return }
+            config.baseBackgroundColor = button.isSelected ? TerminalTheme.cursor
+                : UIColor(white: button.isHighlighted ? 0.36 : 0.24, alpha: 1)
+            button.configuration = config
+        }
+        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 40).isActive = true
+        return button
+    }
+
+    private func send(_ key: Key) {
+        guard let terminal else { return }
+        UIDevice.current.playInputClick()
+        switch key {
+        case .text(let data):
+            terminal.send(txt: data)
+        case .arrow(let letter):
+            // Full-screen programs ask for application cursor keys.
+            let prefix = terminal.getTerminal().applicationCursor ? "\u{1b}O" : "\u{1b}["
+            terminal.send(txt: prefix + String(letter))
+        case .control:
+            break
+        }
+    }
+
+    @objc private func tapped(_ sender: UIButton) { send(Self.keys[sender.tag].key) }
+
+    @objc private func toggleControl(_ sender: UIButton) {
+        // The next key typed goes as its control character, then this lets go.
+        terminal?.controlModifier = sender.isSelected
+    }
+
+    @objc private func controlWasReset() { controlButton?.isSelected = false }
+
+    @objc private func arrowDown(_ sender: UIButton) {
+        let key = Self.keys[sender.tag].key
+        send(key)
+        repeatTimer?.invalidate()
+        repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { _ in
+                    MainActor.assumeIsolated { self?.send(key) }
+                }
+            }
+        }
+    }
+
+    @objc private func arrowUp(_ sender: UIButton) {
+        repeatTimer?.invalidate()
+        repeatTimer = nil
+    }
+
+    @objc private func hideKeyboard() { _ = terminal?.resignFirstResponder() }
+}
+
+extension TerminalKeys: UIInputViewAudioFeedback {
+    var enableInputClicksWhenVisible: Bool { true }
 }
 
 /// Bridges one bot's pty stream to a SwiftTerm view: attach with a replay
-/// cursor, feed `term` pushes, send keystrokes and size changes back.
+/// cursor, feed `term` pushes in order, send keystrokes and size changes back.
 @MainActor
-final class TerminalController: NSObject, TerminalSink, @preconcurrency TerminalViewDelegate {
+final class TerminalController: NSObject, @preconcurrency TerminalViewDelegate {
     let botId: String
+    let feed: TerminalFeed
     private let store: AppStore
-    private(set) var view: PassiveTerminalView?
-    private var lastSeq: Int?
+    private(set) var view: BotTerminalView?
     private var attachedOnce = false
     private var lastSentSize: [Int] = []
     private var resizeTask: Task<Void, Never>?
     /// Why attaching failed (a linked bot's machine is offline), or nil once attached.
     var onFailure: ((String?) -> Void)?
+    /// The bot's computer refused typing from here, in its words.
+    var onRefused: ((String) -> Void)?
+    var onFocusChange: ((Bool) -> Void)?
 
     init(botId: String, store: AppStore) {
         self.botId = botId
         self.store = store
+        feed = TerminalFeed(botId: botId)
+        super.init()
+        feed.onReattach = { [weak self] in self?.attach() }
+        feed.onAttached = { [weak self] resumed in
+            self?.attachedOnce = true
+            // A replay from scratch rebuilds only what the ring still holds:
+            // a forced resize makes the runtime repaint the rest.
+            self?.sendSize(force: !resumed)
+        }
+        feed.onRefused = { [weak self] message in self?.onRefused?(message) }
     }
 
-    func makeView() -> PassiveTerminalView {
-        let terminal = PassiveTerminalView(frame: .zero)
+    func makeView(typingAllowed: Bool) -> BotTerminalView {
+        let terminal = BotTerminalView(frame: .zero)
         terminal.font = UIFont.monospacedSystemFont(ofSize: Self.fontSize, weight: .regular)
-        terminal.nativeBackgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1)
-        terminal.nativeForegroundColor = UIColor(white: 0.92, alpha: 1)
+        terminal.getTerminal().changeHistorySize(TerminalTheme.scrollback)
+        terminal.getTerminal().setCursorStyle(.steadyBlock)
+        terminal.nativeBackgroundColor = TerminalTheme.background
+        terminal.nativeForegroundColor = TerminalTheme.foreground
+        terminal.caretColor = TerminalTheme.cursor
+        terminal.selectedTextBackgroundColor = TerminalTheme.selection
+        terminal.keyboardAppearance = .dark
+        // Dragging scrolls back through the output rather than reporting the
+        // mouse to the runtime.
+        terminal.allowMouseReporting = false
+        terminal.typingAllowed = typingAllowed
+        terminal.inputAccessoryView = TerminalKeys(terminal: terminal)
+        terminal.isAccessibilityElement = true
+        terminal.accessibilityLabel = "Terminal"
+        terminal.accessibilityIdentifier = "bot-terminal"
+        terminal.onFocusChange = { [weak self] in self?.onFocusChange?($0) }
         terminal.terminalDelegate = self
         view = terminal
-        store.register(self, for: botId)
+        feed.display = terminal
+        store.register(feed, for: botId)
         attach()
         return terminal
     }
@@ -45,49 +295,36 @@ final class TerminalController: NSObject, TerminalSink, @preconcurrency Terminal
         return saved == 0 ? 11 : saved
     }
 
+    func focus() { _ = view?.becomeFirstResponder() }
+
     func close() {
         resizeTask?.cancel()
-        store.unregister(self, for: botId)
+        _ = view?.resignFirstResponder()
+        store.unregister(feed, for: botId)
     }
 
     // MARK: Stream
 
     private func attach() {
-        var fields: JSONDict = ["bot_id": botId]
-        if let lastSeq { fields["after_seq"] = lastSeq }
+        let fields = feed.attachFields()
         Task {
             do {
                 _ = try await store.client.request("attach", fields)
                 onFailure?(nil)
             } catch let error as DaemonError where error.code == "unavailable" {
+                feed.attachFailed()
                 let machine = store.bot(botId)?.peerName ?? "Its computer"
                 onFailure?("\(machine) is offline. The terminal shows here again when it is back.")
             } catch let error as DaemonError where error.code != "not_connected" {
+                feed.attachFailed()
                 onFailure?(error.message)
-            } catch {}
+            } catch {
+                feed.attachFailed()
+            }
         }
     }
 
-    func reattach() { attach() }
-
-    func attached(seq: Int, resumed: Bool) {
-        // The replay no longer joins up with what is on screen: start clean.
-        if !resumed { view?.feed(text: "\u{1b}c") }
-        attachedOnce = true
-        sendSize(force: true)
-    }
-
-    func output(seq: Int, data: String) {
-        view?.feed(text: data)
-        lastSeq = seq
-    }
-
-    // MARK: Input
-
-    func type(_ data: String) {
-        guard store.canControl else { return }
-        store.client.send("input", ["bot_id": botId, "data": data])
-    }
+    // MARK: Size
 
     private func sendSize(force: Bool) {
         guard store.canControl, attachedOnce, let terminal = view?.getTerminal(),
@@ -103,8 +340,9 @@ final class TerminalController: NSObject, TerminalSink, @preconcurrency Terminal
     // MARK: TerminalViewDelegate
 
     func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-        // The keyboard sliding in and out fires a burst of layouts; each
-        // resize makes the runtime repaint, so only the settled size is sent.
+        // The keyboard sliding in and out, or a rotation, fires a burst of
+        // layouts; each resize makes the runtime repaint, so only the settled
+        // size is sent.
         resizeTask?.cancel()
         resizeTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
@@ -114,7 +352,8 @@ final class TerminalController: NSObject, TerminalSink, @preconcurrency Terminal
     }
 
     func send(source: TerminalView, data: ArraySlice<UInt8>) {
-        type(String(decoding: data, as: UTF8.self))
+        guard view?.typingAllowed == true else { return }
+        store.typeIntoTerminal(botId, data: String(decoding: data, as: UTF8.self))
     }
 
     func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {
@@ -136,60 +375,102 @@ final class TerminalController: NSObject, TerminalSink, @preconcurrency Terminal
 
 private struct TerminalHost: UIViewRepresentable {
     let controller: TerminalController
+    let typingAllowed: Bool
 
-    func makeUIView(context: Context) -> PassiveTerminalView { controller.makeView() }
-    func updateUIView(_ view: PassiveTerminalView, context: Context) {}
+    func makeUIView(context: Context) -> BotTerminalView { controller.makeView(typingAllowed: typingAllowed) }
+    func updateUIView(_ view: BotTerminalView, context: Context) { view.typingAllowed = typingAllowed }
 }
 
-/// The bot's live Claude Code terminal, with phone-sized controls under it.
+/// The bot's live terminal: typed into directly, with the terminal's keys
+/// above the keyboard. An asleep bot has none, so it offers Wake now instead.
 struct TerminalScreen: View {
+    @Environment(AppStore.self) private var store
+    let botId: String
+
+    var body: some View {
+        if let bot = store.bot(botId), store.hasTeamOnDemand, bot.state.isAsleep {
+            TerminalAsleep(bot: bot)
+        } else {
+            LiveTerminal(botId: botId)
+        }
+    }
+}
+
+private struct TerminalAsleep: View {
+    let bot: Bot
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(bot.state == .queued ? "Waiting for a slot" : "Asleep", systemImage: "moon.zzz")
+        } description: {
+            Text("\(bot.name) has no terminal while it sleeps. It shows here as soon as the bot is up.")
+        } actions: {
+            BotRestBanner(bot: bot)
+        }
+        .accessibilityIdentifier("terminal-asleep")
+    }
+}
+
+private struct LiveTerminal: View {
     @Environment(AppStore.self) private var store
     let botId: String
     @State private var controller: TerminalController?
     @State private var failure: String?
-    @State private var draft = ""
-    /// Height of the controls with a one-line compose field.
-    @State private var barHeight: CGFloat = 0
-    @FocusState private var composing: Bool
+    @State private var refusal: String?
+    @State private var typing = false
 
-    private static let keys: [(label: String, data: String)] = [
-        ("esc", "\u{1b}"), ("⏎", "\r"), ("↑", "\u{1b}[A"), ("↓", "\u{1b}[B"),
-        ("1", "1"), ("2", "2"), ("3", "3"), ("⇥", "\t"), ("⇧⇥", "\u{1b}[Z"),
-        ("←", "\u{1b}[D"), ("→", "\u{1b}[C"), ("^C", "\u{03}"),
-    ]
+    private var typingAllowed: Bool { store.canControl && refusal == nil }
+
+    private var note: String? {
+        if !store.canControl { return "This device can watch but not type: it needs control access." }
+        return refusal
+    }
 
     var body: some View {
-        // The controls float over the terminal's bottom edge rather than
-        // stacking under it: a compose field growing by a line would
-        // otherwise resize the pty, and every resize makes the bot repaint.
-        ZStack(alignment: .bottom) {
-            Group {
+        VStack(spacing: 0) {
+            ZStack(alignment: .bottomTrailing) {
                 if let controller {
-                    TerminalHost(controller: controller)
+                    TerminalHost(controller: controller, typingAllowed: typingAllowed)
                 } else {
-                    Color.clear
+                    Color(TerminalTheme.background)
+                }
+                if typingAllowed, !typing, failure == nil, controller != nil {
+                    Button { controller?.focus() } label: {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 46, height: 46)
+                            .background(Color(white: 0.24), in: Circle())
+                    }
+                    .padding(14)
+                    .accessibilityLabel("Type into the terminal")
+                    .accessibilityIdentifier("terminal-type")
                 }
             }
-            .padding(.bottom, barHeight)
             .overlay {
                 if let failure {
                     ContentUnavailableView("Terminal unavailable", systemImage: "terminal", description: Text(failure))
                         .environment(\.colorScheme, .dark)
-                        .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+                        .background(Color(TerminalTheme.background))
                 }
             }
-            Group {
-                if store.canControl { controls } else { readOnlyNote }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                barHeight = barHeight == 0 ? height : min(barHeight, height)
+            if let note {
+                Text(note)
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(8)
+                    .background(Color(white: 0.10))
+                    .accessibilityIdentifier("terminal-note")
             }
         }
-        .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+        .background(Color(TerminalTheme.background))
         .onAppear {
             if controller == nil {
                 let made = TerminalController(botId: botId, store: store)
                 made.onFailure = { failure = $0 }
+                made.onRefused = { refusal = $0 }
+                made.onFocusChange = { typing = $0 }
                 controller = made
             }
         }
@@ -197,78 +478,5 @@ struct TerminalScreen: View {
             controller?.close()
             controller = nil
         }
-    }
-
-    private var controls: some View {
-        VStack(spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(Self.keys, id: \.label) { key in
-                        Button(key.label) { controller?.type(key.data) }
-                            .accessibilityLabel(accessibilityName(key.label))
-                    }
-                }
-                .buttonStyle(KeyButtonStyle())
-                .padding(.horizontal, 10)
-            }
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Message the bot's terminal", text: $draft, prompt: .placeholder("Message the bot's terminal"), axis: .vertical)
-                    .lineLimit(1...5)
-                    .focused($composing)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(.white)
-                Button {
-                    let text = draft
-                    draft = ""
-                    Task { await store.submitToTerminal(botId, text: text) }
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 30))
-                }
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel("Send to terminal")
-            }
-            .padding(.horizontal, 10)
-        }
-        .padding(.vertical, 8)
-        .background(Color(white: 0.10))
-        .environment(\.colorScheme, .dark)
-    }
-
-    private var readOnlyNote: some View {
-        Text("This device can watch but not type: it needs control access.")
-            .font(.footnote)
-            .foregroundStyle(Color.secondaryText)
-            .frame(maxWidth: .infinity)
-            .padding(8)
-            .background(Color(white: 0.10))
-    }
-
-    private func accessibilityName(_ label: String) -> String {
-        switch label {
-        case "esc": "Escape"
-        case "⇧⇥": "Shift Tab"
-        case "⇥": "Tab"
-        case "←": "Left"
-        case "→": "Right"
-        case "↑": "Up"
-        case "↓": "Down"
-        case "⏎": "Return"
-        case "^C": "Control C"
-        default: label
-        }
-    }
-}
-
-private struct KeyButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 15, weight: .medium, design: .monospaced))
-            .foregroundStyle(.white)
-            .frame(minWidth: 40, minHeight: 34)
-            .padding(.horizontal, 4)
-            .background(Color(white: configuration.isPressed ? 0.32 : 0.20),
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }

@@ -15,12 +15,15 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import re
 import shutil
 import signal
+import secrets
 import socket
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -166,6 +169,34 @@ def start_daemon(gravityd: str, out: str, port: int) -> subprocess.Popen:
         time.sleep(0.2)
     daemon.kill()
     raise SystemExit(f"the demo daemon did not start; see {out}/gravityd.log")
+
+
+# A phone paired with the demo, as the owner's is: the owner token reads and runs
+# the fleet but never types into a bot (H-195 D5), so UI tests that type connect
+# with this device's token, which make_demo writes to <out>/phone.token.
+PHONE_ID = "demo-phone"
+
+
+def pair_phone_before_start(home: str) -> str:
+    """The device's credential, as the daemon stores one: only its sha256, read at start."""
+    secrets_dir = os.path.join(home, "secrets")
+    os.makedirs(secrets_dir, mode=0o700, exist_ok=True)
+    token = secrets.token_urlsafe(32)
+    path = os.path.join(secrets_dir, f"device-{PHONE_ID}.sha256")
+    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as handle:
+        handle.write(hashlib.sha256(token.encode()).hexdigest())
+    return token
+
+
+def pair_phone_after_start(home: str, out: str, token: str) -> None:
+    """Its device record, which the daemon reads on each hello; then the token for the tests."""
+    db = sqlite3.connect(os.path.join(home, "bus.sqlite"), timeout=10)
+    with db:
+        db.execute("INSERT OR REPLACE INTO device(id, name, capabilities, created_at) VALUES (?, ?, ?, ?)",
+                   (PHONE_ID, "Demo iPhone", "read,control", datetime.now(timezone.utc).isoformat()))
+    db.close()
+    with open(os.path.join(out, "phone.token"), "w") as handle:
+        handle.write(token)
 
 
 def bot_tool(port: int, home: str, bot_id: str, tool: str, **arguments: Any) -> Dict[str, Any]:
@@ -353,6 +384,16 @@ def bot_call(port: int, home: str, bot_id: str, tool: str, **arguments: Any) -> 
     return {"ok": not result.get("isError", False), "text": text, "data": data}
 
 
+# A bot's terminal in colour (POST /colours): what the screen shows once drawn.
+# The last line is written, then rewritten in place with a carriage return and
+# an erase, as a progress line would be.
+COLOUR_LINES = ["build 142 passed", "2 sync tests failed", "retrying on the SE", "terminal ready"]
+COLOURS = ("\r\n\x1b[1;32m" + COLOUR_LINES[0] + "\x1b[0m\r\n"
+           "\x1b[31m" + COLOUR_LINES[1] + "\x1b[0m\r\n"
+           "\x1b[33m" + COLOUR_LINES[2] + "\x1b[0m\r\n"
+           "\x1b[90mloading\u2026\x1b[0m\r\x1b[K\x1b[36m" + COLOUR_LINES[3] + "\x1b[0m\r\n")
+
+
 # The 0.17 flows (UI tests, on demand): a project whose bots have board roles by name.
 LAB = ("Flotilla Lab", [
     ("Team Lead", "icon:orbit", "Leads Flotilla Lab: plans releases and runs the stand-up."),
@@ -392,6 +433,9 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
     POST /team/reset           every slot free again (cap 32), the bots put to sleep woken
     POST /roles                0.23: Team Lead gives DevOps the Product role and files a card;
                                {"item_id", "product": "DevOps"} (starts the Lab's board)
+    POST /colours?bot=<name>   types ANSI-coloured lines into that bot's terminal, which the double
+                               runtime echoes back as output (green, red, yellow, cyan, and a line
+                               rewritten in place); {"lines": [what the screen shows]}
     POST /freeze, /thaw        pause and resume the demo daemon (SIGSTOP/SIGCONT), so a
                                request from the app fails as a connection error would
     """
@@ -662,6 +706,15 @@ def serve_control(control_port: int, port: int, home: str, token: str, bots: Dic
                         raise RuntimeError(f"item_create: {made}")
                     reply = {"item_id": (made.get("data") or {}).get("item", made.get("data") or {}).get("id"),
                              "product": "DevOps"}
+                elif url.path == "/colours":
+                    # Typing is the owner's own: from the paired phone, never the owner token.
+                    ws = Socket(port)
+                    with open(os.path.join(os.path.dirname(home), "phone.token")) as handle:
+                        ws.request("hello", protocol_version=2, token=handle.read().strip(), client="flotilla-demo-colours")
+                    ws.send({"type": "input", "req_id": "demo-colours", "bot_id": bots[query["bot"][0]]["id"],
+                             "data": COLOURS})
+                    ws.request("list_permissions")  # the input is read before this answers
+                    reply = {"lines": COLOUR_LINES}
                 elif url.path in ("/freeze", "/thaw"):
                     if not daemon_pid:
                         raise RuntimeError("no daemon pid")
@@ -1094,7 +1147,9 @@ def main() -> None:
     for image in os.listdir(ASSETS):
         shutil.copy(os.path.join(ASSETS, image), os.path.join(shots, image))
 
+    phone_token = pair_phone_before_start(home)
     daemon = start_daemon(find_gravityd(args.gravityd), out, args.port)
+    pair_phone_after_start(home, out, phone_token)
     with open(os.path.join(home, "secrets", "client.token")) as handle:
         token = handle.read().strip()
     ws = Socket(args.port)

@@ -69,7 +69,8 @@ struct BotDetailView: View {
             PaneSwitcher(panes: panes, selection: Binding(get: { pane }, set: { choice = $0 }), moreDot: browserOpen)
 
             // Asleep or waiting for a slot (0.23): not an error, and one tap wakes it.
-            if let bot, store.hasTeamOnDemand, bot.state.isAsleep {
+            // The terminal says so in its place, having none to show.
+            if let bot, store.hasTeamOnDemand, bot.state.isAsleep, pane != .terminal {
                 BotRestBanner(bot: bot)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 8)
