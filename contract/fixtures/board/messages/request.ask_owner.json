@@ -1,0 +1,31 @@
+{
+  "reqId": "60",
+  "boardRequest": {
+    "askOwner": {
+      "itemId": "ASL-4",
+      "planNodeId": "PL-2",
+      "questions": [
+        {
+          "text": "Should v1 cover only the ~250 celebrated saints, or the full Martyrology?",
+          "why": "It sets the dataset's size and the licensing work.",
+          "options": [
+            {
+              "key": "celebrated",
+              "label": "The ~250 celebrated saints",
+              "description": "A smaller dataset we can check by hand."
+            },
+            {
+              "key": "full",
+              "label": "The full Martyrology (~7,000)"
+            }
+          ],
+          "recommendation": "celebrated",
+          "blocking": true
+        },
+        {
+          "text": "May we contact the LEV and the CEI about licensing?"
+        }
+      ]
+    }
+  }
+}

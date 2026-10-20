@@ -354,7 +354,7 @@ enum AskAction {
         if case .note = destination { return "Details" }
         switch row.kind {
         case .botStopped: return StoppedBot.restarts(row) ? "Restart" : "Details"
-        case .ownerQuestion: return "Answer"
+        case .ownerQuestion, .question: return "Answer"
         case .decision: return "Decide"
         case .permissionPrompt: return "Approve"
         case .releaseAwaiting, .draftUpdated, .prReview, .planGate: return "Review"

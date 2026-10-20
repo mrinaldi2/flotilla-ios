@@ -1,0 +1,178 @@
+// Questions for the owner (0.22.0): one record per question, on a card or a
+// plan node. A question is an entry of the decision registry of kind
+// `question` (`docs/protocol.md`, "The decision registry"); this is its
+// board-side view, answered where the owner sees it: the card, the plan
+// node, the project's list or Needs you.
+//
+// A bot asks with `ask_owner`, one entry per question. The owner answers
+// each one once (an option, text or both) or dismisses it with a reason.
+// The bot that asked is told each answer, and the lead for plan work. A
+// research spike's answers are added to its research document. A question
+// marked `blocking` holds its node's research from closing and its gate
+// from being submitted while it is open.
+//
+// Grants: `question_list` is read; `question_answer` and `question_dismiss`
+// are approve; `ask_owner` is for bots (MCP).
+
+syntax = "proto3";
+
+package flotilla.board.v1;
+
+import "google/protobuf/timestamp.proto";
+
+enum QuestionState {
+  QUESTION_STATE_UNSPECIFIED = 0;
+  QUESTION_STATE_OPEN = 1;
+  QUESTION_STATE_ANSWERED = 2;
+  QUESTION_STATE_DISMISSED = 3;
+}
+
+// A choice the bot offers.
+message QuestionOption {
+  // Short; the answer names it.
+  string key = 1;
+  string label = 2;
+  // What happens if it is picked.
+  optional string description = 3;
+}
+
+// Who asked: a bot of the project (a stand-in for a linked computer's bot).
+message QuestionAsker {
+  string bot_id = 1;
+  string name = 2;
+  string avatar = 3;
+}
+
+// The owner's answer: an option, text or both.
+message OwnerAnswer {
+  optional string option = 1;
+  string text = 2;
+  // "owner", or "owner-via-bot:<id>" when a bot relayed it.
+  string answered_by = 3;
+  google.protobuf.Timestamp answered_at = 4;
+}
+
+message Question {
+  // The decision's id.
+  string id = 1;
+  string project_id = 2;
+  // What the bot asks, one question.
+  string text = 3;
+  // Why it matters, in a line; may be empty.
+  string why = 4;
+  repeated QuestionOption options = 5;
+  // The option key the bot recommends, if any.
+  optional string recommendation = 6;
+  // Holds its node's research from closing and its gate from being
+  // submitted while open.
+  bool blocking = 7;
+  QuestionState state = 8;
+  QuestionAsker asked_by = 9;
+  google.protobuf.Timestamp asked_at = 10;
+  // What it is about: a card, a plan node, or both (a spike of the node).
+  optional string item_id = 11;
+  optional string plan_node_id = 12;
+  // Set once answered.
+  optional OwnerAnswer answer = 13;
+  // Set once dismissed: the owner's reason.
+  optional string dismissed_reason = 14;
+  // Where the answer was written back: the research document's path.
+  optional string written_to = 15;
+  // The card comment that announced the questions, if any.
+  optional string comment_id = 16;
+  // Bumps on every change; an answer names the version it read.
+  uint64 version = 17;
+}
+
+// --- Requests ---------------------------------------------------------------
+
+// A question as a bot asks it.
+message QuestionAsk {
+  string text = 1;
+  optional string why = 2;
+  repeated QuestionOption options = 3;
+  optional string recommendation = 4;
+  bool blocking = 5;
+}
+
+// A bot asks the owner, one entry per question, about a card, a plan node
+// or both. At most 8 questions a call; the card, when given, is commented
+// with a link to them.
+message AskOwner {
+  optional string item_id = 1;
+  optional string plan_node_id = 2;
+  repeated QuestionAsk questions = 3;
+}
+
+// The project's questions, newest first; open ones first when `state` is
+// left out.
+message QuestionList {
+  string project_id = 1;
+  optional string item_id = 2;
+  // A node's own questions and those of its cards.
+  optional string plan_node_id = 3;
+  optional QuestionState state = 4;
+  // From `QuestionPage.next`.
+  optional string before = 5;
+  // At most 200; 0 means 50.
+  uint32 limit = 6;
+}
+
+// The owner answers one question.
+message QuestionAnswer {
+  string id = 1;
+  uint64 expected_version = 2;
+  // One of the question's option keys.
+  optional string option = 3;
+  // Needed when no option is picked.
+  string text = 4;
+}
+
+// The owner dismisses one question without answering it.
+message QuestionDismiss {
+  string id = 1;
+  uint64 expected_version = 2;
+  string reason = 3;
+}
+
+// --- Responses --------------------------------------------------------------
+
+// To `question_list`.
+message QuestionPage {
+  repeated Question questions = 1;
+  // Set while there are more; pass it as `before`.
+  optional string next = 2;
+}
+
+// To `ask_owner`, `question_answer` and `question_dismiss`.
+message QuestionResult {
+  oneof outcome {
+    // The questions as they are after the change: those asked, or the one
+    // answered or dismissed.
+    QuestionsDone done = 1;
+    // Changed since `expected_version`: the question as it is now.
+    Question conflict = 2;
+    // Not allowed (already answered, no such option, too many open, an
+    // empty answer); nothing was written.
+    QuestionRefused refused = 3;
+  }
+}
+
+message QuestionsDone {
+  repeated Question questions = 1;
+}
+
+message QuestionRefused {
+  string code = 1;
+  string text = 2;
+}
+
+// --- Pushes -----------------------------------------------------------------
+
+// To connections watching the project: a question was asked, answered or
+// dismissed.
+message QuestionChange {
+  string project_id = 1;
+  Question question = 2;
+  optional string actor = 3;
+}

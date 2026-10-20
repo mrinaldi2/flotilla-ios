@@ -1,0 +1,11 @@
+{
+  "reqId": "62",
+  "boardResponse": {
+    "questioned": {
+      "refused": {
+        "code": "question.answered",
+        "text": "This question was already answered."
+      }
+    }
+  }
+}

@@ -667,6 +667,18 @@ nonisolated struct Flotilla_Board_V1_PlanNode: @unchecked Sendable {
     set {_uniqueStorage()._rank = newValue}
   }
 
+  /// Open questions for the owner on it and its cards; those blocking it
+  /// (0.22.0).
+  var questionsOpen: UInt32 {
+    get {_storage._questionsOpen}
+    set {_uniqueStorage()._questionsOpen = newValue}
+  }
+
+  var questionsBlocking: UInt32 {
+    get {_storage._questionsBlocking}
+    set {_uniqueStorage()._questionsBlocking = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1132,6 +1144,9 @@ nonisolated struct Flotilla_Board_V1_PlanNodeDetail: Sendable {
   /// Its own cards: research spikes and design tickets, or a feature's tasks.
   var cards: [Flotilla_Board_V1_ItemCard] = []
 
+  /// Its questions and its cards', open ones first (0.22.0).
+  var questions: [Flotilla_Board_V1_Question] = []
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1526,7 +1541,7 @@ nonisolated extension Flotilla_Board_V1_PlanGate: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PlanNode"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}kind\0\u{3}parent_id\0\u{1}title\0\u{1}summary\0\u{1}stage\0\u{1}due\0\u{1}lead\0\u{3}board_id\0\u{1}docs\0\u{1}research\0\u{1}gate\0\u{3}cards_total\0\u{3}cards_done\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{1}version\0\u{1}rank\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}kind\0\u{3}parent_id\0\u{1}title\0\u{1}summary\0\u{1}stage\0\u{1}due\0\u{1}lead\0\u{3}board_id\0\u{1}docs\0\u{1}research\0\u{1}gate\0\u{3}cards_total\0\u{3}cards_done\0\u{3}created_by\0\u{3}created_at\0\u{3}updated_at\0\u{1}version\0\u{1}rank\0\u{3}questions_open\0\u{3}questions_blocking\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -1549,6 +1564,8 @@ nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftPr
     var _updatedAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
     var _version: UInt64 = 0
     var _rank: String = String()
+    var _questionsOpen: UInt32 = 0
+    var _questionsBlocking: UInt32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -1579,6 +1596,8 @@ nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftPr
       _updatedAt = source._updatedAt
       _version = source._version
       _rank = source._rank
+      _questionsOpen = source._questionsOpen
+      _questionsBlocking = source._questionsBlocking
     }
   }
 
@@ -1617,6 +1636,8 @@ nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftPr
         case 18: try { try decoder.decodeSingularMessageField(value: &_storage._updatedAt) }()
         case 19: try { try decoder.decodeSingularUInt64Field(value: &_storage._version) }()
         case 20: try { try decoder.decodeSingularStringField(value: &_storage._rank) }()
+        case 21: try { try decoder.decodeSingularUInt32Field(value: &_storage._questionsOpen) }()
+        case 22: try { try decoder.decodeSingularUInt32Field(value: &_storage._questionsBlocking) }()
         default: break
         }
       }
@@ -1689,6 +1710,12 @@ nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftPr
       if !_storage._rank.isEmpty {
         try visitor.visitSingularStringField(value: _storage._rank, fieldNumber: 20)
       }
+      if _storage._questionsOpen != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._questionsOpen, fieldNumber: 21)
+      }
+      if _storage._questionsBlocking != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._questionsBlocking, fieldNumber: 22)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1718,6 +1745,8 @@ nonisolated extension Flotilla_Board_V1_PlanNode: SwiftProtobuf.Message, SwiftPr
         if _storage._updatedAt != rhs_storage._updatedAt {return false}
         if _storage._version != rhs_storage._version {return false}
         if _storage._rank != rhs_storage._rank {return false}
+        if _storage._questionsOpen != rhs_storage._questionsOpen {return false}
+        if _storage._questionsBlocking != rhs_storage._questionsBlocking {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -2362,7 +2391,7 @@ nonisolated extension Flotilla_Board_V1_PlanTree: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Flotilla_Board_V1_PlanNodeDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PlanNodeDetail"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}node\0\u{1}history\0\u{1}cards\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}node\0\u{1}history\0\u{1}cards\0\u{1}questions\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2373,6 +2402,7 @@ nonisolated extension Flotilla_Board_V1_PlanNodeDetail: SwiftProtobuf.Message, S
       case 1: try { try decoder.decodeSingularMessageField(value: &self._node) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.history) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.cards) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.questions) }()
       default: break
       }
     }
@@ -2392,6 +2422,9 @@ nonisolated extension Flotilla_Board_V1_PlanNodeDetail: SwiftProtobuf.Message, S
     if !self.cards.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.cards, fieldNumber: 3)
     }
+    if !self.questions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.questions, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2399,6 +2432,7 @@ nonisolated extension Flotilla_Board_V1_PlanNodeDetail: SwiftProtobuf.Message, S
     if lhs._node != rhs._node {return false}
     if lhs.history != rhs.history {return false}
     if lhs.cards != rhs.cards {return false}
+    if lhs.questions != rhs.questions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

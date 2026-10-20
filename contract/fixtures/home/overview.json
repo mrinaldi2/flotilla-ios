@@ -28,7 +28,7 @@
       "doing": [
         { "item_id": "H-130", "title": "Projects home daemon", "assignee_name": "Daemon Dev", "assignee_bot_id": "b-daemon" }
       ],
-      "bots": 6,
+      "bots": 7,
       "bots_working": 3,
       "bots_waiting": 1,
       "doing_total": 4,
@@ -111,6 +111,17 @@
           "state_reason": "Claude Code exited with status 1",
           "computer_name": "mac",
           "since": "2026-10-06T10:05:00Z"
+        },
+        {
+          "daemon_id": "d-mac",
+          "bot_id": "b-architect",
+          "name": "Architect",
+          "avatar": "icon:orbit",
+          "runtime": "claude_code",
+          "status": "BOT_STATUS_ASLEEP",
+          "state": "asleep",
+          "computer_name": "mac",
+          "since": "2026-10-06T10:10:00Z"
         },
         {
           "daemon_id": "d-imac",

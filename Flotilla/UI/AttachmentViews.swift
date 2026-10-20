@@ -6,9 +6,12 @@ import SwiftUI
 /// placeholder for each one removed. Markdown, HTML, text and PDFs, attached
 /// or linked from the artifacts, open in the app (0.20); other files in
 /// Quick Look.
+/// With `artifacts_v2` (0.22) it is the card's one Documents list: the
+/// daemon adds the card's artifact links as documents after the attachments,
+/// and each file shows once.
 struct AttachmentsSection: View {
     @Environment(AppStore.self) private var store
-    let attachments: [ItemAttachment]
+    let listed: [ItemAttachment]
     /// The card's project, so its linked documents can be read.
     var projectId: String?
     @State private var document: DocumentSheet?
@@ -16,6 +19,13 @@ struct AttachmentsSection: View {
     @State private var preview: URL?
     @State private var reading: String?
     @State private var failure: String?
+
+    init(attachments: [ItemAttachment], projectId: String? = nil) {
+        listed = attachments
+        self.projectId = projectId
+    }
+
+    private var attachments: [ItemAttachment] { store.hasArtifactsV2 ? CardDocuments.merged(listed) : listed }
 
     private var images: [ItemAttachment] { attachments.filter { $0.kind == "image" && !$0.removed } }
     private var files: [ItemAttachment] { attachments.filter { $0.kind == "file" && !$0.removed } }
@@ -46,9 +56,13 @@ struct AttachmentsSection: View {
                         }
                     } else if let projectId, !doc.path.isEmpty {
                         Button { document = DocumentSheet(source: .artifact(projectId: projectId, path: doc.path, name: doc.name)) } label: {
-                            ItemRow(title: doc.name, subtitle: "Project document · \(doc.path)") { IconTile(systemImage: Self.symbol(doc.path)) }
+                            ItemRow(title: doc.name.isEmpty ? (doc.path as NSString).lastPathComponent : doc.name,
+                                    subtitle: "\(CardDocuments.isLink(doc) ? "Linked artifact" : "Project document") · \(CardDocuments.shownPath(doc.path))") {
+                                IconTile(systemImage: Self.symbol(doc.path))
+                            }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("item-document-\(CardDocuments.shownPath(doc.path))")
                         .accessibilityHint("Opens the document")
                     } else {
                         ItemRow(title: doc.name, subtitle: "Project document · \(doc.path)") { IconTile(systemImage: "doc.on.doc") }
@@ -63,7 +77,7 @@ struct AttachmentsSection: View {
                     Text(failure).font(.footnote).foregroundStyle(Color.errorText)
                 }
             } header: {
-                SectionTitle("Attachments", count: attachments.count - removed.count)
+                SectionTitle(store.hasArtifactsV2 ? "Documents" : "Attachments", count: attachments.count - removed.count)
             }
             .fullScreenCover(item: Binding(get: { opened.map(AttachmentStart.init) }, set: { opened = $0?.index })) { start in
                 ImageViewer(sources: images.map { .attachment(id: $0.id, name: $0.name) }, index: start.index)

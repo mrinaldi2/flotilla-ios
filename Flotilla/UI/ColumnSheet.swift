@@ -116,7 +116,7 @@ struct ColumnSheet: View {
                         if canMove {
                             Button { moving = Moving(card: card, target: nil) } label: { Label("Move to…", systemImage: "arrow.right.square") }
                             AssignMenu(itemId: card.id, version: card.version, assignee: card.hasAssignee ? card.assignee : nil,
-                                       projectId: link.projectId) { assignFailure = $0 }
+                                       projectId: link.projectId, roles: model?.state?.snapshot.roles) { assignFailure = $0 }
                         }
                     }
                 }

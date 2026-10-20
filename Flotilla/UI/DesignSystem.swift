@@ -106,7 +106,7 @@ extension BotState {
         case .ready: .ready
         case .waitingForUser, .waitingForApproval, .rateLimited: .needsYou
         case .authFailed, .crashed: .failed
-        case .starting, .stopping, .stopped, .unknown: .quiet
+        case .starting, .stopping, .stopped, .asleep, .queued, .unknown: .quiet
         }
     }
 }
@@ -127,9 +127,19 @@ extension Text {
 struct StatusDot: View {
     let tone: Tone
     var size: CGFloat = 8
+    /// A ring instead of a dot (◌): nothing running, and nothing wrong (a bot asleep).
+    var hollow = false
 
     var body: some View {
-        Circle().fill(tone.color).frame(width: size, height: size).accessibilityHidden(true)
+        Group {
+            if hollow {
+                Circle().strokeBorder(tone.color, style: StrokeStyle(lineWidth: 1.5, dash: [1.6, 1.4]))
+            } else {
+                Circle().fill(tone.color)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
 
@@ -139,13 +149,15 @@ struct StatusLabel: View {
     let tone: Tone
     /// A spinner instead of the dot, for something under way.
     var busy = false
+    /// A ring instead of the dot (◌ Asleep).
+    var hollow = false
 
     var body: some View {
         HStack(spacing: 5) {
             if busy {
                 ProgressView().controlSize(.mini)
             } else {
-                StatusDot(tone: tone)
+                StatusDot(tone: tone, hollow: hollow)
             }
             Text(text)
                 .font(.caption.weight(.medium))

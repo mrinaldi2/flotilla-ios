@@ -147,6 +147,7 @@ struct ComputerPage: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
+            TeamStatusSection()
             if !bots.isEmpty {
                 Section {
                     ForEach(bots.prefix(8)) { bot in
@@ -159,6 +160,7 @@ struct ComputerPage: View {
                                 StateBadge(state: bot.state)
                             }
                         }
+                        .botTeamActions(bot)
                     }
                 } header: {
                     SectionTitle("Bots here", count: bots.count)
@@ -190,6 +192,7 @@ struct ComputerPage: View {
             } header: {
                 SectionTitle("Flotilla service")
             }
+            TeamLimitsSection()
             Section {
                 LabeledContent("Status", value: lens.status.label)
                 if case .unreachable(let reason) = lens.status {
@@ -217,7 +220,10 @@ struct ComputerPage: View {
             // Only the computer on screen elsewhere keeps its Lens checked.
             if lens.status == .unknown, store.status == .connected { await lens.refresh() }
         }
-        .refreshable { await loadDiagnostics() }
+        .refreshable {
+            await loadDiagnostics()
+            await store.refreshTeam()
+        }
         .navigationDestination(item: $opening) { place in
             switch place {
             case .screen: ScreenView().navigationTitle("Screen").navigationBarTitleDisplayMode(.inline)

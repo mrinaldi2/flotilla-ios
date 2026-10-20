@@ -85,20 +85,22 @@ enum ActivityWords {
 
 /// A turn starting or finishing on a card, from `bot_state` pushes: each
 /// bot's running turn and its card, so an approval wait inside a turn isn't
-/// a new start. A turn about no card, a chat, says nothing.
+/// a new start. A turn about no card, a chat, says nothing. A turn the
+/// owner's answer started (`cause` "answer", 0.22) says it got the answer.
 struct TurnTracker {
     private var open: [String: String] = [:]
     private static let inTurn: Set<BotState> = [.working, .waitingForUser, .waitingForApproval]
 
     mutating func notice(botId: String, state: BotState, itemId: String?, itemTitle: String?,
-                         bot: Bot?, computerId: String) -> ActivityNotice? {
+                         cause: String? = nil, bot: Bot?, computerId: String) -> ActivityNotice? {
         let running = open[botId]
         let turning = Self.inTurn.contains(state)
         let line: ActivityLine
         let item: String
         if turning, running == nil, let itemId {
             open[botId] = itemId
-            line = ActivityLine(glyph: "●", word: "Started", detail: "working on it")
+            line = ActivityLine(glyph: "●", word: cause == "answer" ? "Got your answer" : "Started",
+                                detail: "working on it")
             item = itemId
         } else if !turning, let ended = itemId ?? running {
             open[botId] = nil

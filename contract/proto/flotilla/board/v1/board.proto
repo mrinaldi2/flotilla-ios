@@ -59,6 +59,11 @@ enum Role {
   ROLE_DEV = 7;
   // Reviews security work: permissions, identity, peers, confinement (H-261 §2.1).
   ROLE_REVIEWER_CE = 8;
+  // The on-demand team's SDLC roles (0.23.0, capability `team_on_demand_v1`):
+  // Product shapes a card, Architect designs it; Dev builds and Tester
+  // verifies. The lead may set both, as it sets Dev.
+  ROLE_PRODUCT = 9;
+  ROLE_ARCHITECT = 10;
 }
 
 // A card's type. From 0.21.0 (capability `item_types_v2`) cards are tasks,
@@ -370,6 +375,8 @@ message ItemCard {
   optional MoveBlock move_block = 20;
   // The plan node it belongs to (0.21.0).
   optional string plan_node_id = 21;
+  // Open questions for the owner on the card (0.22.0).
+  uint32 questions_open = 22;
 }
 
 // What stops a card, for its "can't move" line. Computed when the card is

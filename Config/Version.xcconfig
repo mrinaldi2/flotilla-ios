@@ -4,8 +4,8 @@
 // Settings > About. CURRENT_PROJECT_VERSION is the build number: it goes up by
 // one for every build that goes to a phone, so two installs never look alike.
 
-MARKETING_VERSION = 0.9.0
-CURRENT_PROJECT_VERSION = 21
+MARKETING_VERSION = 0.11.0
+CURRENT_PROJECT_VERSION = 24
 
 // The commit a build was made from, shown in Settings > About. Set on the
 // command line (scripts/bump-version.sh prints how); empty in Xcode builds.

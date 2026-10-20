@@ -78,7 +78,7 @@ struct StateBadge: View {
     let state: BotState
 
     var body: some View {
-        StatusLabel(text: state.label, tone: state.tone, busy: state == .working)
+        StatusLabel(text: state.label, tone: state.tone, busy: state == .working, hollow: state.isAsleep)
     }
 }
 

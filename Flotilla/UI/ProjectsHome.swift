@@ -575,6 +575,12 @@ struct ProjectsHomeView: View {
             separated(inList) {
                 PlanAskRow(row: row, computer: on, primary: primary) { path.append($0) }
             }
+        } else if row.kind == .question, let on = fleet.computer(daemonId: row.daemonID) ?? fleet.computer(id: card.computerId),
+                  on.store.hasQuestions {
+            // A bot's question (0.22): its options and a reply, right here.
+            separated(inList) {
+                QuestionAskRow(row: row, computer: on) { path.append($0) }
+            }
         } else {
             openButton(row, card: card, primary: primary, inList: inList)
         }
@@ -905,6 +911,7 @@ extension HomeAttentionRow {
         case .offBoard: "Off the board"
         case .servingOff: "Not serving"
         case .ownerQuestion: "Question"
+        case .question: questionBlocking ? "Question · holds the gate" : "Question"
         case .draftUpdated: "Draft updated"
         case .planGate: "Plan"
         default: "Needs you"
@@ -922,7 +929,7 @@ extension HomeAttentionRow {
         case .botWaiting: "person.crop.circle.badge.clock"
         case .offBoard: "rectangle.dashed"
         case .servingOff: "wifi.slash"
-        case .ownerQuestion: "questionmark.bubble.fill"
+        case .ownerQuestion, .question: "questionmark.bubble.fill"
         case .draftUpdated: "square.and.pencil"
         case .planGate: "flag.fill"
         default: "circle"
@@ -935,6 +942,7 @@ extension HomeAttentionRow {
         case .decision where priority == "urgent" || priority == "P0": .failed
         case .relayedRulings, .offBoard: .quiet
         case .ownerQuestion, .draftUpdated: .working
+        case .question: questionBlocking ? .needsYou : .working
         default: .needsYou
         }
     }

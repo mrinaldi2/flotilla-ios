@@ -66,6 +66,16 @@ final class ActivityAndDocumentsTests: XCTestCase {
                      "a chat turn says nothing")
     }
 
+    func testATurnTheOwnersAnswerStartedSaysSo() {
+        var turns = TurnTracker()
+        let bot = Bot(["id": "b1", "name": "Lead", "project_id": "p"])
+        let start = turns.notice(botId: "b1", state: .working, itemId: "ASL-004", itemTitle: "Sources",
+                                 cause: "answer", bot: bot, computerId: "mac")
+        XCTAssertEqual(start?.line.word, "Got your answer")
+        XCTAssertEqual(start?.line.detail, "working on it")
+        XCTAssertEqual(start?.itemId, "ASL-004")
+    }
+
     func testOneActorsNoticesOnACardFoldIntoOneToast() {
         let feed = ActivityFeed()
         let now = Date()

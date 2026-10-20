@@ -38,6 +38,10 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 ///   STOPPED   stopping, stopped
 ///   FAILED    crashed, auth_failed, rate_limited
 ///   OFFLINE   its computer isn't answering; `state` is the last one known
+///   ASLEEP    asleep or queued for a slot (0.23.0, capability
+///             `team_on_demand_v1`): an on-demand bot with nothing to do, or
+///             one waiting for a running slot. Not an error. A caller from
+///             before 0.23 is sent STOPPED instead.
 nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
   typealias RawValue = Int
   case unspecified // = 0
@@ -47,6 +51,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
   case stopped // = 4
   case failed // = 5
   case offline // = 6
+  case asleep // = 7
   case UNRECOGNIZED(Int)
 
   init() {
@@ -62,6 +67,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     case 4: self = .stopped
     case 5: self = .failed
     case 6: self = .offline
+    case 7: self = .asleep
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -75,6 +81,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     case .stopped: return 4
     case .failed: return 5
     case .offline: return 6
+    case .asleep: return 7
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -88,6 +95,7 @@ nonisolated enum Flotilla_Home_V1_BotStatus: SwiftProtobuf.Enum, Swift.CaseItera
     .stopped,
     .failed,
     .offline,
+    .asleep,
   ]
 
 }
@@ -135,6 +143,9 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
 
   /// a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
   case planGate // = 20
+
+  /// a bot's question for the owner, one row each; `decision_id` is the question's id (0.22.0, capability `questions_v1`)
+  case question // = 21
   case UNRECOGNIZED(Int)
 
   init() {
@@ -164,6 +175,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case 18: self = .cardWaiting
     case 19: self = .botStopped
     case 20: self = .planGate
+    case 21: self = .question
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -191,6 +203,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case .cardWaiting: return 18
     case .botStopped: return 19
     case .planGate: return 20
+    case .question: return 21
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -218,6 +231,7 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     .cardWaiting,
     .botStopped,
     .planGate,
+    .question,
   ]
 
 }
@@ -582,7 +596,7 @@ nonisolated struct Flotilla_Home_V1_ProjectRow: @unchecked Sendable {
   /// every bot of the project across its computers, this computer's own and
   /// each linked computer's (`ProjectAttention.Part.bots`), a linked bot
   /// once. Order: the lead first, then WAITING, WORKING, FAILED and STOPPED,
-  /// IDLE, OFFLINE; within a group by name, case-insensitively. At most 24:
+  /// IDLE, ASLEEP (0.23.0), OFFLINE; within a group by name, case-insensitively. At most 24:
   /// `bots` and the counts above stay the totals. Empty from an older daemon.
   var botList: [Flotilla_Home_V1_BotBrief] {
     get {_storage._botList}
@@ -1005,6 +1019,12 @@ nonisolated struct Flotilla_Home_V1_AttentionRow: @unchecked Sendable {
   var botState: String {
     get {_storage._botState}
     set {_uniqueStorage()._botState = newValue}
+  }
+
+  /// question: it holds its node's research or gate (0.22.0)
+  var questionBlocking: Bool {
+    get {_storage._questionBlocking}
+    set {_uniqueStorage()._questionBlocking = newValue}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2174,11 +2194,11 @@ nonisolated struct Flotilla_Home_V1_InstallOfferDismissRequest: Sendable {
 fileprivate nonisolated let _protobuf_package = "flotilla.home.v1"
 
 nonisolated extension Flotilla_Home_V1_BotStatus: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0BOT_STATUS_UNSPECIFIED\0\u{1}BOT_STATUS_WORKING\0\u{1}BOT_STATUS_IDLE\0\u{1}BOT_STATUS_WAITING\0\u{1}BOT_STATUS_STOPPED\0\u{1}BOT_STATUS_FAILED\0\u{1}BOT_STATUS_OFFLINE\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0BOT_STATUS_UNSPECIFIED\0\u{1}BOT_STATUS_WORKING\0\u{1}BOT_STATUS_IDLE\0\u{1}BOT_STATUS_WAITING\0\u{1}BOT_STATUS_STOPPED\0\u{1}BOT_STATUS_FAILED\0\u{1}BOT_STATUS_OFFLINE\0\u{1}BOT_STATUS_ASLEEP\0")
 }
 
 nonisolated extension Flotilla_Home_V1_AttentionKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0\u{1}PLAN_GATE\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0\u{1}PLAN_GATE\0\u{1}QUESTION\0")
 }
 
 nonisolated extension Flotilla_Home_V1_BoardActivityKind: SwiftProtobuf._ProtoNameProviding {
@@ -2971,7 +2991,7 @@ nonisolated extension Flotilla_Home_V1_AttentionSummary: SwiftProtobuf.Message, 
 
 nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AttentionRow"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{3}plan_node_id\0\u{3}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{3}plan_node_id\0\u{3}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0\u{3}question_blocking\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2987,6 +3007,7 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
     var _questionCommentID: String = String()
     var _cleanup: Flotilla_Home_V1_CleanupRow? = nil
     var _botState: String = String()
+    var _questionBlocking: Bool = false
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -3010,6 +3031,7 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
       _questionCommentID = source._questionCommentID
       _cleanup = source._cleanup
       _botState = source._botState
+      _questionBlocking = source._questionBlocking
     }
   }
 
@@ -3125,6 +3147,7 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
         case 22: try { try decoder.decodeSingularStringField(value: &_storage._questionCommentID) }()
         case 23: try { try decoder.decodeSingularMessageField(value: &_storage._cleanup) }()
         case 24: try { try decoder.decodeSingularStringField(value: &_storage._botState) }()
+        case 25: try { try decoder.decodeSingularBoolField(value: &_storage._questionBlocking) }()
         default: break
         }
       }
@@ -3216,6 +3239,9 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
       if !_storage._botState.isEmpty {
         try visitor.visitSingularStringField(value: _storage._botState, fieldNumber: 24)
       }
+      if _storage._questionBlocking != false {
+        try visitor.visitSingularBoolField(value: _storage._questionBlocking, fieldNumber: 25)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3238,6 +3264,7 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
         if _storage._questionCommentID != rhs_storage._questionCommentID {return false}
         if _storage._cleanup != rhs_storage._cleanup {return false}
         if _storage._botState != rhs_storage._botState {return false}
+        if _storage._questionBlocking != rhs_storage._questionBlocking {return false}
         return true
       }
       if !storagesAreEqual {return false}

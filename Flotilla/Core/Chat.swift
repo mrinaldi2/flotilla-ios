@@ -157,6 +157,12 @@ struct ArtifactFile: Identifiable, Hashable {
     let title: String?
     /// Who made the file, when the daemon can tell.
     let createdBy: FileCreator?
+    /// shared, uploads or checks (0.22, `artifacts_v2`); empty from an older daemon.
+    let group: String
+    /// The live cards that attach or link it, in card order (0.22).
+    let usedBy: [String]
+    /// The owner kept it: off the tidy-up list (0.22).
+    let kept: Bool
 
     var id: String { path }
 
@@ -169,6 +175,9 @@ struct ArtifactFile: Identifiable, Hashable {
         mime = d.str("mime")
         title = d.optStr("title")
         createdBy = d.dict("created_by").map(FileCreator.init)
+        group = d.str("group")
+        usedBy = d.strings("used_by")
+        kept = d.bool("kept")
     }
 }
 
