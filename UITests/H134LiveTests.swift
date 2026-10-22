@@ -56,12 +56,19 @@ final class H134LiveTests: XCTestCase {
         let app = try DemoApp.launch()
         allowSystemAlerts()
         app.needsYou()
-        let row = waitFor(app.needsRow("Run: Clear the stale build cache"), 20)
+        // 0.24: the phone runs it, Run or Reject right on the row; an older daemon's row says where.
+        let run = app.buttons["owner-action-run"]
+        let row = app.needsRow("Run: Clear the stale build cache")
+        XCTAssertTrue(run.waitForExistence(timeout: 20) || row.waitForExistence(timeout: 5), "No Run card in Needs you")
         screenshot("QA-005-live-run-card-row")
-        row.tap()
-        // Running it from the phone comes later in the 0.5.0 lane: the row says where.
-        let note = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Run cards come to the phone'")).firstMatch  // "… in a later update" since e9d7eef
-        waitFor(note, 10)
+        if run.exists {
+            XCTAssertTrue(app.buttons["owner-action-reject"].exists, "No Reject beside Run")
+            app.buttons.matching(NSPredicate(format: "label CONTAINS 'asks you to run'")).firstMatch.tap()
+            waitFor(app.navigationBars["Run card"], 10)
+        } else {
+            row.tap()
+            waitFor(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Run or reject it on'")).firstMatch, 10)
+        }
         screenshot("QA-005-live-run-card-note")
     }
 
@@ -91,15 +98,6 @@ final class H134LiveTests: XCTestCase {
                        "A grants conflict on a fresh decision")
         screenshot("QA-005-live-grants-published")
 
-        // The ruling reaches Team Lead's thread as words, not the bus envelope (c656476).
-        app.tab("Chat")
-        let lead = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Team Lead'")).firstMatch
-        waitFor(lead, 15)
-        sleep(2)
-        XCTAssertFalse(lead.label.contains("[decision"), "Bus envelope in the preview: \(lead.label)")
-        XCTAssertNil(lead.label.range(of: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}", options: .regularExpression),
-                     "A UUID in the preview: \(lead.label)")
-        screenshot("QA-005-live-ruling-preview")
     }
 
     /// Face ID refused: nothing is published, and the owner is told why.
@@ -208,50 +206,6 @@ final class H134LiveTests: XCTestCase {
         }
     }
 
-    // MARK: I3: owner threads
-
-    func testLiveOwnerThreads() throws {
-        try seed("/question")
-        let app = try DemoApp.launch()
-        allowSystemAlerts()
-        app.tab("Chat")
-        waitFor(app.navigationBars["Chat"])
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Threads come with'")).firstMatch.exists,
-                       "A 0.17 daemon still gets the threads fallback")
-        let question = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Desktop Dev'")).firstMatch
-        waitFor(question, 20)
-        XCTAssertTrue(question.label.contains("Question"), "No Question pill: \(question.label)")
-        XCTAssertTrue(question.label.contains("unread"), "No unread count: \(question.label)")
-        // Previews are plain text: no Markdown marks, no bus envelope.
-        for row in app.buttons.allElementsBoundByIndex where row.label.contains(" · ") || row.label.contains("You: ") {
-            XCTAssertFalse(row.label.contains("**"), "Markdown in a preview: \(row.label)")
-            XCTAssertFalse(row.label.contains("[decision "), "Bus envelope in a preview: \(row.label)")
-        }
-        let backend = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Backend Dev'")).firstMatch
-        if backend.exists { XCTAssertTrue(backend.label.contains("sync-conflicts.md"), backend.label) }
-        let own = app.buttons.matching(NSPredicate(format: "label CONTAINS 'iOS Dev'")).firstMatch
-        XCTAssertTrue(own.exists && own.label.contains("You: "), "No \"You: \" on the owner's last message: \(own.label)")
-        // Open questions first.
-        XCTAssertLessThan(question.frame.minY, own.frame.minY, "The open question is not first")
-        screenshot("QA-005-live-threads")
-
-        question.tap()
-        waitFor(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Should the release notes mention the new board?'")).firstMatch)
-        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
-        waitFor(field).tap()
-        field.typeText("Yes, mention it.")
-        app.buttons["Send"].tap()
-        waitFor(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Yes, mention it.'")).firstMatch, 10)
-        screenshot("QA-005-live-thread")
-
-        // Read: back on the list, no unread count.
-        app.tab("Chat")
-        let after = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Desktop Dev'")).firstMatch
-        waitFor(after)
-        sleep(2)
-        XCTAssertFalse(after.label.contains("unread"), "Still unread after reading: \(after.label)")
-    }
-
     // MARK: I2: the bot page's Reports, live
 
     func testLiveBotReports() throws {
@@ -294,7 +248,7 @@ final class H134LiveTests: XCTestCase {
     }
 }
 
-/// The live iPad: ranked projects in the sidebar, owner threads in the chat panel.
+/// The live iPad: ranked projects in the sidebar.
 final class H134LivePadTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = true
@@ -314,11 +268,8 @@ final class H134LivePadTests: XCTestCase {
         screenshot("QA-005-live-ipad-sidebar")
         lab.tap()
         waitFor(app.buttons["Overview"].firstMatch, 10)
-        waitFor(app.buttons["Main chat"]).tap()
-        let thread = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Desktop Dev'")).firstMatch
-        waitFor(thread, 15)
-        XCTAssertTrue(thread.label.contains("Question"), thread.label)
-        screenshot("QA-005-live-ipad-threads-panel")
+        // 0.24: no chat panel; Commands is in the sidebar.
+        XCTAssertFalse(app.buttons["Main chat"].exists, "The main chat panel is gone in 0.24")
     }
 }
 

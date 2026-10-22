@@ -90,19 +90,6 @@ final class QA006bCardLinkTests: XCTestCase {
         tapThrough(app, "H-195", from: "decision", capture: "decision")
     }
 
-    func testChatThreadLinks() {
-        let app = launch(["-openTab", "chat"])
-        let thread = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Architect'")).firstMatch
-        app.scroll(to: thread)
-        waitFor(thread, 30).tap()
-        sleep(3)
-        // H-193 when it is an element; else the lowest card link on screen (H-207: multi-id texts expose one).
-        let onScreen = app.links.allElementsBoundByIndex.filter { $0.isHittable }
-        let id = link(app, "H-193").exists && link(app, "H-193").isHittable ? "H-193" : onScreen.first.map { Self.id($0.label) } ?? "H-193"
-        if id != "H-193" { XCTContext.runActivity(named: "H-193 not an element; using \(id)") { _ in } }
-        tapThrough(app, id, from: "chat thread", capture: "chat")
-    }
-
     func testBotReportsLinks() {
         let app = launch(["-openProject", "The Hermes", "-openSegment", "team"])
         waitFor(app.navigationBars["The Hermes"], 30)

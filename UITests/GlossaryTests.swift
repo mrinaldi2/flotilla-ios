@@ -67,8 +67,8 @@ final class GlossaryTests: XCTestCase {
         XCTAssertTrue(app.buttons["Clear conversation"].exists)
         look("bot-more")
 
-        app.tab("Chat")
-        look("chat")
+        app.tab("Commands")
+        look("commands")
         app.tab("Settings")
         look("settings")
         waitFor(app.buttons["Computers"]).tap()

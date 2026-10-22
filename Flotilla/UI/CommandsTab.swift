@@ -48,7 +48,7 @@ struct CommandsTab: View {
             .searchable(text: $model.query, prompt: "Search commands")
             .refreshable { await model.load(sources) }
             .navigationDestination(for: CommandLink.self) { link in
-                CommandDetailView(model: model, rowId: link.id, snapshot: link.row)
+                CommandDetailView(model: model, rowId: link.id, snapshot: link.row) { path.append($0) }
             }
             .needsDestinations()
             .task(id: loadKey) {
@@ -182,7 +182,7 @@ private struct CommandsSummaryTiles: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .accessibilityElement(children: .combine)
             }
         }
@@ -197,7 +197,7 @@ private struct CommandsSummaryTiles: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(value) \(label)")
     }
@@ -305,6 +305,8 @@ struct CommandDetailView: View {
     let model: CommandsModel
     let rowId: String
     let snapshot: FleetCommand
+    /// Pushes a screen on the tab's stack: Open bot is a button, not a row.
+    let open: (NeedsDestination) -> Void
     @State private var confirmingStop = false
 
     private var row: FleetCommand { model.row(rowId) ?? snapshot }
@@ -348,7 +350,7 @@ struct CommandDetailView: View {
                         .disabled(model.stopping.contains(row.id))
                         .accessibilityIdentifier("command-stop")
                     }
-                    NavigationLink(value: NeedsDestination.bot(computerId: row.computerId, botId: row.botId, chat: false)) {
+                    Button { open(.bot(computerId: row.computerId, botId: row.botId, chat: false)) } label: {
                         Text("Open bot")
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 48)

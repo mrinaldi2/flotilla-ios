@@ -123,26 +123,6 @@ final class QA007Tests: XCTestCase {
         }
         XCTFail("No board-elsewhere words: \(seen)")
     }
-
-    /// H-160 AC9: a bot's question in its thread reads "Asks you · <time>".
-    func testH160AC9AsksYou() {
-        let app = scratchLaunch(["-openTab", "chat"])
-        let rows = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Question' OR label CONTAINS 'Asks' OR label CONTAINS '?'"))
-        _ = rows.firstMatch.waitForExistence(timeout: 30)
-        let asks = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Asks you'")).firstMatch
-        for i in 0..<min(rows.count, 6) {
-            let row = rows.element(boundBy: i)
-            guard row.exists, row.isHittable else { continue }
-            row.tap()
-            if asks.waitForExistence(timeout: 8) { break }
-            app.navigationBars.buttons["BackButton"].firstMatch.tap()
-            sleep(1)
-        }
-        if asks.exists { app.scroll(to: asks) }
-        screenshot("QA-007-h160-ac9-asks-you")
-        XCTAssertTrue(asks.exists, "No 'Asks you · <time>' in any question thread")
-        if asks.exists { XCTAssertTrue(asks.label.hasPrefix("Asks you · "), asks.label) }
-    }
 }
 
 final class QA007PadTests: XCTestCase {

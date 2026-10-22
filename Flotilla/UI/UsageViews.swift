@@ -39,6 +39,14 @@ struct UsageScreen: View {
     @Environment(Fleet.self) private var fleet
     @State private var model = UsageModel()
 
+    /// The report's projects, then the computer's others with nothing used yet, so each can get a budget.
+    private func projects(_ entry: (computerId: String, name: String, report: UsageReport)) -> [UsageProject] {
+        let listed = Set(entry.report.projects.map(\.projectId))
+        let rest = (fleet.computer(id: entry.computerId)?.store.sortedProjects ?? []).filter { !listed.contains($0.id) }
+            .map { UsageProject(["project_id": $0.id, "name": $0.name]) }
+        return entry.report.projects + rest
+    }
+
     private var computers: [Computer] { fleet.computers.filter { $0.store.status == .connected && $0.store.hasUsage } }
     private var revisions: String {
         computers.map { "\($0.id):\($0.store.usageRevision.values.reduce(0, +))" }.joined(separator: ",")
@@ -62,8 +70,12 @@ struct UsageScreen: View {
                     if entry.report.projects.isEmpty {
                         EmptyNote(text: "No tokens used in this range.", systemImage: "gauge.with.dots.needle.0percent")
                     }
-                    ForEach(entry.report.projects) { project in
-                        NavigationLink(value: NeedsDestination.usage(computerId: entry.computerId, projectId: project.projectId)) {
+                    ForEach(projects(entry)) { project in
+                        NavigationLink {
+                            if let computer = fleet.computer(id: entry.computerId) {
+                                ProjectUsageScreen(projectId: project.projectId).computerEnvironment(computer)
+                            }
+                        } label: {
                             UsageProjectRow(project: project, top: entry.report.top(in: project.projectId))
                         }
                         .accessibilityIdentifier("usage-project-\(project.projectId)")
@@ -104,7 +116,6 @@ struct UsageScreen: View {
         .task(id: "\(model.range.rawValue)|\(revisions)") {
             await model.load(computers.map { UsageModel.Source(computerId: $0.id, name: $0.name, service: $0.store) })
         }
-        .needsDestinations()
     }
 }
 
@@ -281,6 +292,7 @@ struct BudgetSection: View {
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: 110)
                     .focused($editing)
+                    .disabled(!store.canApprove)
                     .accessibilityIdentifier("budget-field")
                 Text("M tokens").foregroundStyle(Color.secondaryText)
             }

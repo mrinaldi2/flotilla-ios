@@ -83,22 +83,25 @@ struct OwnerActionBody: View {
 /// Push (or Run) and Reject: Face ID first, the reason optional.
 struct OwnerActionButtons: View {
     let model: OwnerActionModel
+    /// This device holds the approve grant: only the owner's device runs one.
+    var allowed = true
     @State private var rejecting = false
     @State private var reason = ""
 
     var body: some View {
         if let action = model.action, action.isOpen {
+            let enabled = model.canAct && allowed
             HStack(spacing: 10) {
                 Button { Task { await model.run() } } label: {
                     AskButtonLabel(text: model.busy ? "Sending…" : OwnerActionWords.run(action), primary: true,
-                                   enabled: model.canAct, wide: true)
+                                   enabled: enabled, wide: true)
                 }
-                .disabled(!model.canAct)
+                .disabled(!enabled)
                 .accessibilityIdentifier("owner-action-run")
                 Button { reason = ""; rejecting = true } label: {
-                    AskButtonLabel(text: "Reject", enabled: model.canAct, wide: true)
+                    AskButtonLabel(text: "Reject", enabled: enabled, wide: true)
                 }
-                .disabled(!model.canAct)
+                .disabled(!enabled)
                 .accessibilityIdentifier("owner-action-reject")
             }
             .buttonStyle(GlanceButtonStyle())
@@ -172,7 +175,7 @@ struct OwnerActionAskRow: View {
                     .accessibilityLabel("Command: \(action.content)")
             }
             if let model {
-                OwnerActionButtons(model: model)
+                OwnerActionButtons(model: model, allowed: store.canApprove)
                 if let failure = model.failure {
                     Label(failure, systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(Color.errorText)
                 }
@@ -206,6 +209,7 @@ struct OwnerActionAskRow: View {
 
     private var detail: String? {
         if store.status != .connected { return "Not connected to \(computer.name)" }
+        if !store.canApprove { return "This device can’t run owner actions" }
         if let push = model?.action?.push { return OwnerActionWords.pushLine(push) }
         return nil
     }

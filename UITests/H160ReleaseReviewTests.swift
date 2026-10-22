@@ -154,9 +154,9 @@ final class H160ReleaseReviewTests: XCTestCase {
         }
         app.buttons["Approve 1 of 3 items"].tap()
         XCTAssertTrue(bar.waitForExistence(timeout: 5))
-        app.tabBars.buttons["Chat"].tap()
-        XCTAssertTrue(text(app, "Approving 1 of 3 items of \(name)").waitForExistence(timeout: 2), "The bar did not follow to Chat")
-        XCTAssertTrue(app.buttons["Undo"].exists, "No Undo on Chat")
+        app.tabBars.buttons["Commands"].tap()
+        XCTAssertTrue(text(app, "Approving 1 of 3 items of \(name)").waitForExistence(timeout: 2), "The bar did not follow to Commands")
+        XCTAssertTrue(app.buttons["Undo"].exists, "No Undo on Commands")
         screenshot("QA-007-h160-ac4-bar-on-needs-you")
         let outcome = text(app, "1 of 3 items of \(name) approved. DevOps repackages them next.")
         XCTAssertTrue(outcome.waitForExistence(timeout: 15), "No outcome line after approving")
