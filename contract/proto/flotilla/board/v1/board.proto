@@ -250,6 +250,14 @@ message BoardColumn {
   repeated string movers = 11;
   repeated string rules = 12;
   repeated string allowed_from = 13;
+  // The board runs the SDLC (0.24.0, capability `board_flow_v1`): when a
+  // card enters the column, it is assigned to a holder of this role, as
+  // `item_assign {role}` picks one (awake and free, then asleep, which wakes
+  // it), and the holder is told. However the card got there: a bot, the
+  // owner or a fact. ROLE_UNSPECIFIED = nobody: the card keeps its assignee.
+  // A role nobody holds leaves the card with whoever moved it and raises a
+  // `ROLE_UNHELD` row in Needs you.
+  Role on_entry = 14;
 }
 
 message ProjectRole {

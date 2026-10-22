@@ -1144,6 +1144,13 @@ nonisolated struct Flotilla_Pr_V1_PullRequest: @unchecked Sendable {
     set {_uniqueStorage()._repo = newValue}
   }
 
+  /// merging, after the Undo window: why it isn't handed yet. "no_devops" =
+  /// nobody in the project holds DevOps, the role that merges (0.23.3).
+  var mergeWaiting: String {
+    get {_storage._mergeWaiting}
+    set {_uniqueStorage()._mergeWaiting = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -2794,7 +2801,7 @@ nonisolated extension Flotilla_Pr_V1_Cleanup: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PullRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}number\0\u{3}item_id\0\u{1}branch\0\u{1}base\0\u{3}base_sha\0\u{3}head_sha\0\u{1}state\0\u{1}author\0\u{1}title\0\u{3}change_note\0\u{1}reviews\0\u{1}checks\0\u{3}owner_review_required\0\u{3}owner_flagged\0\u{1}mergeable\0\u{3}merged_sha\0\u{3}opened_at\0\u{3}merged_at\0\u{3}required_roles\0\u{3}comment_count\0\u{3}moved_unreported\0\u{3}item_title\0\u{3}owner_flag_reason\0\u{1}waivers\0\u{3}docs_changed\0\u{3}merge_at\0\u{3}closed_at\0\u{1}cleanup\0\u{1}additions\0\u{1}deletions\0\u{3}files_changed\0\u{1}repo\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}project_id\0\u{1}number\0\u{3}item_id\0\u{1}branch\0\u{1}base\0\u{3}base_sha\0\u{3}head_sha\0\u{1}state\0\u{1}author\0\u{1}title\0\u{3}change_note\0\u{1}reviews\0\u{1}checks\0\u{3}owner_review_required\0\u{3}owner_flagged\0\u{1}mergeable\0\u{3}merged_sha\0\u{3}opened_at\0\u{3}merged_at\0\u{3}required_roles\0\u{3}comment_count\0\u{3}moved_unreported\0\u{3}item_title\0\u{3}owner_flag_reason\0\u{1}waivers\0\u{3}docs_changed\0\u{3}merge_at\0\u{3}closed_at\0\u{1}cleanup\0\u{1}additions\0\u{1}deletions\0\u{3}files_changed\0\u{1}repo\0\u{3}merge_waiting\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2831,6 +2838,7 @@ nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftPr
     var _deletions: UInt32 = 0
     var _filesChanged: UInt32 = 0
     var _repo: String = String()
+    var _mergeWaiting: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2875,6 +2883,7 @@ nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftPr
       _deletions = source._deletions
       _filesChanged = source._filesChanged
       _repo = source._repo
+      _mergeWaiting = source._mergeWaiting
     }
   }
 
@@ -2927,6 +2936,7 @@ nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftPr
         case 32: try { try decoder.decodeSingularUInt32Field(value: &_storage._deletions) }()
         case 33: try { try decoder.decodeSingularUInt32Field(value: &_storage._filesChanged) }()
         case 34: try { try decoder.decodeSingularStringField(value: &_storage._repo) }()
+        case 35: try { try decoder.decodeSingularStringField(value: &_storage._mergeWaiting) }()
         default: break
         }
       }
@@ -3041,6 +3051,9 @@ nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftPr
       if !_storage._repo.isEmpty {
         try visitor.visitSingularStringField(value: _storage._repo, fieldNumber: 34)
       }
+      if !_storage._mergeWaiting.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._mergeWaiting, fieldNumber: 35)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3084,6 +3097,7 @@ nonisolated extension Flotilla_Pr_V1_PullRequest: SwiftProtobuf.Message, SwiftPr
         if _storage._deletions != rhs_storage._deletions {return false}
         if _storage._filesChanged != rhs_storage._filesChanged {return false}
         if _storage._repo != rhs_storage._repo {return false}
+        if _storage._mergeWaiting != rhs_storage._mergeWaiting {return false}
         return true
       }
       if !storagesAreEqual {return false}

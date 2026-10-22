@@ -87,6 +87,11 @@ enum PlanResearchState {
   PLAN_RESEARCH_STATE_CLOSED = 2;
   // The owner skipped it, with a reason.
   PLAN_RESEARCH_STATE_SKIPPED = 3;
+  // Every spike is done, and the owner reviews the findings (0.24.0,
+  // capability `research_gate_v1`): the node's gate is RESEARCH, with its
+  // research documents. Approving closes research; sending it back reopens
+  // it with the note. Only where the project's `research_gate` is on.
+  PLAN_RESEARCH_STATE_AWAITING = 4;
 }
 
 // A document in the project's repository.
@@ -218,6 +223,10 @@ message PlanNodeGet {
 message PlanEnable {
   string project_id = 1;
   bool enabled = 2;
+  // The research gate (0.24.0, `research_gate_v1`), on by default: research
+  // waits for the owner's Approve findings / Send back once every spike is
+  // done. Left out, it is kept as it is.
+  optional bool research_gate = 3;
 }
 
 // The owner starting a goal or an initiative. An initiative creates its
@@ -322,6 +331,9 @@ message PlanTree {
   repeated PlanNode nodes = 4;
   // `docs/guidelines/*`.
   repeated PlanDoc guidelines = 5;
+  // Research waits for the owner's findings review (0.24.0,
+  // `research_gate_v1`); on by default. Always false from an older daemon.
+  bool research_gate = 6;
 }
 
 // To `plan_node_get`.

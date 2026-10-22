@@ -267,6 +267,9 @@ message PullRequest {
   // The repository, "owner/name" (e.g. "mrinaldi2/gravity_os"): a project's
   // board can span several; numbers stay per project.
   string repo = 34;
+  // merging, after the Undo window: why it isn't handed yet. "no_devops" =
+  // nobody in the project holds DevOps, the role that merges (0.23.3).
+  string merge_waiting = 35;
 }
 
 message LineComment {

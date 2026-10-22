@@ -1,0 +1,11 @@
+{
+  "reqId": "28",
+  "boardRequest": {
+    "columnUpdate": {
+      "boardId": "b1",
+      "version": "5",
+      "key": "review",
+      "onEntry": "ROLE_TESTER"
+    }
+  }
+}

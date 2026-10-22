@@ -910,6 +910,15 @@ nonisolated struct Flotilla_Board_V1_BoardColumn: Sendable {
 
   var allowedFrom: [String] = []
 
+  /// The board runs the SDLC (0.24.0, capability `board_flow_v1`): when a
+  /// card enters the column, it is assigned to a holder of this role, as
+  /// `item_assign {role}` picks one (awake and free, then asleep, which wakes
+  /// it), and the holder is told. However the card got there: a bot, the
+  /// owner or a fact. ROLE_UNSPECIFIED = nobody: the card keeps its assignee.
+  /// A role nobody holds leaves the card with whoever moved it and raises a
+  /// `ROLE_UNHELD` row in Needs you.
+  var onEntry: Flotilla_Board_V1_Role = .unspecified
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -2063,7 +2072,7 @@ nonisolated extension Flotilla_Board_V1_BoardSettings: SwiftProtobuf.Message, Sw
 
 nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardColumn"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{3}board_id\0\u{1}kind\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{3}board_id\0\u{1}kind\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0\u{3}on_entry\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2084,6 +2093,7 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
       case 11: try { try decoder.decodeRepeatedStringField(value: &self.movers) }()
       case 12: try { try decoder.decodeRepeatedStringField(value: &self.rules) }()
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.allowedFrom) }()
+      case 14: try { try decoder.decodeSingularEnumField(value: &self.onEntry) }()
       default: break
       }
     }
@@ -2133,6 +2143,9 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
     if !self.allowedFrom.isEmpty {
       try visitor.visitRepeatedStringField(value: self.allowedFrom, fieldNumber: 13)
     }
+    if self.onEntry != .unspecified {
+      try visitor.visitSingularEnumField(value: self.onEntry, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2150,6 +2163,7 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
     if lhs.movers != rhs.movers {return false}
     if lhs.rules != rhs.rules {return false}
     if lhs.allowedFrom != rhs.allowedFrom {return false}
+    if lhs.onEntry != rhs.onEntry {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
