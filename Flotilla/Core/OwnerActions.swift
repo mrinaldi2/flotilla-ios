@@ -171,10 +171,11 @@ enum OwnerActionWords {
         return "Run \(PermissionWords.middleTruncated(action.content.split(separator: "\n").first.map(String.init) ?? action.content, limit: 60))?"
     }
 
-    /// What a Push card says it does, under its buttons.
+    /// What a Push card says it does, under its buttons. It names no branch:
+    /// the base a push may not reach is the project's (`develop` on some), not always main.
     static func promise(_ action: OwnerAction) -> String {
         action.isPush
-            ? "Runs exactly this command as you, from the bot’s worktree, once. Pushes to main are never offered here."
+            ? "Runs exactly this command as you, from the bot’s worktree, once. A push to the project’s base branch is never offered here."
             : "Runs exactly this command as you, once, on \(action.targetName ?? "its computer")."
     }
 

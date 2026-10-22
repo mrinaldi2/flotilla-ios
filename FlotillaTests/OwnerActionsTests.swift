@@ -86,6 +86,22 @@ final class OwnerActionsTests: XCTestCase {
         XCTAssertNil(OwnerActionWords.expiry(Self.action(state: "succeeded")))
     }
 
+    /// A project whose base branch is `develop`: no text says main.
+    func testAPushOnADevelopProjectNamesItsOwnBranches() {
+        var row = Self.pushRow()
+        row["content"] = "git push origin dev/hitstop:release-prep"
+        row["push"] = ["branch": "dev/hitstop", "target": "release-prep", "repo": "mrinaldi2/phd", "commit": "9f1e2d3c4b5a",
+                       "files": 1, "additions": 12, "deletions": 0]
+        let action = OwnerAction(row)
+        XCTAssertEqual(OwnerActionWords.destination(action.push!), "mrinaldi2/phd · dev/hitstop → release-prep")
+        XCTAssertEqual(OwnerActionWords.promise(action),
+                       "Runs exactly this command as you, from the bot’s worktree, once. A push to the project’s base branch is never offered here.")
+        for text in [OwnerActionWords.promise(action), OwnerActionWords.destination(action.push!), OwnerActionWords.question(action),
+                     OwnerActionWords.title(action, botName: "Unity Dev"), OwnerActionWords.pushLine(action.push!)] {
+            XCTAssertFalse(text.contains("main"), "names main on a develop project: \(text)")
+        }
+    }
+
     func testTheHelloSaysThePhoneRendersOwnerActions() {
         XCTAssertTrue(DaemonClient.features.contains("owner_actions"), "only a client that renders them may run one")
     }
