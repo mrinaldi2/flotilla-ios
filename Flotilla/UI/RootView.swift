@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The app's tabs (UX-024, 0.20): Projects · Chat · Settings. What waits for
+/// The app's tabs (0.24.0): Projects · Commands · Settings. What waits for
 /// you is the Needs you filter on Projects, and its count is on that tab.
+/// Commands took Chat's place; each bot's own chat is on its page.
 struct RootView: View {
     @Environment(Fleet.self) private var fleet
     @Environment(Computer.self) private var computer
@@ -14,7 +15,6 @@ struct RootView: View {
     /// Bumped on each landing, so Projects pops to its list even when the
     /// tab and the filter were already the ones asked for.
     @State private var landings = 0
-    @State private var openBot: BotLink?
     @State private var explaining = false
     private var router: NotificationRouter { .shared }
 
@@ -32,8 +32,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if sizeClass == .regular {
-                // iPad (UX-024): the sidebar holds Chat and the projects.
-                PadRootView(tab: $tab, openNeeds: $openNeeds, openBot: $openBot, landings: landings)
+                // iPad (UX-024): the sidebar holds Commands and the projects.
+                PadRootView(tab: $tab, openNeeds: $openNeeds, landings: landings)
             } else {
                 tabs
             }
@@ -57,7 +57,7 @@ struct RootView: View {
                 .accessibilityHidden(true)
         }
         // The home feed loads at the root, whichever screen opens first: a
-        // notification may open Chat before Projects ever shows (QA-004).
+        // notification may open a bot before Projects ever shows (QA-004).
         .task(id: connections) {
             fleet.home.loadCache(fleet.computers)
             #if DEBUG
@@ -109,7 +109,7 @@ struct RootView: View {
                 fleet.openCard = id
             }
         }
-        // Screenshots of a tab: -openTab needs|chat|settings ("needs": Projects, filtered).
+        // Screenshots of a tab: -openTab needs|commands|settings ("needs": Projects, filtered).
         .task {
             if let landing = HomeRoute.tab(named: UserDefaults.standard.string(forKey: "openTab")) { land(landing) }
         }
@@ -131,10 +131,9 @@ struct RootView: View {
                 .tabItem { Label("Projects", systemImage: "square.grid.2x2") }
                 .badge(fleet.home.total(fleet.computers))
                 .tag(Tab.projects)
-            MainChatView(openBot: $openBot)
-                .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
-                .badge(fleet.home.questions(fleet.computers))
-                .tag(Tab.chat)
+            CommandsTab(landings: landings)
+                .tabItem { Label("Commands", systemImage: "apple.terminal") }
+                .tag(Tab.commands)
             SettingsView(inTab: true)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .badge(fleet.computers.filter { $0.store.status != .connected && $0.store.status != .connecting }.count)
@@ -150,8 +149,8 @@ struct RootView: View {
             // A terminal command's card sits atop Projects, read-only (H-108).
             land(HomeRoute.permissionCard(on: source.id, botId: source.store.permissions.first { $0.id == id }?.botId))
         case .bot(let id, let pane):
-            tab = .chat
-            openBot = BotLink(botId: id, pane: pane)
+            // The bot's page on Projects: its chat, now that Chat is gone (0.24.0).
+            land(HomeLanding(filter: nil, push: .bot(computerId: source.id, botId: id, chat: pane == .chat)))
         }
     }
 

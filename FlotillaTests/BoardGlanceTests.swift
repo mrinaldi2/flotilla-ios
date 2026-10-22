@@ -322,7 +322,8 @@ final class BoardGlanceTests: XCTestCase {
     }
 
     func testOtherTabsLeaveTheFilterAlone() {
-        XCTAssertEqual(HomeRoute.tab(named: "chat"), HomeLanding(tab: .chat, filter: nil))
+        XCTAssertEqual(HomeRoute.tab(named: "commands"), HomeLanding(tab: .commands, filter: nil))
+        XCTAssertEqual(HomeRoute.tab(named: "chat"), HomeLanding(tab: .commands, filter: nil), "Commands took Chat's place (0.24.0)")
         XCTAssertEqual(HomeRoute.tab(named: "settings"), HomeLanding(tab: .settings, filter: nil))
         XCTAssertNil(HomeRoute.tab(named: nil))
         XCTAssertNil(HomeRoute.tab(named: "bots"))

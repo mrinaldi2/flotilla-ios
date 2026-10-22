@@ -161,6 +161,8 @@ struct ItemView: View {
                                   discussion: discussion, chatting: $chatting) { await load() }
                 }
                 if let questions { QuestionsSection(model: questions) }
+                // A push or a command a bot asks the owner to run for this card (0.24.0).
+                if live, store.hasOwnerActions { CardOwnerActions(projectId: project ?? "", itemId: itemId) }
                 if live {
                     Section {
                         if groups.isEmpty { EmptyNote(text: "No comments yet", systemImage: "text.bubble") }

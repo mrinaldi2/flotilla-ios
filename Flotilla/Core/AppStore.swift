@@ -110,6 +110,14 @@ final class AppStore {
     @ObservationIgnored private var turns = TurnTracker()
     /// Bumped by `owner_thread_updated`: the main chat rereads its threads.
     var ownerThreadsVersion = 0
+    /// Bumped by `commands_changed` (0.24.0): the Commands tab reads its list again.
+    var commandsRevision = 0
+    /// project id → bumped by `usage_updated` (0.24.0).
+    var usageRevision: [String: Int] = [:]
+    /// Owner actions as the daemon last pushed them (`owner_action_update`), by id.
+    var ownerActionUpdates: [String: OwnerAction] = [:]
+    /// A running owner action's redacted output so far (`owner_action_output`), by id.
+    var ownerActionOutputs: [String: String] = [:]
     /// Turns of a bot's chat that are new or changed (`chat_turns`).
     @ObservationIgnored var onChatTurns: ((String, [JSONDict]) -> Void)?
 
@@ -207,6 +215,8 @@ final class AppStore {
         decisions = []
         pendingCounts = PendingCounts()
         approvals = [:]
+        ownerActionUpdates = [:]
+        ownerActionOutputs = [:]
     }
 
     // MARK: Connection events
@@ -408,6 +418,14 @@ final class AppStore {
             boardActivity(frame)
         case "owner_thread_updated":
             ownerThreadsVersion += 1
+        case "commands_changed":
+            commandsRevision += 1
+        case "usage_updated":
+            usageRevision[frame.str("project_id"), default: 0] += 1
+        case "owner_action_update":
+            ownerActionUpdated(frame)
+        case "owner_action_output":
+            ownerActionOutput(frame)
         default:
             break
         }

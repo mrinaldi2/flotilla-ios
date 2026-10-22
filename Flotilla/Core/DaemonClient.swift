@@ -46,8 +46,9 @@ final class DaemonClient {
     /// and answers them, so the daemon holds a prompt for it instead of
     /// leaving it in the bot's terminal. It shows what a decision option
     /// grants, so it may rule on one (H-118).
-    /// It also takes terminal requests (T4), shown read-only (H-108).
-    static let features = ["permission_cards", "decision_grants", "terminal_card"]
+    /// It also takes terminal requests (T4), shown read-only (H-108), and
+    /// shows owner actions, so it may run one (0.24.0).
+    static let features = ["permission_cards", "decision_grants", "terminal_card", "owner_actions"]
     /// The typed surfaces (ADR-001) and the highest version of each this app speaks.
     static let contracts = ["board": 1, "home": 1]
 

@@ -10,6 +10,7 @@ struct SettingsView: View {
     var inTab = false
     @AppStorage("terminalFontSize") private var fontSize = 11.0
     @Environment(\.dismiss) private var dismiss
+    @Environment(Fleet.self) private var fleet
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @State private var notifications: UNAuthorizationStatus?
@@ -30,6 +31,13 @@ struct SettingsView: View {
                         }
                         Button { showing = .files } label: {
                             Label("Files", systemImage: "doc.on.doc")
+                        }
+                        // Tokens per project and bot, and the budgets (0.24.0, `usage_v1`).
+                        if fleet.computers.contains(where: { $0.store.hasUsage }) {
+                            NavigationLink { UsageScreen() } label: {
+                                Label("Usage", systemImage: "gauge.with.dots.needle.33percent")
+                            }
+                            .accessibilityIdentifier("settings-usage")
                         }
                     } footer: {
                         Text("Computers, their screens and tokens. Each project's artifacts move into the project in the next build.")

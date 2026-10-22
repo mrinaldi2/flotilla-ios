@@ -99,6 +99,23 @@ enum RoleWords {
         return "\(label(role)) · \(names.isEmpty ? "nobody yet" : names.joined(separator: ", "))"
     }
 
+    /// A role from its token in a `ROLE_UNHELD` row: "architect", "dev" or "developer".
+    static func role(token: String) -> BoardRole? {
+        let token = token.lowercased().replacingOccurrences(of: "role_", with: "")
+        if token == "developer" { return .dev }
+        if token == "qa" { return .tester }
+        return BoardRole.allCases.first { role in
+            role != .unspecified && (label(role).lowercased() == token || "\(role)".lowercased() == token.replacingOccurrences(of: "_", with: ""))
+        }
+    }
+
+    /// A column gives cards to a role nobody holds (0.24.0, `ROLE_UNHELD`): what to do.
+    static func unheld(_ token: String, on place: String) -> String {
+        let name = role(token: token).map(label) ?? token.capitalizedFirst
+        return "A column gives its cards to the \(name), and nobody in this project holds that role, so they wait there. "
+            + "Create a bot with the \(name) role, or give the role to a bot, in Flotilla on \(place)."
+    }
+
     /// Why a card can't go to a role nobody holds.
     static func unheld(_ role: BoardRole?) -> String {
         let name = role.map(label) ?? "that"

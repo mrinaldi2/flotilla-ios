@@ -17,6 +17,8 @@ enum OwnerAuth {
         case approvePlan
         /// Dropping a plan node and what is under it (0.21).
         case dropPlan
+        /// Running a bot's proposed command or push as the owner (0.24.0).
+        case runOwnerAction
 
         var question: String {
             switch self {
@@ -27,6 +29,7 @@ enum OwnerAuth {
             case .approveBoardChange: "Approve this board change?"
             case .approvePlan: "Approve this step of the plan?"
             case .dropPlan: "Drop this from the plan?"
+            case .runOwnerAction: "Run this as you?"
             }
         }
 
@@ -39,6 +42,7 @@ enum OwnerAuth {
             case .approveBoardChange: "Not approved. Nothing was sent."
             case .approvePlan: "Not approved. Nothing was sent."
             case .dropPlan: "Not dropped. Nothing was sent."
+            case .runOwnerAction: "Not run. Nothing was sent."
             }
         }
     }

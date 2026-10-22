@@ -4,7 +4,7 @@ import SwiftUI
 /// the two answers its kind takes: a document gate's Review (the gate
 /// screen) or Later; a proposed initiative's Accept (Face ID) or Decline
 /// (with a note); a research skip's Skip (Face ID) or Keep research (with a
-/// note). The node is read for its stage and version; until it is, the row
+/// note); research findings (0.24.0), Review or Later as a document. The node is read for its stage and version; until it is, the row
 /// offers Review.
 struct PlanAskRow: View {
     @Environment(Fleet.self) private var fleet
@@ -24,12 +24,12 @@ struct PlanAskRow: View {
         return ""
     }
 
-    private var ask: PlanAsk { PlanAsk(node?.gate.stage ?? .unspecified) }
+    private var ask: PlanAsk { node.map { PlanAsk($0) } ?? PlanAsk(.unspecified) }
     private var store: AppStore { computer.store }
     private var destination: NeedsDestination { .planNode(computerId: computer.id, projectId: row.projectID, nodeId: nodeId) }
 
     private var subtitle: String {
-        var parts = [PlanAsk.kindWord(node?.hasGate == true ? node?.gate.stage : nil)]
+        var parts = [PlanAsk.kindWord(node?.hasGate == true ? node?.gate.stage : nil, awaiting: node.map(PlanWords.awaitsFindings) ?? false)]
         if row.hasCreatedAt { parts.append(row.createdAt.date.relative) }
         return parts.joined(separator: " · ")
     }
@@ -41,12 +41,15 @@ struct PlanAskRow: View {
         case .document: return PlanWords.creates(node.gate).map { "\($0)." }
         case .proposal: return "It would start in Research."
         case .researchSkip: return node.gate.hasNote ? "Lead: “\(node.gate.note)”" : nil
+        case .findings:
+            let count = node.docs.filter { $0.kind == .research }.count
+            return count == 0 ? nil : "\(count) research document\(count == 1 ? "" : "s")."
         }
     }
 
     private var unavailable: String? {
         if store.status != .connected { return "Not connected to \(computer.name)" }
-        if ask.kind != .document, !store.canApprove { return "This device can’t rule on the plan" }
+        if !ask.reads, !store.canApprove { return "This device can’t rule on the plan" }
         return failure
     }
 
@@ -81,8 +84,8 @@ struct PlanAskRow: View {
     }
 
     private var connected: Bool { store.status == .connected }
-    private var canYes: Bool { connected && !busy && (ask.kind == .document || (node != nil && store.canApprove)) }
-    private var canNo: Bool { !busy && (ask.kind == .document || (connected && node != nil && store.canApprove)) }
+    private var canYes: Bool { connected && !busy && (ask.reads || (node != nil && store.canApprove)) }
+    private var canNo: Bool { !busy && (ask.reads || (connected && node != nil && store.canApprove)) }
 
     private func load() async {
         guard connected, !nodeId.isEmpty else { return }
@@ -91,14 +94,14 @@ struct PlanAskRow: View {
 
     private func yes() {
         switch ask.kind {
-        case .document: open(destination)
+        case .document, .findings: open(destination)
         case .proposal, .researchSkip: rule(approve: true)
         }
     }
 
     private func no() {
         switch ask.kind {
-        case .document: withAnimation(.snappy) { fleet.home.putOff(row.id) }
+        case .document, .findings: withAnimation(.snappy) { fleet.home.putOff(row.id) }
         case .proposal, .researchSkip:
             note = ""
             noting = true
