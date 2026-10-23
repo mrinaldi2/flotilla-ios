@@ -385,6 +385,10 @@ message ItemCard {
   optional string plan_node_id = 21;
   // Open questions for the owner on the card (0.22.0).
   uint32 questions_open = 22;
+  // A bot's open questions to the owner about the card (0.24.0): asked on
+  // it, or from its thread naming it ("[card H-1] …"). The card waits on
+  // the owner while it is above 0; never on a done or cancelled card.
+  uint32 owner_waiting = 23;
 }
 
 // What stops a card, for its "can't move" line. Computed when the card is
