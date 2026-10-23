@@ -146,6 +146,15 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
 
   /// a bot's question for the owner, one row each; `decision_id` is the question's id (0.22.0, capability `questions_v1`)
   case question // = 21
+
+  /// a column assigns a role nobody holds: `role`, the card in `item_id` of the title (0.24.0, capability `board_flow_v1`)
+  case roleUnheld // = 22
+
+  /// a project used 80% of its weekly token budget (0.24.0, capability `usage_v1`)
+  case budgetWarning // = 23
+
+  /// a project used its whole weekly budget: its on-demand bots don't wake (0.24.0, `usage_v1`)
+  case budgetReached // = 24
   case UNRECOGNIZED(Int)
 
   init() {
@@ -176,6 +185,9 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case 19: self = .botStopped
     case 20: self = .planGate
     case 21: self = .question
+    case 22: self = .roleUnheld
+    case 23: self = .budgetWarning
+    case 24: self = .budgetReached
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -204,6 +216,9 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     case .botStopped: return 19
     case .planGate: return 20
     case .question: return 21
+    case .roleUnheld: return 22
+    case .budgetWarning: return 23
+    case .budgetReached: return 24
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -232,6 +247,9 @@ nonisolated enum Flotilla_Home_V1_AttentionKind: SwiftProtobuf.Enum, Swift.CaseI
     .botStopped,
     .planGate,
     .question,
+    .roleUnheld,
+    .budgetWarning,
+    .budgetReached,
   ]
 
 }
@@ -617,11 +635,48 @@ nonisolated struct Flotilla_Home_V1_ProjectRow: @unchecked Sendable {
   /// Clears the value of `topAttention`. Subsequent reads from it will return its default value.
   mutating func clearTopAttention() {_uniqueStorage()._topAttention = nil}
 
+  /// Addition (0.24.0, capability `usage_v1`): the project's usage, for the
+  /// "usage today" line on its card. Unset from an older daemon.
+  var usage: Flotilla_Home_V1_ProjectUsage {
+    get {_storage._usage ?? Flotilla_Home_V1_ProjectUsage()}
+    set {_uniqueStorage()._usage = newValue}
+  }
+  /// Returns true if `usage` has been explicitly set.
+  var hasUsage: Bool {_storage._usage != nil}
+  /// Clears the value of `usage`. Subsequent reads from it will return its default value.
+  mutating func clearUsage() {_uniqueStorage()._usage = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// A project's token usage (0.24.0, `usage_v1`). Tokens are every kind
+/// summed: input, output, cache reads and cache writes.
+nonisolated struct Flotilla_Home_V1_ProjectUsage: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var tokensToday: UInt64 = 0
+
+  /// the budget's week: the last 7 days
+  var tokensWeek: UInt64 = 0
+
+  /// 0 = no budget
+  var budgetWeek: UInt64 = 0
+
+  /// from the owner's price table; an estimate
+  var estCostTodayUsd: Double = 0
+
+  /// its on-demand bots don't wake
+  var budgetReached: Bool = false
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
 }
 
 /// addition (H-144)
@@ -982,6 +1037,15 @@ nonisolated struct Flotilla_Home_V1_AttentionRow: @unchecked Sendable {
     set {_uniqueStorage()._target = .planNodeID(newValue)}
   }
 
+  /// role_unheld: the role's token, e.g. "architect" (create a bot with it)
+  var role: String {
+    get {
+      if case .role(let v)? = _storage._target {return v}
+      return String()
+    }
+    set {_uniqueStorage()._target = .role(newValue)}
+  }
+
   /// relayed_rulings only
   var relayedCount: UInt32 {
     get {_storage._relayedCount}
@@ -1048,6 +1112,8 @@ nonisolated struct Flotilla_Home_V1_AttentionRow: @unchecked Sendable {
     case machine(String)
     /// plan_gate: the node (plan_node_get, plan_rule)
     case planNodeID(String)
+    /// role_unheld: the role's token, e.g. "architect" (create a bot with it)
+    case role(String)
 
   }
 
@@ -2198,7 +2264,7 @@ nonisolated extension Flotilla_Home_V1_BotStatus: SwiftProtobuf._ProtoNameProvid
 }
 
 nonisolated extension Flotilla_Home_V1_AttentionKind: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0\u{1}PLAN_GATE\0\u{1}QUESTION\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ATTENTION_KIND_UNSPECIFIED\0\u{1}RELEASE_AWAITING\0\u{1}OWNER_ACTION\0\u{1}PERMISSION_PROMPT\0\u{1}DECISION\0\u{1}RELAYED_RULINGS\0\u{1}P0_ITEM\0\u{1}BOT_WAITING\0\u{1}OFF_BOARD\0\u{1}SERVING_OFF\0\u{1}OWNER_QUESTION\0\u{1}PR_REVIEW\0\u{1}PR_MERGE_STUCK\0\u{1}MAIN_MOVED_OUTSIDE\0\u{1}CLEANUP_HELD\0\u{1}DISK_LOW\0\u{1}CHECK_UNROUTABLE\0\u{1}DRAFT_UPDATED\0\u{1}CARD_WAITING\0\u{1}BOT_STOPPED\0\u{1}PLAN_GATE\0\u{1}QUESTION\0\u{1}ROLE_UNHELD\0\u{1}BUDGET_WARNING\0\u{1}BUDGET_REACHED\0")
 }
 
 nonisolated extension Flotilla_Home_V1_BoardActivityKind: SwiftProtobuf._ProtoNameProviding {
@@ -2479,7 +2545,7 @@ nonisolated extension Flotilla_Home_V1_ProjectsOverview: SwiftProtobuf.Message, 
 
 nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ProjectRow"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}name\0\u{1}members\0\u{3}board_home\0\u{3}current_release\0\u{3}open_tasks\0\u{1}doing\0\u{1}bots\0\u{3}bots_working\0\u{1}attention\0\u{1}partial\0\u{3}stale_sources\0\u{3}last_activity_at\0\u{1}pinned\0\u{1}rank\0\u{3}latest_summary\0\u{1}legacy\0\u{1}columns\0\u{3}doing_total\0\u{3}bots_waiting\0\u{3}bot_list\0\u{3}top_attention\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}name\0\u{1}members\0\u{3}board_home\0\u{3}current_release\0\u{3}open_tasks\0\u{1}doing\0\u{1}bots\0\u{3}bots_working\0\u{1}attention\0\u{1}partial\0\u{3}stale_sources\0\u{3}last_activity_at\0\u{1}pinned\0\u{1}rank\0\u{3}latest_summary\0\u{1}legacy\0\u{1}columns\0\u{3}doing_total\0\u{3}bots_waiting\0\u{3}bot_list\0\u{3}top_attention\0\u{1}usage\0")
 
   fileprivate class _StorageClass {
     var _projectID: String = String()
@@ -2504,6 +2570,7 @@ nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftP
     var _botsWaiting: UInt32 = 0
     var _botList: [Flotilla_Home_V1_BotBrief] = []
     var _topAttention: Flotilla_Home_V1_AttentionRow? = nil
+    var _usage: Flotilla_Home_V1_ProjectUsage? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2536,6 +2603,7 @@ nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftP
       _botsWaiting = source._botsWaiting
       _botList = source._botList
       _topAttention = source._topAttention
+      _usage = source._usage
     }
   }
 
@@ -2576,6 +2644,7 @@ nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftP
         case 20: try { try decoder.decodeSingularUInt32Field(value: &_storage._botsWaiting) }()
         case 21: try { try decoder.decodeRepeatedMessageField(value: &_storage._botList) }()
         case 22: try { try decoder.decodeSingularMessageField(value: &_storage._topAttention) }()
+        case 23: try { try decoder.decodeSingularMessageField(value: &_storage._usage) }()
         default: break
         }
       }
@@ -2654,6 +2723,9 @@ nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftP
       try { if let v = _storage._topAttention {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
       } }()
+      try { if let v = _storage._usage {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2685,10 +2757,61 @@ nonisolated extension Flotilla_Home_V1_ProjectRow: SwiftProtobuf.Message, SwiftP
         if _storage._botsWaiting != rhs_storage._botsWaiting {return false}
         if _storage._botList != rhs_storage._botList {return false}
         if _storage._topAttention != rhs_storage._topAttention {return false}
+        if _storage._usage != rhs_storage._usage {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Flotilla_Home_V1_ProjectUsage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ProjectUsage"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tokens_today\0\u{3}tokens_week\0\u{3}budget_week\0\u{3}est_cost_today_usd\0\u{3}budget_reached\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.tokensToday) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.tokensWeek) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.budgetWeek) }()
+      case 4: try { try decoder.decodeSingularDoubleField(value: &self.estCostTodayUsd) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.budgetReached) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.tokensToday != 0 {
+      try visitor.visitSingularUInt64Field(value: self.tokensToday, fieldNumber: 1)
+    }
+    if self.tokensWeek != 0 {
+      try visitor.visitSingularUInt64Field(value: self.tokensWeek, fieldNumber: 2)
+    }
+    if self.budgetWeek != 0 {
+      try visitor.visitSingularUInt64Field(value: self.budgetWeek, fieldNumber: 3)
+    }
+    if self.estCostTodayUsd.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.estCostTodayUsd, fieldNumber: 4)
+    }
+    if self.budgetReached != false {
+      try visitor.visitSingularBoolField(value: self.budgetReached, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Flotilla_Home_V1_ProjectUsage, rhs: Flotilla_Home_V1_ProjectUsage) -> Bool {
+    if lhs.tokensToday != rhs.tokensToday {return false}
+    if lhs.tokensWeek != rhs.tokensWeek {return false}
+    if lhs.budgetWeek != rhs.budgetWeek {return false}
+    if lhs.estCostTodayUsd != rhs.estCostTodayUsd {return false}
+    if lhs.budgetReached != rhs.budgetReached {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2991,7 +3114,7 @@ nonisolated extension Flotilla_Home_V1_AttentionSummary: SwiftProtobuf.Message, 
 
 nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".AttentionRow"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{3}plan_node_id\0\u{3}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0\u{3}question_blocking\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}kind\0\u{3}daemon_id\0\u{3}project_id\0\u{1}title\0\u{3}created_at\0\u{1}weight\0\u{4}\u{3}decision_id\0\u{3}release_id\0\u{3}action_id\0\u{3}request_id\0\u{1}bot\0\u{3}item_id\0\u{3}pr_number\0\u{3}cleanup_job_id\0\u{1}machine\0\u{3}plan_node_id\0\u{3}relayed_count\0\u{1}priority\0\u{3}question_comment_id\0\u{1}cleanup\0\u{3}bot_state\0\u{3}question_blocking\0\u{1}role\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -3148,6 +3271,14 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
         case 23: try { try decoder.decodeSingularMessageField(value: &_storage._cleanup) }()
         case 24: try { try decoder.decodeSingularStringField(value: &_storage._botState) }()
         case 25: try { try decoder.decodeSingularBoolField(value: &_storage._questionBlocking) }()
+        case 26: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._target != nil {try decoder.handleConflictingOneOf()}
+            _storage._target = .role(v)
+          }
+        }()
         default: break
         }
       }
@@ -3222,7 +3353,7 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
         guard case .planNodeID(let v)? = _storage._target else { preconditionFailure() }
         try visitor.visitSingularStringField(value: v, fieldNumber: 19)
       }()
-      case nil: break
+      default: break
       }
       if _storage._relayedCount != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._relayedCount, fieldNumber: 20)
@@ -3242,6 +3373,9 @@ nonisolated extension Flotilla_Home_V1_AttentionRow: SwiftProtobuf.Message, Swif
       if _storage._questionBlocking != false {
         try visitor.visitSingularBoolField(value: _storage._questionBlocking, fieldNumber: 25)
       }
+      try { if case .role(let v)? = _storage._target {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 26)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }

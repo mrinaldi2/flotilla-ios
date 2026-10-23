@@ -152,8 +152,8 @@ final class H217Tests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 3), "Back to Projects froze")
         app.tabBars.buttons["Settings"].tap()
         XCTAssertTrue(app.tabBars.buttons["Settings"].isSelected, "Tab switch froze")
-        app.tabBars.buttons["Chat"].tap()
-        XCTAssertTrue(app.tabBars.buttons["Chat"].waitForExistence(timeout: 3) && app.tabBars.buttons["Chat"].isSelected, "Tab switch froze")
+        app.tabBars.buttons["Commands"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Commands"].waitForExistence(timeout: 3) && app.tabBars.buttons["Commands"].isSelected, "Tab switch froze")
         print("QA-008 H-217 navigation while down took \(String(format: "%.1f", Date().timeIntervalSince(t0))) s")
         screenshot("QA-008-h217-navigated-while-down")
         // And it comes back.

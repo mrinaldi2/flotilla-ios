@@ -42,10 +42,14 @@ final class FakePlan: PlanService {
     private(set) var updates: [Flotilla_Board_V1_PlanUpdate] = []
     private(set) var drops: [Flotilla_Board_V1_PlanDrop] = []
 
-    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree {
+    private(set) var researchGates: [Bool?] = []
+
+    func planEnable(projectId: String, enabled: Bool, researchGate: Bool?) async throws -> PlanTree {
         enables.append(enabled)
+        researchGates.append(researchGate)
         if let enableError { throw enableError }
         tree.enabled = enabled
+        if let researchGate { tree.researchGate = researchGate }
         return tree
     }
 
@@ -678,5 +682,92 @@ final class PlanTests: XCTestCase {
         image.kind = "image"
         XCTAssertEqual(DesignWords.line([doc, image, image, image]), "design.md · 3 mockups")
         XCTAssertEqual(DesignWords.line([]), "No documents yet")
+    }
+
+    // MARK: The research gate (0.24.0)
+
+    private func awaiting() -> PlanNode {
+        var epic = node("PL-7", kind: .epic, stage: .research, version: 4)
+        epic.title = "Prerequisites and grounding"
+        epic.research.state = .awaiting
+        epic.research.spikes = ["CASS-039"]
+        epic.gate.stage = .research
+        epic.gate.submittedBy = "daemon"
+        epic.gate.round = 1
+        var doc = PlanDoc()
+        doc.kind = .research
+        doc.path = "items/CASS-039/prerequisites-research.md"
+        doc.itemID = "CASS-039"
+        epic.docs = [doc]
+        return epic
+    }
+
+    func testResearchAwaitingIsReviewedAsADocument() {
+        let epic = awaiting()
+        XCTAssertTrue(PlanWords.awaitsFindings(epic))
+        let ask = PlanAsk(epic)
+        XCTAssertEqual(ask.kind, .findings)
+        XCTAssertTrue(ask.reads, "opened to read, then Approve or Send back")
+        XCTAssertEqual([ask.yes, ask.no], ["Review", "Later"])
+        XCTAssertEqual(ask.noteTitle, "Send back")
+        XCTAssertEqual(ask.question(epic), "Approve the research findings of Prerequisites and grounding?")
+        XCTAssertEqual(PlanAsk.kindWord(.research, awaiting: true), "Research findings")
+        XCTAssertEqual(PlanWords.gateTitle(epic), "Approve research")
+        XCTAssertEqual(PlanWords.waits(epic), "Research findings wait for you")
+        XCTAssertEqual(PlanWords.research(epic.research), "Research · waits for your review")
+    }
+
+    func testTheLeadsSkipRequestIsStillASkip() {
+        var epic = awaiting()
+        epic.research.state = .open
+        epic.gate.submittedBy = "bot:lead"
+        epic.gate.note = "The prototype answered it."
+        XCTAssertFalse(PlanWords.awaitsFindings(epic))
+        XCTAssertEqual(PlanAsk(epic).kind, .researchSkip)
+        XCTAssertEqual(PlanWords.gateTitle(epic), "Skip research")
+    }
+
+    func testFindingsAreApprovedWithFaceIDOrSentBackWithANote() async {
+        let fake = FakePlan()
+        let epic = awaiting()
+        fake.result.outcome = .done(epic)
+        var asked: [String] = []
+        let model = GateModel(node: epic, service: fake) { asked.append($0) }
+        await model.approve()
+        XCTAssertEqual(asked, ["Approve the research findings of Prerequisites and grounding?"])
+        XCTAssertEqual(fake.rules.last?.approve, true)
+        XCTAssertEqual(fake.rules.last?.expectedVersion, 4)
+
+        let back = GateModel(node: epic, service: fake) { _ in }
+        back.note = "Ask a second player too."
+        await back.sendBack()
+        XCTAssertEqual(fake.rules.last?.approve, false)
+        XCTAssertEqual(fake.rules.last?.note, "Ask a second player too.")
+    }
+
+    func testTheResearchGateSwitchKeepsPlanningAsItIs() async throws {
+        let fake = FakePlan()
+        var tree = try tree()
+        tree.enabled = true
+        tree.researchGate = true
+        fake.tree = tree
+        let model = PlanSwitchModel(projectId: "p1", service: fake)
+        await model.load()
+        XCTAssertTrue(model.researchGate)
+        await model.setResearchGate(true)
+        XCTAssertTrue(fake.enables.isEmpty, "already on: nothing sent")
+        await model.setResearchGate(false)
+        XCTAssertEqual(fake.enables, [true], "planning stays on")
+        XCTAssertEqual(fake.researchGates, [false])
+        XCTAssertFalse(model.researchGate)
+        await model.toggle()
+        XCTAssertEqual(fake.researchGates.last, .some(nil), "turning planning off leaves the research gate as it is")
+    }
+
+    func testTheResearchGateWaitsForItsCapability() {
+        let store = AppStore(defaults: ComputerDefaults(id: "research-gate-test"))
+        XCTAssertFalse(store.hasResearchGate)
+        store.capabilities = ["research_gate_v1"]
+        XCTAssertTrue(store.hasResearchGate)
     }
 }

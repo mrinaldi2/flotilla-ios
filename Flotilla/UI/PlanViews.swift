@@ -110,7 +110,7 @@ struct PlanWaitingRow: View {
     let node: PlanNode
 
     var body: some View {
-        ItemRow(title: PlanWords.waits(node.gate), subtitle: [node.title, node.gate.submittedAt.date.relative].joined(separator: " · "),
+        ItemRow(title: PlanWords.waits(node), subtitle: [node.title, node.gate.submittedAt.date.relative].joined(separator: " · "),
                 titleTone: .needsYou) {
             Circle().fill(Tone.needsYou.color.opacity(0.18)).frame(width: 26, height: 26)
                 .overlay { Text("!").font(.system(size: 13, weight: .heavy)).foregroundStyle(Tone.needsYou.text) }
@@ -590,7 +590,7 @@ struct PlanGateScreen: View {
                 ProgressView()
             }
         }
-        .navigationTitle(node?.node.flatMap { $0.hasGate ? PlanWords.gateTitle($0.gate) : nil } ?? "Plan")
+        .navigationTitle(node?.node.flatMap { $0.hasGate ? PlanWords.gateTitle($0) : nil } ?? "Plan")
         .navigationBarTitleDisplayMode(.inline)
         // The two answers sit at the bottom, where the tab bar would be.
         .toolbar(.hidden, for: .tabBar)
@@ -618,7 +618,7 @@ private struct GateContent: View {
     private var gate: PlanGate { node.gate }
 
     var body: some View {
-        let ask = PlanAsk(gate.stage)
+        let ask = PlanAsk(node)
         List {
             Section {
                 VStack(alignment: .leading, spacing: 4) {
@@ -640,6 +640,7 @@ private struct GateContent: View {
                 if gate.hasPrNumber { LabeledContent("Pull request", value: "#\(gate.prNumber)") }
             }
             if gate.hasDocPath { excerptSection }
+            if ask.kind == .findings { findingsSection }
             if ask.kind == .proposal, !node.summary.isEmpty {
                 Section {
                     LinkedText(markdown: node.summary)
@@ -684,7 +685,7 @@ private struct GateContent: View {
                         Label(line, systemImage: "xmark.octagon").foregroundStyle(Color.errorText)
                     }
                 } header: {
-                    SectionTitle(ask.kind == .document ? "Not approved" : "Not sent")
+                    SectionTitle(ask.reads ? "Not approved" : "Not sent")
                 }
             }
             if !store.canApprove {
@@ -722,6 +723,21 @@ private struct GateContent: View {
                     Task { await model.sendBack() }
                 }
             }
+        }
+    }
+
+    /// Research awaiting review (0.24.0): the spikes' documents, each read in place.
+    @ViewBuilder private var findingsSection: some View {
+        let docs = node.docs.filter { $0.kind == .research }
+        Section {
+            if docs.isEmpty {
+                EmptyNote(text: "No research documents attached.", systemImage: "doc.text.magnifyingglass")
+            }
+            ForEach(docs, id: \.path) { doc in PlanDocRow(doc: doc, projectId: projectId) }
+        } header: {
+            SectionTitle("Findings", count: docs.isEmpty ? nil : docs.count)
+        } footer: {
+            Text(PlanAsk.findingsFooter).foregroundStyle(Color.secondaryText)
         }
     }
 
@@ -794,12 +810,13 @@ private struct GateContent: View {
         case .document: "Approve with Face ID"
         case .proposal: "Accept with Face ID"
         case .researchSkip: "Skip research with Face ID"
+        case .findings: "Approve findings with Face ID"
         }
     }
 
     static func no(_ ask: PlanAsk) -> String {
         switch ask.kind {
-        case .document: "Send back with a note"
+        case .document, .findings: "Send back with a note"
         case .proposal: "Decline with a note"
         case .researchSkip: "Keep research"
         }
@@ -1068,6 +1085,19 @@ struct PlanningSection: View {
                 }
                 .disabled(!store.canApprove || model.busy || (!model.enabled && !model.canTurnOn))
                 .accessibilityIdentifier("plan-switch")
+                // The research gate (0.24.0): on by default, the owner's switch.
+                if model.enabled, store.hasResearchGate {
+                    Toggle(isOn: Binding(get: { model.researchGate }, set: { on in Task { await model.setResearchGate(on) } })) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Review research findings")
+                            Text(model.researchGate ? "Research waits for your Approve or Send back once every spike is done."
+                                                    : "Research closes by itself once every spike is done.")
+                                .font(.footnote).foregroundStyle(Color.secondaryText)
+                        }
+                    }
+                    .disabled(!store.canApprove || model.busy)
+                    .accessibilityIdentifier("research-gate-switch")
+                }
                 if !model.enabled && !model.canTurnOn {
                     Text("Set the project’s repository first: the plan’s documents live there.")
                         .font(.footnote).foregroundStyle(Color.secondaryText)

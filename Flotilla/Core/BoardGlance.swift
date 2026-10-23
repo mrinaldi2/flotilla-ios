@@ -7,9 +7,10 @@ import Foundation
 
 typealias HomeColumn = Flotilla_Home_V1_ColumnCount
 
-/// The app's tabs (BG-Rules, decided 16 Oct): Projects · Chat · Settings.
+/// The app's tabs (0.24.0): Projects · Commands · Settings. Commands took
+/// Chat's place.
 enum AppTab: Hashable {
-    case projects, chat, settings
+    case projects, commands, settings
 }
 
 /// The Projects tab's filter chips (§3).
@@ -358,6 +359,9 @@ enum AskAction {
         case .decision: return "Decide"
         case .permissionPrompt: return "Approve"
         case .releaseAwaiting, .draftUpdated, .prReview, .planGate: return "Review"
+        case .ownerAction: return "Open"
+        case .budgetWarning: return "Raise budget"
+        case .budgetReached: return "Budget"
         default: return "Open"
         }
     }
@@ -368,7 +372,8 @@ extension NeedsDestination {
     var computerId: String? {
         switch self {
         case .decision(let id, _), .bot(let id, _, _), .item(let id, _), .reply(let id, _, _), .release(let id, _),
-             .planNode(let id, _, _): id
+             .planNode(let id, _, _), .ownerAction(let id, _), .usage(let id, _), .pullRequest(let id, _, _),
+             .pullRequests(let id, _): id
         case .note: nil
         }
     }
@@ -408,13 +413,14 @@ enum HomeRoute {
         HomeLanding(push: .release(computerId: computerId, releaseId: id))
     }
 
-    /// Screenshots of a tab, `-openTab needs|chat|settings`: "needs" still
-    /// means what waits for you, so scripts and tests keep their meaning.
+    /// Screenshots of a tab, `-openTab needs|commands|settings`: "needs" still
+    /// means what waits for you, so scripts and tests keep their meaning, and
+    /// "chat", the tab Commands replaced, opens Commands.
     static func tab(named name: String?) -> HomeLanding? {
         switch name {
         case "needs": needsYou
         case "projects": HomeLanding(filter: nil)
-        case "chat": HomeLanding(tab: .chat, filter: nil)
+        case "commands", "chat": HomeLanding(tab: .commands, filter: nil)
         case "settings": HomeLanding(tab: .settings, filter: nil)
         default: nil
         }

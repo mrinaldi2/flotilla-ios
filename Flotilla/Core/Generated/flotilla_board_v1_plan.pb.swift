@@ -272,6 +272,12 @@ nonisolated enum Flotilla_Board_V1_PlanResearchState: SwiftProtobuf.Enum, Swift.
 
   /// The owner skipped it, with a reason.
   case skipped // = 3
+
+  /// Every spike is done, and the owner reviews the findings (0.24.0,
+  /// capability `research_gate_v1`): the node's gate is RESEARCH, with its
+  /// research documents. Approving closes research; sending it back reopens
+  /// it with the note. Only where the project's `research_gate` is on.
+  case awaiting // = 4
   case UNRECOGNIZED(Int)
 
   init() {
@@ -284,6 +290,7 @@ nonisolated enum Flotilla_Board_V1_PlanResearchState: SwiftProtobuf.Enum, Swift.
     case 1: self = .open
     case 2: self = .closed
     case 3: self = .skipped
+    case 4: self = .awaiting
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -294,6 +301,7 @@ nonisolated enum Flotilla_Board_V1_PlanResearchState: SwiftProtobuf.Enum, Swift.
     case .open: return 1
     case .closed: return 2
     case .skipped: return 3
+    case .awaiting: return 4
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -304,6 +312,7 @@ nonisolated enum Flotilla_Board_V1_PlanResearchState: SwiftProtobuf.Enum, Swift.
     .open,
     .closed,
     .skipped,
+    .awaiting,
   ]
 
 }
@@ -773,9 +782,23 @@ nonisolated struct Flotilla_Board_V1_PlanEnable: Sendable {
 
   var enabled: Bool = false
 
+  /// The research gate (0.24.0, `research_gate_v1`), on by default: research
+  /// waits for the owner's Approve findings / Send back once every spike is
+  /// done. Left out, it is kept as it is.
+  var researchGate: Bool {
+    get {_researchGate ?? false}
+    set {_researchGate = newValue}
+  }
+  /// Returns true if `researchGate` has been explicitly set.
+  var hasResearchGate: Bool {self._researchGate != nil}
+  /// Clears the value of `researchGate`. Subsequent reads from it will return its default value.
+  mutating func clearResearchGate() {self._researchGate = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+
+  fileprivate var _researchGate: Bool? = nil
 }
 
 /// The owner starting a goal or an initiative. An initiative creates its
@@ -1119,6 +1142,10 @@ nonisolated struct Flotilla_Board_V1_PlanTree: Sendable {
   /// `docs/guidelines/*`.
   var guidelines: [Flotilla_Board_V1_PlanDoc] = []
 
+  /// Research waits for the owner's findings review (0.24.0,
+  /// `research_gate_v1`); on by default. Always false from an older daemon.
+  var researchGate: Bool = false
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1310,7 +1337,7 @@ nonisolated extension Flotilla_Board_V1_PlanDocKind: SwiftProtobuf._ProtoNamePro
 }
 
 nonisolated extension Flotilla_Board_V1_PlanResearchState: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLAN_RESEARCH_STATE_UNSPECIFIED\0\u{1}PLAN_RESEARCH_STATE_OPEN\0\u{1}PLAN_RESEARCH_STATE_CLOSED\0\u{1}PLAN_RESEARCH_STATE_SKIPPED\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLAN_RESEARCH_STATE_UNSPECIFIED\0\u{1}PLAN_RESEARCH_STATE_OPEN\0\u{1}PLAN_RESEARCH_STATE_CLOSED\0\u{1}PLAN_RESEARCH_STATE_SKIPPED\0\u{1}PLAN_RESEARCH_STATE_AWAITING\0")
 }
 
 nonisolated extension Flotilla_Board_V1_PlanDoc: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -1872,7 +1899,7 @@ nonisolated extension Flotilla_Board_V1_PlanNodeGet: SwiftProtobuf.Message, Swif
 
 nonisolated extension Flotilla_Board_V1_PlanEnable: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PlanEnable"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}enabled\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}enabled\0\u{3}research_gate\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1882,24 +1909,33 @@ nonisolated extension Flotilla_Board_V1_PlanEnable: SwiftProtobuf.Message, Swift
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self._researchGate) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectID.isEmpty {
       try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 1)
     }
     if self.enabled != false {
       try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 2)
     }
+    try { if let v = self._researchGate {
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Flotilla_Board_V1_PlanEnable, rhs: Flotilla_Board_V1_PlanEnable) -> Bool {
     if lhs.projectID != rhs.projectID {return false}
     if lhs.enabled != rhs.enabled {return false}
+    if lhs._researchGate != rhs._researchGate {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2341,7 +2377,7 @@ nonisolated extension Flotilla_Board_V1_PlanDocRead: SwiftProtobuf.Message, Swif
 
 nonisolated extension Flotilla_Board_V1_PlanTree: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PlanTree"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}enabled\0\u{3}has_repo\0\u{1}nodes\0\u{1}guidelines\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}enabled\0\u{3}has_repo\0\u{1}nodes\0\u{1}guidelines\0\u{3}research_gate\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2354,6 +2390,7 @@ nonisolated extension Flotilla_Board_V1_PlanTree: SwiftProtobuf.Message, SwiftPr
       case 3: try { try decoder.decodeSingularBoolField(value: &self.hasRepo_p) }()
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.nodes) }()
       case 5: try { try decoder.decodeRepeatedMessageField(value: &self.guidelines) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.researchGate) }()
       default: break
       }
     }
@@ -2375,6 +2412,9 @@ nonisolated extension Flotilla_Board_V1_PlanTree: SwiftProtobuf.Message, SwiftPr
     if !self.guidelines.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.guidelines, fieldNumber: 5)
     }
+    if self.researchGate != false {
+      try visitor.visitSingularBoolField(value: self.researchGate, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2384,6 +2424,7 @@ nonisolated extension Flotilla_Board_V1_PlanTree: SwiftProtobuf.Message, SwiftPr
     if lhs.hasRepo_p != rhs.hasRepo_p {return false}
     if lhs.nodes != rhs.nodes {return false}
     if lhs.guidelines != rhs.guidelines {return false}
+    if lhs.researchGate != rhs.researchGate {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

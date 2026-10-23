@@ -41,6 +41,8 @@ struct ItemView: View {
     @State private var planNode: PlanNode?
     /// The card's questions for the owner (0.22, `questions_v1`), kept live while on screen.
     @State private var questions: QuestionsModel?
+    /// A bot's open questions to the owner about the card (0.24.0), from its board card.
+    @State private var ownerWaiting: UInt32 = 0
 
     /// The home keeps a "Code research" section on tasks and bugs (0.21).
     private func codeResearch(_ item: Flotilla_Board_V1_Item) -> String? {
@@ -82,6 +84,11 @@ struct ItemView: View {
                     DraftBanner(item: item, boardName: (board?.boards.count ?? 0) > 1 ? board?.board?.name : nil)
                 }
                 Section {
+                    if live, let waiting = CardWaiting.line(ownerWaiting) {
+                        Text(waiting).font(.subheadline.weight(.semibold)).foregroundStyle(Tone.working.text)
+                            .accessibilityLabel(CardWaiting.label(ownerWaiting))
+                            .accessibilityIdentifier("item-waiting")
+                    }
                     Text(item.title).font(.headline)
                     // Where the card stands (UX-037): "Doing · Desktop Dev", flags.
                     let facts = CardPreview.of(item) { store.bot($0)?.name }
@@ -161,6 +168,10 @@ struct ItemView: View {
                                   discussion: discussion, chatting: $chatting) { await load() }
                 }
                 if let questions { QuestionsSection(model: questions) }
+                // A push or a command a bot asks the owner to run for this card (0.24.0).
+                if live, store.hasOwnerActions { CardOwnerActions(projectId: project ?? "", itemId: itemId) }
+                // The card's pull requests (H-261), each with where it stands.
+                if live, store.hasPullRequests { CardPullRequests(projectId: project ?? "", itemId: itemId) }
                 if live {
                     Section {
                         if groups.isEmpty { EmptyNote(text: "No comments yet", systemImage: "text.bubble") }
@@ -362,6 +373,7 @@ struct ItemView: View {
             if fresh.item.state == "draft" { await followDraft(fresh) }
             await loadQuestions(fresh)
             await loadPlanParts(fresh)
+            await loadOwnerWaiting(fresh)
             if let answering, !openedReply,
                let row = CommentThread.rows(comments: fresh.comments, history: fresh.history, pending: []).first(where: { $0.id == answering }) {
                 openedReply = true
@@ -370,6 +382,14 @@ struct ItemView: View {
         } catch {
             if detail == nil { failure = error.localizedDescription }
         }
+    }
+
+    /// Whether a bot's question holds the card on the owner: its board card says (0.24.0).
+    private func loadOwnerWaiting(_ fresh: BoardItemDetail) async {
+        let live = fresh.item.state.isEmpty || fresh.item.state == "live"
+        guard live, store.speaksProto, let project,
+              let snapshot = try? await store.board(projectId: project) else { return }
+        ownerWaiting = snapshot.cards.first { $0.id == itemId }?.ownerWaiting ?? 0
     }
 
     /// The card's questions, open first, from its detail; then followed so

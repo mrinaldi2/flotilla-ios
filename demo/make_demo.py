@@ -1203,6 +1203,11 @@ def main() -> None:
         spawn_workers(ws, args.port, home, out, bots)
     ws.request("send_user_message", to_bot_id=bots["iOS Dev"]["id"],
                body="Nice work on the banner. Keep it behind the flag until QA signs off.")
+    if "push_requests_v1" in hello.get("capabilities", []):
+        # 0.24: a command a bot asks the owner to run, a Run card in Needs you that the phone runs.
+        bot_tool(args.port, home, bots["Backend Dev"]["id"], "propose_owner_action",
+                 content="du -sh ~/Library/Caches/aurora-notes", cwd=out,
+                 reason="See how much the sync cache holds before I clear it.")
 
     launch = (f"xcrun simctl launch booted <your bundle id> -gravHost 127.0.0.1 -gravPort {args.port} "
               f"-lensPort {args.lens_port} -gravToken {token}")

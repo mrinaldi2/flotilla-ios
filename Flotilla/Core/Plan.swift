@@ -29,6 +29,8 @@ enum PlanCapability {
     static let itemTypes = "item_types_v2"
     /// Research columns, the `start.research` guard and Design links.
     static let research = "column_research"
+    /// The research gate (0.24.0): research waits for the owner once every spike is done.
+    static let researchGate = "research_gate_v1"
     /// `PLAN_GATE` rows in Needs you.
     static let attention = "attention_plan"
 }
@@ -38,6 +40,8 @@ extension AppStore {
     var hasItemTypesV2: Bool { capabilities.contains(PlanCapability.itemTypes) }
     var hasResearchColumn: Bool { capabilities.contains(PlanCapability.research) }
     var hasPlanAttention: Bool { capabilities.contains(PlanCapability.attention) || PlanFixture.isOn }
+    /// Research waits for the owner's findings review (0.24.0).
+    var hasResearchGate: Bool { capabilities.contains(PlanCapability.researchGate) }
 }
 
 /// The card types New item offers: the 0.21 four on a home that takes them,
@@ -62,7 +66,8 @@ protocol PlanService: AnyObject {
     func planRule(_ rule: Flotilla_Board_V1_PlanRule) async throws -> PlanResult
     func planDocRead(_ read: Flotilla_Board_V1_PlanDocRead) async throws -> Flotilla_Board_V1_PlanDocContent
     /// The owner turning planning on or off (`plan_enable`); the tree after it.
-    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree
+    /// `researchGate` nil keeps the research gate as it is (0.24.0).
+    func planEnable(projectId: String, enabled: Bool, researchGate: Bool?) async throws -> PlanTree
     /// A goal's stage, by the owner (`plan_update`).
     func planUpdate(_ update: Flotilla_Board_V1_PlanUpdate) async throws -> PlanResult
     /// The owner stopping a node and what is under it (`plan_drop`).
@@ -122,10 +127,11 @@ extension AppStore: PlanService {
         return content
     }
 
-    func planEnable(projectId: String, enabled: Bool) async throws -> PlanTree {
+    func planEnable(projectId: String, enabled: Bool, researchGate: Bool?) async throws -> PlanTree {
         var enable = Flotilla_Board_V1_PlanEnable()
         enable.projectID = projectId
         enable.enabled = enabled
+        if let researchGate { enable.researchGate = researchGate }
         guard case .plan(let tree) = try await boardCall(.planEnable(enable), name: "plan_enable") else { throw unexpectedPlan("plan_enable") }
         return tree
     }
@@ -286,6 +292,24 @@ enum PlanWords {
         }
     }
 
+    /// Research waits for the owner's review of its findings (0.24.0): the
+    /// node's gate is RESEARCH, with no document of its own.
+    static func awaitsFindings(_ node: PlanNode) -> Bool {
+        guard node.hasGate, node.gate.stage == .research else { return false }
+        if node.hasResearch, node.research.state == .awaiting { return true }
+        return node.gate.submittedBy == "daemon"
+    }
+
+    /// "HLD waits for you", "Research findings wait for you".
+    static func waits(_ node: PlanNode) -> String {
+        awaitsFindings(node) ? "Research findings wait for you" : waits(node.gate)
+    }
+
+    /// "Approve research" for findings, else the gate's own title.
+    static func gateTitle(_ node: PlanNode) -> String {
+        awaitsFindings(node) ? "Approve research" : gateTitle(node.gate)
+    }
+
     /// "HLD waits for you", "Proposal waits for you".
     static func waits(_ gate: PlanGate) -> String {
         switch gate.stage {
@@ -365,6 +389,7 @@ enum PlanWords {
             let when = research.hasClosedAt ? " \(research.closedAt.date.formatted(.dateTime.day().month(.abbreviated)))" : ""
             return "Research · closed\(when)"
         case .skipped: return "Research · skipped"
+        case .awaiting: return "Research · waits for your review"
         default: return "Research · open"
         }
     }
@@ -604,7 +629,23 @@ final class PlanSwitchModel {
         failure = nil
         defer { busy = false }
         do {
-            self.tree = try await service.planEnable(projectId: projectId, enabled: !tree.enabled)
+            self.tree = try await service.planEnable(projectId: projectId, enabled: !tree.enabled, researchGate: nil)
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+
+    /// Research waits for the owner's review of the findings (0.24.0).
+    var researchGate: Bool { tree?.researchGate ?? false }
+
+    /// Turns the research gate; planning stays as it is.
+    func setResearchGate(_ on: Bool) async {
+        guard let tree, !busy, tree.researchGate != on else { return }
+        busy = true
+        failure = nil
+        defer { busy = false }
+        do {
+            self.tree = try await service.planEnable(projectId: projectId, enabled: tree.enabled, researchGate: on)
         } catch {
             failure = error.localizedDescription
         }
@@ -697,22 +738,34 @@ enum PlanOutcome: Equatable {
 /// The two answers a waiting node offers, by what waits: a document gate,
 /// a proposed initiative, or the lead's request to skip research.
 struct PlanAsk: Equatable {
-    enum Kind: Equatable { case document, proposal, researchSkip }
+    /// `findings`: research waits for the owner's review of what the spikes
+    /// found (0.24.0, `PLAN_RESEARCH_STATE_AWAITING`), ruled as a document is.
+    enum Kind: Equatable { case document, proposal, researchSkip, findings }
 
     let kind: Kind
 
-    init(_ stage: PlanStage) {
+    init(_ stage: PlanStage, awaiting: Bool = false) {
         switch stage {
         case .proposed: kind = .proposal
-        case .research: kind = .researchSkip
+        case .research: kind = awaiting ? .findings : .researchSkip
         default: kind = .document
         }
     }
 
+    /// What waits on a node: its gate's stage, and whether research awaits review.
+    init(_ node: PlanNode) {
+        self.init(node.gate.stage, awaiting: PlanWords.awaitsFindings(node))
+    }
+
+    /// Opened to read before ruling: a document, or the research's findings.
+    var reads: Bool { kind == .document || kind == .findings }
+
+    static let findingsFooter = "Approving closes research and the next step opens. Sending it back reopens research with your note: the lead revises it."
+
     /// The filled button: Review opens the gate; the others rule at once.
     var yes: String {
         switch kind {
-        case .document: "Review"
+        case .document, .findings: "Review"
         case .proposal: "Accept"
         case .researchSkip: "Skip"
         }
@@ -720,18 +773,18 @@ struct PlanAsk: Equatable {
 
     var no: String {
         switch kind {
-        case .document: "Later"
+        case .document, .findings: "Later"
         case .proposal: "Decline"
         case .researchSkip: "Keep research"
         }
     }
 
-    /// "HLD gate", "Proposal", "Research".
-    static func kindWord(_ stage: PlanStage?) -> String {
+    /// "HLD gate", "Proposal", "Research", "Research findings".
+    static func kindWord(_ stage: PlanStage?, awaiting: Bool = false) -> String {
         guard let stage else { return "Plan" }
         switch stage {
         case .proposed: return "Proposal"
-        case .research: return "Research"
+        case .research: return awaiting ? "Research findings" : "Research"
         default: return "\(PlanWords.stage(stage)) gate"
         }
     }
@@ -742,13 +795,14 @@ struct PlanAsk: Equatable {
         case .document: "Approve the \(PlanWords.stage(node.gate.stage)) of \(node.title)?"
         case .proposal: "Accept the initiative \(node.title)?"
         case .researchSkip: "Skip research for \(node.title)?"
+        case .findings: "Approve the research findings of \(node.title)?"
         }
     }
 
     /// The note sheet's words for ruling no (and for a skip's reason).
     var noteTitle: String {
         switch kind {
-        case .document: "Send back"
+        case .document, .findings: "Send back"
         case .proposal: "Decline"
         case .researchSkip: "Keep research"
         }
@@ -778,7 +832,7 @@ final class GateModel {
         self.confirm = confirm
     }
 
-    var ask: PlanAsk { PlanAsk(node.gate.stage) }
+    var ask: PlanAsk { PlanAsk(node) }
 
     func toggle(_ index: Int) {
         if leftOut.contains(index) { leftOut.remove(index) } else { leftOut.insert(index) }

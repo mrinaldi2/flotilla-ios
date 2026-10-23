@@ -1,7 +1,7 @@
 import XCTest
 
 /// H-134 (UX-024) on iPhone: Projects home and its Needs you filter (I1, 0.20), the project screen and
-/// the bot page Reports-first (I2), the main chat (I3). Against the demo world, whose
+/// the bot page Reports-first (I2), Commands in the main chat's place (0.24). Against the demo world, whose
 /// daemon may predate 0.17: those checks take the legacy path the app shows it, and the
 /// 0.17 paths (projects_overview cards) come from the golden fixture via -homeFixture.
 /// The live 0.17 checks are in H134LiveTests.
@@ -216,49 +216,25 @@ final class H134Tests: XCTestCase {
         }
     }
 
-    // MARK: I3 Main chat (iPhone)
+    // MARK: Commands (0.24.0), in the main chat's place
 
-    func testMainChat() throws {
+    func testCommandsTookChatsPlace() throws {
         let app = try DemoApp.launch()
         allowSystemAlerts()
-        app.tab("Chat")
-        waitFor(app.navigationBars["Chat"])
-        let footer = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Threads come with version 0.17'")).firstMatch
-        if footer.waitForExistence(timeout: 5) {
-            // Older daemon: its bots under its name, each opening the bot's chat.
-            waitFor(app.staticTexts["Demo Mac"])
-            waitFor(app.buttons["Architect"])
+        XCTAssertFalse(app.tabBars.buttons["Chat"].exists, "The Chat tab is gone in 0.24")
+        app.tab("Commands")
+        waitFor(app.navigationBars["Commands"])
+        for chip in ["running", "failed", "all"] {
+            XCTAssertTrue(waitFor(app.buttons["commands-status-\(chip)"], 5).exists, chip)
         }
-        screenshot("QA-004-i3-chat")
-
-        if footer.exists {
-            app.buttons["Architect"].tap()
-            waitFor(app.pane("Reports"))
-            sleep(1)
-            screenshot("QA-004-i3-chat-bot-opened")
-            // The Chat pane: its composer, and not Reports (the tab bar's Chat is selected too).
-            XCTAssertFalse(app.pane("Reports").isSelected, "A bot from Chat opened on Reports, not its chat")
-            let composer = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Message Architect' OR placeholderValue == 'Message Architect'")).firstMatch
-            XCTAssertTrue(composer.waitForExistence(timeout: 5), "No chat composer: the bot did not open on its chat")
-            app.tab("Chat")
-        }
-
-        // ✎ New message: every bot, grouped by project, with search.
-        waitFor(app.buttons["New message"]).tap()
-        waitFor(app.navigationBars["Message a bot"])
-        let backend = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Backend Dev'"))
-        let before = backend.count
-        let search = app.searchFields.firstMatch
-        waitFor(search).tap()
-        search.typeText("Arch")
+        screenshot("0-24-commands")
+        app.buttons["commands-status-all"].tap()
         sleep(1)
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Architect'")).count > 0, "Search lost Architect")
-        XCTAssertLessThan(backend.count, before, "Search did not filter Backend Dev out of Message a bot")
-        screenshot("QA-004-i3-message-a-bot")
+        screenshot("0-24-commands-all")
     }
 }
 
-/// H-134 I3 on iPad: the sidebar of ranked projects and the main chat sliding over.
+/// H-134 I3 on iPad: the sidebar of Commands and the ranked projects.
 /// Run on an iPad simulator: `SIMULATOR=<iPad> scripts/ui-tests.sh -only-testing:UITests/H134PadTests`.
 final class H134PadTests: XCTestCase {
     override func setUpWithError() throws {
@@ -275,7 +251,7 @@ final class H134PadTests: XCTestCase {
         let app = try DemoApp.launch()
         allowSystemAlerts()
         waitFor(app.navigationBars["Flotilla"], 20)
-        for item in ["Chat", "All projects", "Settings"] {
+        for item in ["Commands", "All projects", "Settings"] {
             XCTAssertTrue(waitFor(sidebarItem(app, item), 5).exists, item)
         }
         // Needs you is the Projects filter now, not a sidebar row (0.20).
@@ -291,25 +267,5 @@ final class H134PadTests: XCTestCase {
             XCTAssertTrue(waitFor(app.buttons[segment].firstMatch, 10).exists, segment)
         }
         screenshot("QA-004-i3-ipad-project")
-    }
-
-    func testMainChatSlidesOver() throws {
-        let app = try DemoApp.launch()
-        allowSystemAlerts()
-        waitFor(app.navigationBars["Flotilla"], 20)
-        sidebarItem(app, "Aurora Notes").tap()
-        waitFor(app.buttons["Overview"].firstMatch, 10)
-        waitFor(app.buttons["Main chat"]).tap()
-        // The chat beside the project, not instead of it.
-        waitFor(app.buttons["New message"], 10)
-        XCTAssertTrue(app.buttons["Overview"].firstMatch.exists, "The project went away under the chat")
-        screenshot("QA-004-i3-ipad-chat-panel")
-    }
-
-    func testChatPanelLaunchArgument() throws {
-        let app = try DemoApp.launch(["-openProject", "Aurora", "-openChatPanel", "YES"])
-        allowSystemAlerts()
-        waitFor(app.buttons["New message"], 20)
-        screenshot("QA-004-i3-ipad-chat-panel-arg")
     }
 }

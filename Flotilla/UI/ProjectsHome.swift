@@ -36,6 +36,14 @@ enum NeedsDestination: Hashable {
     case release(computerId: String, releaseId: String)
     /// A plan node waiting for the owner (0.21): its gate, on the board's home.
     case planNode(computerId: String, projectId: String, nodeId: String)
+    /// A command or push a bot asks the owner to run (0.24.0): Run or Reject.
+    case ownerAction(computerId: String, actionId: String)
+    /// A project's usage and budget (0.24.0, `usage_v1`).
+    case usage(computerId: String, projectId: String)
+    /// One pull request, on the board's home (H-261, `pull_requests`).
+    case pullRequest(computerId: String, projectId: String, number: UInt32)
+    /// A project's pull requests.
+    case pullRequests(computerId: String, projectId: String)
     case note(title: String, text: String)
 }
 
@@ -575,6 +583,18 @@ struct ProjectsHomeView: View {
             separated(inList) {
                 PlanAskRow(row: row, computer: on, primary: primary) { path.append($0) }
             }
+        } else if row.kind == .ownerAction, let on = fleet.computer(daemonId: row.daemonID) ?? fleet.computer(id: card.computerId),
+                  on.store.hasOwnerActions {
+            // A command or push to run (0.24.0): Push or Run, and Reject, right here.
+            separated(inList) {
+                OwnerActionAskRow(row: row, computer: on) { path.append($0) }
+            }
+        } else if row.kind == .budgetWarning || row.kind == .budgetReached,
+                  let on = fleet.computer(daemonId: row.daemonID) ?? fleet.computer(id: card.computerId), on.store.hasUsage {
+            // A project near or at its weekly budget (0.24.0): Raise budget, Extend today.
+            separated(inList) {
+                BudgetAskRow(row: row, computer: on, primary: primary) { path.append($0) }
+            }
         } else if row.kind == .question, let on = fleet.computer(daemonId: row.daemonID) ?? fleet.computer(id: card.computerId),
                   on.store.hasQuestions {
             // A bot's question (0.22): its options and a reply, right here.
@@ -731,8 +751,11 @@ extension Fleet {
             }
         case .releaseID(let id)?:
             if let on { return .release(computerId: on.id, releaseId: id) }
-        case .actionID?:
-            return .note(title: row.title, text: "Run cards come to the phone in a later update. For now, run or reject it on \(place), in the Flotilla app.")
+        case .actionID(let id)?:
+            if let on, on.store.hasOwnerActions { return .ownerAction(computerId: on.id, actionId: id) }
+            return .note(title: row.title, text: "Run or reject it on \(place), in the Flotilla app.")
+        case .role(let role)?:
+            return .note(title: row.title, text: RoleWords.unheld(role, on: place))
         case .itemID(let id)?:
             // The card on the computer that keeps its board, where a comment is
             // accepted (H-210); the bot's computer would refuse it.
@@ -740,11 +763,17 @@ extension Fleet {
         case .planNodeID(let id)?:
             // A gate, a proposed initiative or a research skip: ruled on the home that keeps the plan.
             if let on, on.store.hasPlanAttention { return .planNode(computerId: on.id, projectId: row.projectID, nodeId: id) }
-        case .prNumber?, .cleanupJobID?, .machine?, nil:
-            // PR reviews, cleanups and disk space are answered on the computer.
+        case .prNumber(let number)?:
+            // The PR on the board's home, which keeps it, with the owner's review.
+            if let on, on.store.hasPullRequests { return .pullRequest(computerId: on.id, projectId: row.projectID, number: number) }
+        case .cleanupJobID?, .machine?, nil:
+            // Cleanups and disk space are answered on the computer.
             break
         }
         switch row.kind {
+        case .budgetWarning, .budgetReached:
+            if let on, on.store.hasUsage { return .usage(computerId: on.id, projectId: row.projectID) }
+            return .note(title: row.title, text: "Raise its budget on \(place), in the Flotilla app.")
         case .relayedRulings:
             return .note(title: row.title, text: "Confirm them under Decisions on \(place).")
         case .botStopped:
@@ -787,6 +816,22 @@ struct NeedsDestinations: ViewModifier {
             case .planNode(let computerId, let projectId, let nodeId):
                 if let computer = fleet.computer(id: computerId) {
                     PlanGateScreen(projectId: projectId, nodeId: nodeId).computerEnvironment(computer)
+                }
+            case .ownerAction(let computerId, let actionId):
+                if let computer = fleet.computer(id: computerId) {
+                    OwnerActionScreen(actionId: actionId).computerEnvironment(computer)
+                }
+            case .usage(let computerId, let projectId):
+                if let computer = fleet.computer(id: computerId) {
+                    ProjectUsageScreen(projectId: projectId).computerEnvironment(computer)
+                }
+            case .pullRequest(let computerId, let projectId, let number):
+                if let computer = fleet.computer(id: computerId) {
+                    PRDetailScreen(projectId: projectId, number: number).computerEnvironment(computer)
+                }
+            case .pullRequests(let computerId, let projectId):
+                if let computer = fleet.computer(id: computerId) {
+                    ProjectPullRequestsScreen(projectId: projectId).computerEnvironment(computer)
                 }
             case .note(let title, let text):
                 NeedsNote(title: title, text: text)
@@ -914,6 +959,10 @@ extension HomeAttentionRow {
         case .question: questionBlocking ? "Question · holds the gate" : "Question"
         case .draftUpdated: "Draft updated"
         case .planGate: "Plan"
+        case .prReview: "Pull request"
+        case .roleUnheld: "Role nobody holds"
+        case .budgetWarning: "Budget"
+        case .budgetReached: "Budget reached"
         default: "Needs you"
         }
     }
@@ -932,13 +981,16 @@ extension HomeAttentionRow {
         case .ownerQuestion, .question: "questionmark.bubble.fill"
         case .draftUpdated: "square.and.pencil"
         case .planGate: "flag.fill"
+        case .prReview: "arrow.triangle.pull"
+        case .roleUnheld: "person.crop.circle.badge.questionmark"
+        case .budgetWarning, .budgetReached: "gauge.with.dots.needle.67percent"
         default: "circle"
         }
     }
 
     var tone: Tone {
         switch kind {
-        case .p0Item, .servingOff: .failed
+        case .p0Item, .servingOff, .budgetReached: .failed
         case .decision where priority == "urgent" || priority == "P0": .failed
         case .relayedRulings, .offBoard: .quiet
         case .ownerQuestion, .draftUpdated: .working

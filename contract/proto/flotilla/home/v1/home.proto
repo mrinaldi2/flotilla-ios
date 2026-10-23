@@ -80,6 +80,19 @@ message ProjectRow {
   // one's and the linked ones' parts. Unset when nothing needs the owner,
   // and from an older daemon.
   AttentionRow top_attention = 22;
+  // Addition (0.24.0, capability `usage_v1`): the project's usage, for the
+  // "usage today" line on its card. Unset from an older daemon.
+  ProjectUsage usage = 23;
+}
+
+// A project's token usage (0.24.0, `usage_v1`). Tokens are every kind
+// summed: input, output, cache reads and cache writes.
+message ProjectUsage {
+  uint64 tokens_today = 1;
+  uint64 tokens_week = 2;                   // the budget's week: the last 7 days
+  uint64 budget_week = 3;                   // 0 = no budget
+  double est_cost_today_usd = 4;            // from the owner's price table; an estimate
+  bool budget_reached = 5;                  // its on-demand bots don't wake
 }
 
 message ColumnCount {                       // addition (H-144)
@@ -183,6 +196,9 @@ enum AttentionKind {
   BOT_STOPPED = 19;                         // a bot stopped, crashed, or can't run: `bot`, `bot_state` (0.20.0, capability `attention_bot_stopped`)
   PLAN_GATE = 20;                           // a plan node waits for the owner: a gate, a proposed initiative or a research skip; `plan_node_id` (0.21.0, capability `attention_plan`)
   QUESTION = 21;                            // a bot's question for the owner, one row each; `decision_id` is the question's id (0.22.0, capability `questions_v1`)
+  ROLE_UNHELD = 22;                         // a column assigns a role nobody holds: `role`, the card in `item_id` of the title (0.24.0, capability `board_flow_v1`)
+  BUDGET_WARNING = 23;                      // a project used 80% of its weekly token budget (0.24.0, capability `usage_v1`)
+  BUDGET_REACHED = 24;                      // a project used its whole weekly budget: its on-demand bots don't wake (0.24.0, `usage_v1`)
 }
 
 message AttentionRow {
@@ -204,6 +220,7 @@ message AttentionRow {
     string cleanup_job_id = 17;             // cleanup_held: the job (cleanup_resolve)
     string machine = 18;                    // disk_low: the computer (cleanup_now, disk_report)
     string plan_node_id = 19;               // plan_gate: the node (plan_node_get, plan_rule)
+    string role = 26;                       // role_unheld: the role's token, e.g. "architect" (create a bot with it)
   }
   uint32 relayed_count = 20;                // relayed_rulings only
   string priority = 21;                     // decision only: P0..P3

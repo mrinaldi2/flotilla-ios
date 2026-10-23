@@ -910,6 +910,15 @@ nonisolated struct Flotilla_Board_V1_BoardColumn: Sendable {
 
   var allowedFrom: [String] = []
 
+  /// The board runs the SDLC (0.24.0, capability `board_flow_v1`): when a
+  /// card enters the column, it is assigned to a holder of this role, as
+  /// `item_assign {role}` picks one (awake and free, then asleep, which wakes
+  /// it), and the holder is told. However the card got there: a bot, the
+  /// owner or a fact. ROLE_UNSPECIFIED = nobody: the card keeps its assignee.
+  /// A role nobody holds leaves the card with whoever moved it and raises a
+  /// `ROLE_UNHELD` row in Needs you.
+  var onEntry: Flotilla_Board_V1_Role = .unspecified
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1437,6 +1446,14 @@ nonisolated struct Flotilla_Board_V1_ItemCard: @unchecked Sendable {
   var questionsOpen: UInt32 {
     get {_storage._questionsOpen}
     set {_uniqueStorage()._questionsOpen = newValue}
+  }
+
+  /// A bot's open questions to the owner about the card (0.24.0): asked on
+  /// it, or from its thread naming it ("[card H-1] …"). The card waits on
+  /// the owner while it is above 0; never on a done or cancelled card.
+  var ownerWaiting: UInt32 {
+    get {_storage._ownerWaiting}
+    set {_uniqueStorage()._ownerWaiting = newValue}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2063,7 +2080,7 @@ nonisolated extension Flotilla_Board_V1_BoardSettings: SwiftProtobuf.Message, Sw
 
 nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BoardColumn"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{3}board_id\0\u{1}kind\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_id\0\u{1}key\0\u{1}name\0\u{1}ord\0\u{1}category\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{3}board_id\0\u{1}kind\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0\u{3}on_entry\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2084,6 +2101,7 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
       case 11: try { try decoder.decodeRepeatedStringField(value: &self.movers) }()
       case 12: try { try decoder.decodeRepeatedStringField(value: &self.rules) }()
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.allowedFrom) }()
+      case 14: try { try decoder.decodeSingularEnumField(value: &self.onEntry) }()
       default: break
       }
     }
@@ -2133,6 +2151,9 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
     if !self.allowedFrom.isEmpty {
       try visitor.visitRepeatedStringField(value: self.allowedFrom, fieldNumber: 13)
     }
+    if self.onEntry != .unspecified {
+      try visitor.visitSingularEnumField(value: self.onEntry, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2150,6 +2171,7 @@ nonisolated extension Flotilla_Board_V1_BoardColumn: SwiftProtobuf.Message, Swif
     if lhs.movers != rhs.movers {return false}
     if lhs.rules != rhs.rules {return false}
     if lhs.allowedFrom != rhs.allowedFrom {return false}
+    if lhs.onEntry != rhs.onEntry {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2662,7 +2684,7 @@ nonisolated extension Flotilla_Board_V1_Item: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ItemCard"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0\u{3}plan_node_id\0\u{3}questions_open\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{1}title\0\u{1}priority\0\u{1}size\0\u{1}rank\0\u{3}column_key\0\u{1}assignee\0\u{1}platforms\0\u{1}labels\0\u{1}blocked\0\u{1}stale\0\u{3}ac_checked\0\u{3}ac_total\0\u{1}version\0\u{3}owner_commented_at\0\u{3}board_id\0\u{1}draft\0\u{1}invited\0\u{3}move_block\0\u{3}plan_node_id\0\u{3}questions_open\0\u{3}owner_waiting\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -2687,6 +2709,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
     var _moveBlock: Flotilla_Board_V1_MoveBlock? = nil
     var _planNodeID: String? = nil
     var _questionsOpen: UInt32 = 0
+    var _ownerWaiting: UInt32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -2719,6 +2742,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       _moveBlock = source._moveBlock
       _planNodeID = source._planNodeID
       _questionsOpen = source._questionsOpen
+      _ownerWaiting = source._ownerWaiting
     }
   }
 
@@ -2759,6 +2783,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         case 20: try { try decoder.decodeSingularMessageField(value: &_storage._moveBlock) }()
         case 21: try { try decoder.decodeSingularStringField(value: &_storage._planNodeID) }()
         case 22: try { try decoder.decodeSingularUInt32Field(value: &_storage._questionsOpen) }()
+        case 23: try { try decoder.decodeSingularUInt32Field(value: &_storage._ownerWaiting) }()
         default: break
         }
       }
@@ -2837,6 +2862,9 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
       if _storage._questionsOpen != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._questionsOpen, fieldNumber: 22)
       }
+      if _storage._ownerWaiting != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._ownerWaiting, fieldNumber: 23)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2868,6 +2896,7 @@ nonisolated extension Flotilla_Board_V1_ItemCard: SwiftProtobuf.Message, SwiftPr
         if _storage._moveBlock != rhs_storage._moveBlock {return false}
         if _storage._planNodeID != rhs_storage._planNodeID {return false}
         if _storage._questionsOpen != rhs_storage._questionsOpen {return false}
+        if _storage._ownerWaiting != rhs_storage._ownerWaiting {return false}
         return true
       }
       if !storagesAreEqual {return false}

@@ -212,6 +212,8 @@ message ColumnAdd {
   repeated string movers = 8;
   repeated string rules = 9;
   repeated string allowed_from = 10;
+  // As on `BoardColumn` (0.24.0, `board_flow_v1`).
+  optional Role on_entry = 11;
 }
 
 // Changes one column. Lists replace the column's (`set_policy` says the
@@ -232,6 +234,8 @@ message ColumnUpdate {
   repeated string movers = 12;
   repeated string rules = 13;
   repeated string allowed_from = 14;
+  // As on `BoardColumn` (0.24.0, `board_flow_v1`); ROLE_UNSPECIFIED clears it.
+  optional Role on_entry = 15;
 }
 
 // Removes a column, moving its items to `move_items_to` first.

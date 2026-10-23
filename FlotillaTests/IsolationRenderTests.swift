@@ -65,8 +65,4 @@ final class IsolationRenderTests: XCTestCase {
         render(NewProjectButton(prominent: true).environment(Fleet()))
         render(ProjectsHomeView().environment(Fleet()))
     }
-
-    func testTheBotPickerRendersWithTheFleetItDeclares() {
-        render(BotPicker { _ in }.environment(Fleet()))
-    }
 }

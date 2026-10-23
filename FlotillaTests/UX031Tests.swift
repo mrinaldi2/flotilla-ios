@@ -32,29 +32,12 @@ final class UX031Tests: XCTestCase {
         XCTAssertEqual(PermissionWords.middleTruncated("npm ci"), "npm ci")
     }
 
-    func testAThreadWithAnOpenQuestionPreviewsIt() {
-        var thread = Flotilla_Home_V1_OwnerThread()
-        thread.bot.botID = "dev"
-        thread.bot.name = "Desktop Dev"
-        thread.last.text = "Done: **sync-conflicts.md** is in the artifacts."
-        thread.openQuestion = true
-        var card = ThreadCard(thread, computerId: "mac")
+    func testAQuestionStillOpenIsTheNewestAsking() {
         let entries = [
             ThreadEntry(id: "1", fromOwner: false, text: "Should the release notes mention the new board?", at: nil, asks: true, open: true),
-            ThreadEntry(id: "2", fromOwner: false, text: "Done: **sync-conflicts.md** is in the artifacts.", at: nil, asks: false, open: false),
+            ThreadEntry(id: "2", fromOwner: false, text: "Done.", at: nil, asks: false, open: false),
         ]
-        card.preview(question: entries.openQuestion)
-        XCTAssertEqual(card.last, "Should the release notes mention the new board?")
-        XCTAssertFalse(card.lastFromOwner)
-    }
-
-    func testWithoutAnOpenQuestionTheNewestMessageStays() {
-        var thread = Flotilla_Home_V1_OwnerThread()
-        thread.last.text = "Done."
-        var card = ThreadCard(thread, computerId: "mac")
-        card.preview(question: ThreadEntry(id: "1", fromOwner: false, text: "Old?", at: nil, asks: true, open: true))
-        XCTAssertEqual(card.last, "Done.", "the thread isn't marked as asking")
-        let answered = [ThreadEntry(id: "1", fromOwner: false, text: "Old?", at: nil, asks: true, open: false)]
-        XCTAssertNil(answered.openQuestion)
+        XCTAssertEqual(entries.openQuestion?.id, "1")
+        XCTAssertNil([ThreadEntry(id: "1", fromOwner: false, text: "Old?", at: nil, asks: true, open: false)].openQuestion)
     }
 }

@@ -1125,6 +1125,16 @@ nonisolated struct Flotilla_Board_V1_ColumnAdd: Sendable {
 
   var allowedFrom: [String] = []
 
+  /// As on `BoardColumn` (0.24.0, `board_flow_v1`).
+  var onEntry: Flotilla_Board_V1_Role {
+    get {_onEntry ?? .unspecified}
+    set {_onEntry = newValue}
+  }
+  /// Returns true if `onEntry` has been explicitly set.
+  var hasOnEntry: Bool {self._onEntry != nil}
+  /// Clears the value of `onEntry`. Subsequent reads from it will return its default value.
+  mutating func clearOnEntry() {self._onEntry = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1132,6 +1142,7 @@ nonisolated struct Flotilla_Board_V1_ColumnAdd: Sendable {
   fileprivate var _after: String? = nil
   fileprivate var _wipLimit: UInt32? = nil
   fileprivate var _wipScope: Flotilla_Board_V1_WipScope? = nil
+  fileprivate var _onEntry: Flotilla_Board_V1_Role? = nil
 }
 
 /// Changes one column. Lists replace the column's (`set_policy` says the
@@ -1226,6 +1237,16 @@ nonisolated struct Flotilla_Board_V1_ColumnUpdate: Sendable {
 
   var allowedFrom: [String] = []
 
+  /// As on `BoardColumn` (0.24.0, `board_flow_v1`); ROLE_UNSPECIFIED clears it.
+  var onEntry: Flotilla_Board_V1_Role {
+    get {_onEntry ?? .unspecified}
+    set {_onEntry = newValue}
+  }
+  /// Returns true if `onEntry` has been explicitly set.
+  var hasOnEntry: Bool {self._onEntry != nil}
+  /// Clears the value of `onEntry`. Subsequent reads from it will return its default value.
+  mutating func clearOnEntry() {self._onEntry = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -1238,6 +1259,7 @@ nonisolated struct Flotilla_Board_V1_ColumnUpdate: Sendable {
   fileprivate var _visible: Bool? = nil
   fileprivate var _after: String? = nil
   fileprivate var _setPolicy: Bool? = nil
+  fileprivate var _onEntry: Flotilla_Board_V1_Role? = nil
 }
 
 /// Removes a column, moving its items to `move_items_to` first.
@@ -4685,7 +4707,7 @@ nonisolated extension Flotilla_Board_V1_LabelGroupList: SwiftProtobuf.Message, S
 
 nonisolated extension Flotilla_Board_V1_ColumnAdd: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ColumnAdd"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_id\0\u{1}version\0\u{1}name\0\u{1}kind\0\u{1}after\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_id\0\u{1}version\0\u{1}name\0\u{1}kind\0\u{1}after\0\u{3}wip_limit\0\u{3}wip_scope\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0\u{3}on_entry\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4703,6 +4725,7 @@ nonisolated extension Flotilla_Board_V1_ColumnAdd: SwiftProtobuf.Message, SwiftP
       case 8: try { try decoder.decodeRepeatedStringField(value: &self.movers) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.rules) }()
       case 10: try { try decoder.decodeRepeatedStringField(value: &self.allowedFrom) }()
+      case 11: try { try decoder.decodeSingularEnumField(value: &self._onEntry) }()
       default: break
       }
     }
@@ -4743,6 +4766,9 @@ nonisolated extension Flotilla_Board_V1_ColumnAdd: SwiftProtobuf.Message, SwiftP
     if !self.allowedFrom.isEmpty {
       try visitor.visitRepeatedStringField(value: self.allowedFrom, fieldNumber: 10)
     }
+    try { if let v = self._onEntry {
+      try visitor.visitSingularEnumField(value: v, fieldNumber: 11)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4757,6 +4783,7 @@ nonisolated extension Flotilla_Board_V1_ColumnAdd: SwiftProtobuf.Message, SwiftP
     if lhs.movers != rhs.movers {return false}
     if lhs.rules != rhs.rules {return false}
     if lhs.allowedFrom != rhs.allowedFrom {return false}
+    if lhs._onEntry != rhs._onEntry {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4764,7 +4791,7 @@ nonisolated extension Flotilla_Board_V1_ColumnAdd: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Flotilla_Board_V1_ColumnUpdate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ColumnUpdate"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_id\0\u{1}version\0\u{1}key\0\u{1}name\0\u{1}kind\0\u{3}wip_limit\0\u{3}clear_wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{1}after\0\u{3}set_policy\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}board_id\0\u{1}version\0\u{1}key\0\u{1}name\0\u{1}kind\0\u{3}wip_limit\0\u{3}clear_wip_limit\0\u{3}wip_scope\0\u{1}visible\0\u{1}after\0\u{3}set_policy\0\u{1}movers\0\u{1}rules\0\u{3}allowed_from\0\u{3}on_entry\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4786,6 +4813,7 @@ nonisolated extension Flotilla_Board_V1_ColumnUpdate: SwiftProtobuf.Message, Swi
       case 12: try { try decoder.decodeRepeatedStringField(value: &self.movers) }()
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.rules) }()
       case 14: try { try decoder.decodeRepeatedStringField(value: &self.allowedFrom) }()
+      case 15: try { try decoder.decodeSingularEnumField(value: &self._onEntry) }()
       default: break
       }
     }
@@ -4838,6 +4866,9 @@ nonisolated extension Flotilla_Board_V1_ColumnUpdate: SwiftProtobuf.Message, Swi
     if !self.allowedFrom.isEmpty {
       try visitor.visitRepeatedStringField(value: self.allowedFrom, fieldNumber: 14)
     }
+    try { if let v = self._onEntry {
+      try visitor.visitSingularEnumField(value: v, fieldNumber: 15)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4856,6 +4887,7 @@ nonisolated extension Flotilla_Board_V1_ColumnUpdate: SwiftProtobuf.Message, Swi
     if lhs.movers != rhs.movers {return false}
     if lhs.rules != rhs.rules {return false}
     if lhs.allowedFrom != rhs.allowedFrom {return false}
+    if lhs._onEntry != rhs._onEntry {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

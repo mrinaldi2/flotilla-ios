@@ -1,21 +1,16 @@
 import SwiftUI
 
-/// The iPad shell (UX-024, 0.20): a sidebar with Chat, then the projects in
-/// the order Projects shows them, the ones that need the owner first; what
-/// needs you is the Needs you filter on All projects. The main chat also
-/// slides over any screen (✉ or ⌘J) without leaving it.
+/// The iPad shell (UX-024, 0.20): a sidebar with Commands (0.24.0, in Chat's
+/// place), then the projects in the order Projects shows them, the ones that
+/// need the owner first; what needs you is the Needs you filter on All
+/// projects. Each bot's own chat is on its page.
 struct PadRootView: View {
     @Environment(Fleet.self) private var fleet
     @Binding var tab: RootView.Tab
     @Binding var openNeeds: NeedsDestination?
-    @Binding var openBot: BotLink?
     /// RootView's landings: each one shows All projects, where its screen opens.
     var landings = 0
     @State private var selection: Item? = .projects
-    @State private var chatPanel = false
-    /// ✎ on iPad: who to message, then their thread in the slide-over chat.
-    @State private var picking = false
-    @State private var openThread: ThreadLink?
     /// The project column's stack, so card links push there (H-204).
     @State private var projectPath = NavigationPath()
     /// What to show once a project is selected: a linked card, or its settings.
@@ -28,7 +23,7 @@ struct PadRootView: View {
     @State private var projectSegment = ProjectScreen.Segment.overview
 
     enum Item: Hashable {
-        case chat, projects, settings
+        case commands, projects, settings
         case project(HomeProjectLink)
     }
 
@@ -37,9 +32,8 @@ struct PadRootView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                Label("Chat", systemImage: "bubble.left.and.bubble.right")
-                    .badge(fleet.home.questions(fleet.computers))
-                    .tag(Item.chat)
+                Label("Commands", systemImage: "apple.terminal")
+                    .tag(Item.commands)
                 Section("Projects") {
                     Label("All projects", systemImage: "square.grid.2x2")
                         .badge(fleet.home.total(fleet.computers))
@@ -72,40 +66,12 @@ struct PadRootView: View {
             }
         } detail: {
             detail
-                .toolbar {
-                    // One order everywhere (UX-029): ✉ Chat · ✎ Message a bot · ⋯ More (the screen's own).
-                    if selection != .chat {
-                        ToolbarItemGroup(placement: .topBarTrailing) {
-                            Button { chatPanel.toggle() } label: { Image(systemName: "envelope") }
-                                .accessibilityLabel("Main chat")
-                                .keyboardShortcut("j", modifiers: .command)
-                            Button { picking = true } label: { Image(systemName: "square.and.pencil") }
-                                .accessibilityLabel("Message a bot")
-                                .keyboardShortcut("n", modifiers: .command)
-                        }
-                    }
-                }
-                .inspector(isPresented: $chatPanel) {
-                    MainChatView(title: "Chat", openThread: $openThread)
-                        .inspectorColumnWidth(min: 320, ideal: 380, max: 480)
-                }
-                .sheet(isPresented: $picking) {
-                    BotPicker { link in
-                        picking = false
-                        openThread = link
-                        chatPanel = true
-                    }
-                }
         }
-        #if DEBUG
-        // Screenshots of the slide-over chat: -openChatPanel YES.
-        .task { if UserDefaults.standard.bool(forKey: "openChatPanel") { chatPanel = true } }
-        #endif
         // A notification or the debug tab picks the matching sidebar row.
         .onChange(of: tab, initial: true) { _, tab in
             switch tab {
             case .projects: if case .project = selection {} else { selection = .projects }
-            case .chat: selection = .chat
+            case .commands: selection = .commands
             case .settings: selection = .settings
             }
         }
@@ -123,7 +89,7 @@ struct PadRootView: View {
             pendingSegment = nil
             pendingAddCard = false
             switch item {
-            case .chat: tab = .chat; chatPanel = false
+            case .commands: tab = .commands
             case .settings: tab = .settings
             default: tab = .projects
             }
@@ -145,8 +111,8 @@ struct PadRootView: View {
 
     @ViewBuilder private var detail: some View {
         switch selection {
-        case .chat:
-            MainChatView(openBot: $openBot)
+        case .commands:
+            CommandsTab(landings: landings)
         case .settings:
             SettingsView(inTab: true)
         case .project(let link):
