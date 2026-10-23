@@ -342,4 +342,16 @@ final class QuestionsTests: XCTestCase {
         XCTAssertEqual(row.kindWord, "Question · holds the gate")
         XCTAssertEqual(row.tone, .needsYou)
     }
+
+    // MARK: A card held on the owner (0.24.0, `owner_waiting`)
+
+    func testACardWithABotsQuestionSaysWaitingForYou() throws {
+        let card = try BoardCard(jsonString: #"{"id": "CASS-057", "title": "Prerequisites", "owner_waiting": 2}"#)
+        XCTAssertEqual(card.ownerWaiting, 2)
+        XCTAssertEqual(CardWaiting.line(card.ownerWaiting), "▲ Waiting for you")
+        XCTAssertEqual(CardWaiting.label(card.ownerWaiting), "Waiting for you: bots asked you 2 things about this card")
+        XCTAssertEqual(CardWaiting.label(1), "Waiting for you: a bot asked you about this card")
+        let quiet = try BoardCard(jsonString: #"{"id": "CASS-058", "title": "Done one"}"#)
+        XCTAssertNil(CardWaiting.line(quiet.ownerWaiting), "an older daemon's card, or nothing asked: no line")
+    }
 }

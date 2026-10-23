@@ -266,6 +266,13 @@ struct ColumnList: View {
                                     .accessibilityIdentifier("card-questions-\(card.id)")
                             }
                         }
+                        // A bot's question to the owner holds it (0.24.0).
+                        if let waiting = CardWaiting.line(card.ownerWaiting) {
+                            Text(waiting).font(.caption.weight(.semibold)).foregroundStyle(Tone.working.text)
+                                .padding(.leading, 44).padding(.bottom, 2)
+                                .accessibilityLabel(CardWaiting.label(card.ownerWaiting))
+                                .accessibilityIdentifier("card-waiting-\(card.id)")
+                        }
                         // The plan node it belongs to (0.21), under the title.
                         if card.hasPlanNodeID, let node = planNodes[card.planNodeID] {
                             PlanNodeChip(node: node).padding(.leading, 44).padding(.bottom, 4)

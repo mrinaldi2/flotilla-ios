@@ -93,9 +93,17 @@ struct ColumnSheet: View {
                 ForEach(cards, id: \.id) { card in
                     VStack(alignment: .leading, spacing: 10) {
                         NavigationLink(value: NeedsDestination.item(computerId: computer.id, itemId: card.id)) {
-                            ItemRow(title: card.title, subtitle: ColumnActions.subtitle(card, bots: computer.store.bots), titleLines: 2) {
-                                IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
+                            VStack(alignment: .leading, spacing: 2) {
+                                ItemRow(title: card.title, subtitle: ColumnActions.subtitle(card, bots: computer.store.bots), titleLines: 2) {
+                                    IconTile(systemImage: card.blocked ? "nosign" : "square.text.square", tone: card.blocked ? .failed : nil)
+                                }
+                                if let waiting = CardWaiting.line(card.ownerWaiting) {
+                                    Text(waiting).font(.caption.weight(.semibold)).foregroundStyle(Tone.working.text)
+                                        .padding(.leading, 44)
+                                        .accessibilityLabel(CardWaiting.label(card.ownerWaiting))
+                                }
                             }
+                            .accessibilityElement(children: .combine)
                         }
                         if review, canMove {
                             HStack(spacing: 10) {

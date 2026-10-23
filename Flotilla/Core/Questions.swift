@@ -219,6 +219,20 @@ enum QuestionWords {
     }
 }
 
+/// A card held on the owner (0.24.0, `ItemCard.owner_waiting`): a bot's open
+/// questions to the owner about it, asked on the card or from its thread.
+/// "▲ Waiting for you" in the accent colour, as the desktop.
+enum CardWaiting {
+    static let text = "▲ Waiting for you"
+
+    /// Nil while nothing waits on the owner.
+    static func line(_ waiting: UInt32) -> String? { waiting > 0 ? text : nil }
+
+    static func label(_ waiting: UInt32) -> String {
+        waiting == 1 ? "Waiting for you: a bot asked you about this card" : "Waiting for you: bots asked you \(waiting) things about this card"
+    }
+}
+
 struct QuestionOptionRow: Identifiable, Equatable {
     let option: Flotilla_Board_V1_QuestionOption
     let recommended: Bool
