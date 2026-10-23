@@ -114,6 +114,8 @@ final class AppStore {
     var commandsRevision = 0
     /// project id → bumped by `usage_updated` (0.24.0).
     var usageRevision: [String: Int] = [:]
+    /// project id → bumped by a `PrPush` (`pr_updated`, `check_updated`, …): its PR screens read again.
+    var prRevision: [String: Int] = [:]
     /// Owner actions as the daemon last pushed them (`owner_action_update`), by id.
     var ownerActionUpdates: [String: OwnerAction] = [:]
     /// A running owner action's redacted output so far (`owner_action_output`), by id.

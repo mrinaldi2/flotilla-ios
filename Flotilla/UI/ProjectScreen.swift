@@ -297,6 +297,7 @@ struct OverviewPane: View {
                     SectionTitle("Board")
                 }
             }
+            if let home { OverviewPullRequests(computer: home.computer, projectId: home.projectId) }
             if let release = dashboard?.releases.first, let home {
                 Section {
                     NavigationLink(value: NeedsDestination.release(computerId: home.computer.id, releaseId: release.id)) {

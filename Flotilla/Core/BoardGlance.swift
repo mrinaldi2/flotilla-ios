@@ -372,7 +372,8 @@ extension NeedsDestination {
     var computerId: String? {
         switch self {
         case .decision(let id, _), .bot(let id, _, _), .item(let id, _), .reply(let id, _, _), .release(let id, _),
-             .planNode(let id, _, _), .ownerAction(let id, _), .usage(let id, _): id
+             .planNode(let id, _, _), .ownerAction(let id, _), .usage(let id, _), .pullRequest(let id, _, _),
+             .pullRequests(let id, _): id
         case .note: nil
         }
     }

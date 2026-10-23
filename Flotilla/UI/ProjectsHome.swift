@@ -40,6 +40,10 @@ enum NeedsDestination: Hashable {
     case ownerAction(computerId: String, actionId: String)
     /// A project's usage and budget (0.24.0, `usage_v1`).
     case usage(computerId: String, projectId: String)
+    /// One pull request, on the board's home (H-261, `pull_requests`).
+    case pullRequest(computerId: String, projectId: String, number: UInt32)
+    /// A project's pull requests.
+    case pullRequests(computerId: String, projectId: String)
     case note(title: String, text: String)
 }
 
@@ -759,8 +763,11 @@ extension Fleet {
         case .planNodeID(let id)?:
             // A gate, a proposed initiative or a research skip: ruled on the home that keeps the plan.
             if let on, on.store.hasPlanAttention { return .planNode(computerId: on.id, projectId: row.projectID, nodeId: id) }
-        case .prNumber?, .cleanupJobID?, .machine?, nil:
-            // PR reviews, cleanups and disk space are answered on the computer.
+        case .prNumber(let number)?:
+            // The PR on the board's home, which keeps it, with the owner's review.
+            if let on, on.store.hasPullRequests { return .pullRequest(computerId: on.id, projectId: row.projectID, number: number) }
+        case .cleanupJobID?, .machine?, nil:
+            // Cleanups and disk space are answered on the computer.
             break
         }
         switch row.kind {
@@ -817,6 +824,14 @@ struct NeedsDestinations: ViewModifier {
             case .usage(let computerId, let projectId):
                 if let computer = fleet.computer(id: computerId) {
                     ProjectUsageScreen(projectId: projectId).computerEnvironment(computer)
+                }
+            case .pullRequest(let computerId, let projectId, let number):
+                if let computer = fleet.computer(id: computerId) {
+                    PRDetailScreen(projectId: projectId, number: number).computerEnvironment(computer)
+                }
+            case .pullRequests(let computerId, let projectId):
+                if let computer = fleet.computer(id: computerId) {
+                    ProjectPullRequestsScreen(projectId: projectId).computerEnvironment(computer)
                 }
             case .note(let title, let text):
                 NeedsNote(title: title, text: text)
@@ -944,6 +959,7 @@ extension HomeAttentionRow {
         case .question: questionBlocking ? "Question · holds the gate" : "Question"
         case .draftUpdated: "Draft updated"
         case .planGate: "Plan"
+        case .prReview: "Pull request"
         case .roleUnheld: "Role nobody holds"
         case .budgetWarning: "Budget"
         case .budgetReached: "Budget reached"
@@ -965,6 +981,7 @@ extension HomeAttentionRow {
         case .ownerQuestion, .question: "questionmark.bubble.fill"
         case .draftUpdated: "square.and.pencil"
         case .planGate: "flag.fill"
+        case .prReview: "arrow.triangle.pull"
         case .roleUnheld: "person.crop.circle.badge.questionmark"
         case .budgetWarning, .budgetReached: "gauge.with.dots.needle.67percent"
         default: "circle"
