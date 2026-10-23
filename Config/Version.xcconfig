@@ -5,7 +5,7 @@
 // one for every build that goes to a phone, so two installs never look alike.
 
 MARKETING_VERSION = 0.12.0
-CURRENT_PROJECT_VERSION = 28
+CURRENT_PROJECT_VERSION = 29
 
 // The commit a build was made from, shown in Settings > About. Set on the
 // command line (scripts/bump-version.sh prints how); empty in Xcode builds.
